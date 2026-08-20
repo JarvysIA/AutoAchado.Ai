@@ -5,7 +5,6 @@ const fail = (message) => {
 };
 
 const config = JSON.parse(readFileSync("vercel.json", "utf8"));
-const functionKeys = Object.keys(config.functions ?? {});
 const apiEntrypoints = readdirSync("api", { recursive: true })
   .map(String)
   .filter((path) => /\.(?:js|mjs|cjs|ts|mts|cts)$/.test(path.replaceAll("\\", "/")));
@@ -13,8 +12,18 @@ const artifact = readFileSync("api/index.js", "utf8");
 
 if (config.framework !== null) fail("framework deve ser null");
 if ("builds" in config) fail("configuração legacy builds não é permitida");
-if (functionKeys.length !== 1 || functionKeys[0] !== "api/index.js") {
-  fail("functions deve declarar exclusivamente api/index.js");
+if ("functions" in config) {
+  const functions = config.functions;
+  if (!functions || typeof functions !== "object" || Array.isArray(functions)) {
+    fail("functions deve ser um objeto válido quando presente");
+  }
+  const entries = Object.entries(functions);
+  if (entries.length === 0) fail("functions não pode ser um objeto vazio");
+  for (const [path, options] of entries) {
+    if (!options || typeof options !== "object" || Array.isArray(options) || Object.keys(options).length === 0) {
+      fail(`configuração de Function vazia ou inválida: ${path}`);
+    }
+  }
 }
 if (apiEntrypoints.length !== 1 || apiEntrypoints[0] !== "index.js") {
   fail(`entrypoints inesperados em api/: ${apiEntrypoints.join(", ")}`);

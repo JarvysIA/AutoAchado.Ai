@@ -20,9 +20,21 @@ describe("artefato da função Vercel", () => {
     const apiEntrypoints = readdirSync("api", { recursive: true })
       .map(String)
       .filter((path) => /\.(?:js|mjs|cjs|ts|mts|cts)$/.test(path.replaceAll("\\", "/")));
+    const functionOptions = Object.values(config.functions ?? {});
+    const invalidFunctionConfig =
+      config.functions !== undefined &&
+      (functionOptions.length === 0 ||
+        functionOptions.some(
+          (options) =>
+            !options ||
+            typeof options !== "object" ||
+            Array.isArray(options) ||
+            Object.keys(options as Record<string, unknown>).length === 0,
+        ));
 
     expect(config.framework).toBeNull();
-    expect(Object.keys(config.functions ?? {})).toEqual(["api/index.js"]);
+    expect(config.functions).toBeUndefined();
+    expect(invalidFunctionConfig).toBe(false);
     expect(config.builds).toBeUndefined();
     expect(apiEntrypoints).toEqual(["index.js"]);
     expect(existsSync("src/app.js")).toBe(false);
