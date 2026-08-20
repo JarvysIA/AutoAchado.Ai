@@ -1,0 +1,10 @@
+.env
+.env.*
+!.env.example
+.vercel
+node_modules
+.pnpm-store
+.pnpm-cache
+dist
+coverage
+reports/0A-LIVE-report.md
