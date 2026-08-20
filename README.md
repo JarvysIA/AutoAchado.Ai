@@ -4,6 +4,8 @@ Ferramenta técnica descartável para validar, exclusivamente por APIs oficiais,
 
 Este repositório não contém o produto final. Não há banco de dados, Supabase, afiliados, WhatsApp, scraping ou histórico persistente.
 
+O 0A-LIVE-D testa a cadeia oficial `CATEGORY → HIGHLIGHTS(type=PRODUCT) → /products/{id} → /products/{id}/items → ITEM → sale_price → seller` pela rota `POST /probe/catalog-products`. A execução live requer OAuth na aplicação implantada e não roda automaticamente em CI.
+
 ## Segurança
 
 - Nunca coloque credenciais em arquivos versionados.

@@ -1,6 +1,7 @@
 import type { ProbeResult } from "../probe/runner.js";
 import type { AlternativeDiscoveryResult } from "../probe/alternative.js";
 import type { DirectItemDiscoveryResult } from "../probe/direct-items.js";
+import type { CatalogProductDiscoveryResult } from "../probe/catalog-products.js";
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!);
@@ -11,7 +12,7 @@ function layout(content: string): string {
 }
 
 export function homePage(connected: boolean, userLabel?: string): string {
-  return layout(`<h1>AutoAchado.AI</h1><p class="muted">API Feasibility Probe</p>${connected ? `<section><p>Mercado Livre conectado ✅</p><p>${escapeHtml(userLabel ?? "Usuário autenticado")}</p><form method="post" action="/probe"><button type="submit">Executar 0A-LIVE</button></form><form method="post" action="/probe/alternative"><button type="submit">Executar 0A-LIVE-B</button></form><form method="post" action="/probe/direct-items"><button type="submit">Executar 0A-LIVE-C</button></form></section>` : `<section><a href="/auth/start">Conectar Mercado Livre</a></section>`}`);
+  return layout(`<h1>AutoAchado.AI</h1><p class="muted">API Feasibility Probe</p>${connected ? `<section><p>Mercado Livre conectado ✅</p><p>${escapeHtml(userLabel ?? "Usuário autenticado")}</p><form method="post" action="/probe"><button type="submit">Executar 0A-LIVE</button></form><form method="post" action="/probe/alternative"><button type="submit">Executar 0A-LIVE-B</button></form><form method="post" action="/probe/direct-items"><button type="submit">Executar 0A-LIVE-C</button></form><form method="post" action="/probe/catalog-products"><button type="submit">Executar 0A-LIVE-D</button></form></section>` : `<section><a href="/auth/start">Conectar Mercado Livre</a></section>`}`);
 }
 
 function icon(status: string): string {
@@ -34,6 +35,11 @@ export function alternativeProbePage(result: AlternativeDiscoveryResult, markdow
 export function directItemProbePage(result: DirectItemDiscoveryResult, markdown: string): string {
   const dataUrl = `data:text/markdown;charset=utf-8,${encodeURIComponent(markdown)}`;
   return layout(`<h1>AutoAchado.AI — resultado 0A-LIVE-C</h1><section><p><strong>${escapeHtml(result.formalStatus)}</strong></p><p>Highlights 200 ${result.repeatability.highlights200Categories >= 2 ? "✅" : "⚠️"}</p><p>ITEM direto ${result.repeatability.directItemCandidates >= 3 ? "✅" : "⚠️"}</p><p>Detalhes ${result.repeatability.itemDetailsPass >= 3 ? "✅" : "⚠️"}</p><p>Terceiros ${result.repeatability.thirdPartyItems >= 3 ? "✅" : "⚠️"}</p><p>Preço ${result.repeatability.currentPrices >= 3 ? "✅" : "⚠️"}</p><p>Reputação ${result.repeatability.sellersWithReputation > 0 ? "✅" : "⚠️"}</p></section><section><a download="0A-LIVE-C-report.md" href="${escapeHtml(dataUrl)}">Baixar relatório</a></section><details><summary>Ver relatório</summary><pre>${escapeHtml(markdown)}</pre></details>`);
+}
+
+export function catalogProductProbePage(result: CatalogProductDiscoveryResult, markdown: string): string {
+  const dataUrl = `data:text/markdown;charset=utf-8,${encodeURIComponent(markdown)}`;
+  return layout(`<h1>AutoAchado.AI — resultado 0A-LIVE-D</h1><section><p><strong>${escapeHtml(result.formalStatus)}</strong></p><p>PRODUCT ${result.repeatability.productDetailsPass >= 3 ? "✅" : "⚠️"}</p><p>PRODUCT → ofertas ${result.repeatability.associatedOffers >= 3 ? "✅" : "⚠️"}</p><p>Terceiros ${result.repeatability.thirdPartyOffers >= 3 ? "✅" : "⚠️"}</p><p>Preço ${result.repeatability.currentPrices >= 3 ? "✅" : "⚠️"}</p><p>Reputação ${result.repeatability.sellersWithReputation > 0 ? "✅" : "⚠️"}</p><p>Buy box ${result.buyBox === "BUY_BOX_AVAILABLE" ? "✅" : "⚠️"}</p></section><section><a download="0A-LIVE-D-report.md" href="${escapeHtml(dataUrl)}">Baixar relatório</a></section><details><summary>Ver relatório</summary><pre>${escapeHtml(markdown)}</pre></details>`);
 }
 
 export function errorPage(title: string, message: string): string {

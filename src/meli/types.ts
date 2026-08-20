@@ -94,3 +94,40 @@ export interface PricesResponse {
     end_time?: string | null;
   }>;
 }
+
+export interface CatalogOffer {
+  item_id?: string;
+  seller_id?: number;
+  category_id?: string;
+  price?: number;
+  original_price?: number | null;
+  currency_id?: string;
+  condition?: string;
+  available_quantity?: number;
+  sold_quantity?: number;
+  shipping?: { free_shipping?: boolean };
+  seller?: { reputation_level_id?: string; tags?: string[] };
+  product_id?: string;
+  site_id?: string;
+}
+
+export interface CatalogProductDetail {
+  id: string;
+  status?: string;
+  name?: string;
+  domain_id?: string;
+  family_name?: string;
+  attributes?: unknown[];
+  pictures?: unknown[] | null;
+  permalink?: string;
+  sold_quantity?: number;
+  parent_id?: string | null;
+  children_ids?: string[];
+  buy_box_winner?: CatalogOffer | null;
+  buy_box_winner_price_range?: unknown;
+}
+
+export interface CatalogProductOffersResponse {
+  paging?: { total?: number; offset?: number; limit?: number };
+  results?: CatalogOffer[];
+}

@@ -11,6 +11,7 @@ const ALLOWED_PATHS = [
   /^\/items\/MLB\d+(?:\/sale_price|\/prices)?$/,
   /^\/items$/,
   /^\/highlights\/MLB\/category\/MLB\d+$/,
+  /^\/products\/MLB\d+(?:\/items)?$/,
   /^\/user-products\/MLBU\d+$/,
   /^\/users\/\d+\/items\/search$/,
 ];
@@ -40,5 +41,10 @@ export function assertSellerId(value: number | string): string {
 
 export function assertUserProductId(value: string): string {
   if (!/^MLBU\d+$/.test(value)) throw new Error("ID de User Product inválido");
+  return value;
+}
+
+export function assertCatalogProductId(value: string): string {
+  if (!/^MLB\d+$/.test(value)) throw new Error("ID de produto de catálogo inválido");
   return value;
 }

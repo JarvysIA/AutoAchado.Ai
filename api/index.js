@@ -77,6 +77,7 @@ var ALLOWED_PATHS = [
   /^\/items\/MLB\d+(?:\/sale_price|\/prices)?$/,
   /^\/items$/,
   /^\/highlights\/MLB\/category\/MLB\d+$/,
+  /^\/products\/MLB\d+(?:\/items)?$/,
   /^\/user-products\/MLBU\d+$/,
   /^\/users\/\d+\/items\/search$/
 ];
@@ -102,6 +103,10 @@ function assertSellerId(value) {
 }
 function assertUserProductId(value) {
   if (!/^MLBU\d+$/.test(value)) throw new Error("ID de User Product inválido");
+  return value;
+}
+function assertCatalogProductId(value) {
+  if (!/^MLB\d+$/.test(value)) throw new Error("ID de produto de catálogo inválido");
   return value;
 }
 
@@ -1647,6 +1652,465 @@ async function runDirectItemDiscoveryProbe(accessToken, authenticatedUserId) {
   return { result: safe, markdown };
 }
 
+// src/report/catalog-product-renderer.ts
+function json4(value) {
+  return JSON.stringify(value, null, 2);
+}
+function renderCatalogProductReport(result) {
+  return `# 0A-LIVE-D — Catalog PRODUCT Discovery
+
+## Status formal
+
+${result.formalStatus}
+
+## Ambiente
+
+- data/hora: ${result.generatedAt}
+- runtime: ${process.env.VERCEL ? "Vercel" : "Node.js local"}
+- Client ID: ${DEFAULT_CLIENT_ID}
+- Redirect URI: ${DEFAULT_REDIRECT_URI}
+- requests aproximadas: ${result.requestCount}
+
+## OAuth
+
+${result.oauth}
+
+- authenticated_user_id: ${result.authenticatedUserId}
+
+## Categorias testadas
+
+${json4(result.highlightAttempts.map((attempt) => ({ rootId: attempt.rootId, rootName: attempt.rootName, categoryId: attempt.categoryId, categoryName: attempt.categoryName, httpStatus: attempt.httpStatus })))}
+
+## Highlights PRODUCT
+
+- candidatos PRODUCT únicos: ${result.productCandidates.length}
+- categorias com PRODUCT: ${result.repeatability.categoriesWithProducts}
+- candidatos: ${json4(result.productCandidates)}
+
+## PRODUCT detail
+
+- HTTP 200: ${result.repeatability.productDetailsPass}/${result.products.length}
+- dados: ${json4(result.products.map((product) => ({
+    productId: product.productId,
+    sourceCategoryIds: product.sourceCategoryIds,
+    httpStatus: product.httpStatus,
+    status: product.status,
+    name: product.name,
+    domainId: product.domainId,
+    familyName: product.familyName,
+    attributeCount: product.attributeCount,
+    soldQuantity: product.soldQuantity,
+    parentId: product.parentId,
+    childrenIds: product.childrenIds,
+    permalink: product.permalink,
+    classification: product.classification
+  })))}
+
+## Official PRODUCT → OFFER path
+
+${json4(result.officialOfferPath)}
+
+- endpoint documentado: sim
+- resultados HTTP: ${json4(result.products.slice(0, 5).map((product) => ({ productId: product.productId, httpStatus: product.offerPathHttpStatus, total: product.offerPagingTotal, classification: product.classification })))}
+
+## Offers/Listings
+
+- ofertas associadas: ${result.repeatability.associatedOffers}
+- dados: ${json4(result.offers)}
+
+## Third-party
+
+- user autenticado: ${result.authenticatedUserId}
+- ofertas de terceiros: ${result.repeatability.thirdPartyOffers}
+- sellers distintos: ${new Set(result.offers.flatMap((offer) => offer.thirdParty && offer.sellerId !== null ? [offer.sellerId] : [])).size}
+
+## Item detail
+
+${json4(result.items)}
+
+## sale_price
+
+- preços atuais válidos: ${result.repeatability.currentPrices}/${result.prices.length}
+- regular_amount disponível: ${result.prices.filter((row) => typeof row.data?.regular_amount === "number").length}/${result.prices.length}
+- dados: ${json4(result.prices)}
+
+## Seller reputation
+
+- sellers com reputação pública: ${result.repeatability.sellersWithReputation}/${result.sellers.length}
+- dados: ${json4(result.sellers)}
+
+## Buy box / competition
+
+${result.buyBox}
+
+O campo buy_box_winner de GET /products/{PRODUCT_ID} e GET /products/{PRODUCT_ID}/items são recursos oficiais documentados. O primeiro identifica a publicação ganhadora; o segundo lista as publicações que competem na PDP.
+
+## Repetibilidade
+
+${json4(result.repeatability)}
+
+## Compliance
+
+- somente OAuth e endpoints oficiais documentados
+- PRODUCT aceito somente com type=PRODUCT e ID /^MLB\\d+$/
+- ITEM e USER_PRODUCT não foram tratados como PRODUCT
+- sem /sites/MLB/search, scraping, HTML, browser automation, endpoint privado ou bypass de 403
+- expansão interrompida após 429: ${result.stoppedOnRateLimit}
+- headers de rate limit: ${json4(result.rateLimitHeaders)}
+
+## Limitações
+
+${result.errors.length ? result.errors.map((error) => `- ${error}`).join("\n") : "Nenhuma limitação adicional registrada nesta execução."}
+
+## Conclusão técnica
+
+${result.formalStatus}
+
+Este status se limita à ramificação Catalog PRODUCT Discovery e não altera automaticamente a decisão global do AutoAchado.AI.
+
+## Próximo passo recomendado
+
+Usar a evidência live para decidir se PRODUCT → oferta → preço → seller fecha de forma oficial e repetível em produção.
+`;
+}
+
+// src/probe/catalog-products.ts
+var MAX_CATEGORIES = 5;
+var MAX_CATEGORY_NODES_PER_FAMILY2 = 14;
+var MAX_LEAVES_PER_FAMILY2 = 3;
+var MAX_PRODUCT_CANDIDATES = 20;
+var MAX_PRODUCT_DETAILS = 10;
+var MAX_OFFER_RESOLUTIONS = 5;
+var MAX_ITEM_DETAILS3 = 5;
+var CATALOG_PRODUCT_DETAIL_DOCUMENTATION = "https://developers.mercadolivre.com.br/pt_br/buscador-de-produtos";
+var CATALOG_COMPETITION_DOCUMENTATION = "https://developers.mercadolivre.com.br/pt_br/concorrencia-em-catalogo";
+function normalize4(value) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+function isValidCatalogProductId(value) {
+  return /^MLB\d+$/.test(value);
+}
+function isCatalogProductHighlight(row) {
+  return row.type === "PRODUCT" && isValidCatalogProductId(row.id);
+}
+function deduplicateCatalogProducts(attempts) {
+  const byId = /* @__PURE__ */ new Map();
+  for (const attempt of attempts) {
+    for (const row of attempt.content) {
+      if (!isCatalogProductHighlight(row)) continue;
+      const evidence = byId.get(row.id) ?? { categories: /* @__PURE__ */ new Set(), positions: /* @__PURE__ */ new Set() };
+      evidence.categories.add(attempt.categoryId);
+      if (row.position !== null) evidence.positions.add(row.position);
+      byId.set(row.id, evidence);
+    }
+  }
+  return [...byId].slice(0, MAX_PRODUCT_CANDIDATES).map(([productId, evidence]) => ({
+    productId,
+    sourceCategoryIds: [...evidence.categories],
+    positions: [...evidence.positions]
+  }));
+}
+function isCatalogThirdParty(sellerId2, authenticatedUserId) {
+  return typeof sellerId2 === "number" && sellerId2 !== authenticatedUserId;
+}
+function catalogProductMatchesItem(productId, catalogProductId) {
+  return typeof catalogProductId === "string" ? catalogProductId === productId : null;
+}
+function classifyCatalogProduct(detailStatus, offerStatus, offerCount, offerPathDocumented = true) {
+  if (detailStatus !== 200) return "PRODUCT_FETCH_FAILED";
+  if (!offerPathDocumented) return "PRODUCT_OFFER_PATH_NOT_DOCUMENTED";
+  if (offerCount > 0) return "PRODUCT_WITH_OFFERS";
+  if (offerStatus === 401 || offerStatus === 403) return "PRODUCT_OFFER_PATH_FORBIDDEN";
+  return "PRODUCT_DETAIL_ONLY";
+}
+function hasCatalogSellerReputation(row) {
+  return typeof row.level_id === "string" || typeof row.power_seller_status === "string" || typeof row.transactions_completed === "number" || row.ratings !== void 0;
+}
+function classifyCatalogProductStatus(input) {
+  if (input.productCandidates > 0 && input.productDetailsPass === 0) return "BLOCKED_0A_LIVE_PRODUCT_DETAIL";
+  if (input.productDetailsPass > 0 && input.associatedOffers === 0) return "BLOCKED_0A_LIVE_PRODUCT_TO_OFFER";
+  if (input.thirdPartyOffers > 0 && input.currentPrices === 0) return "BLOCKED_0A_LIVE_CATALOG_OFFER_PRICE";
+  if (input.productDetailsPass >= 3 && input.associatedOffers >= 3 && input.thirdPartyOffers >= 3 && input.currentPrices >= 3 && input.sellersWithReputation >= 1) {
+    return "PASS_0A_LIVE_CATALOG_PRODUCT_DISCOVERY";
+  }
+  return "PARTIAL_0A_LIVE_CATALOG_PRODUCT_DISCOVERY";
+}
+function rankCategories2(categories, keywords) {
+  const score = (category) => {
+    const name = normalize4(category.name);
+    return keywords.reduce((sum, keyword, index) => sum + (name.includes(keyword) ? (keywords.length - index) * 10 : 0), 0);
+  };
+  return [...categories].filter((category) => isRelevantCategoryName(category.name) && isValidCatalogProductId(category.id)).sort((left, right) => score(right) - score(left) || left.name.localeCompare(right.name));
+}
+async function discoverLeaves(client, family) {
+  const queue = [{ id: family.id, name: family.name }];
+  const visited = /* @__PURE__ */ new Set();
+  const leaves = [];
+  while (queue.length && leaves.length < MAX_LEAVES_PER_FAMILY2 && visited.size < MAX_CATEGORY_NODES_PER_FAMILY2 && !client.encounteredRateLimit) {
+    const next = queue.shift();
+    if (!next || visited.has(next.id)) continue;
+    visited.add(next.id);
+    try {
+      const response = await client.get(`/categories/${assertMlbId(next.id, "category")}`);
+      const detail = response.data;
+      if (!detail) continue;
+      const children = detail.children_categories ?? [];
+      if (!children.length) leaves.push({ id: detail.id, name: detail.name });
+      else queue.push(...rankCategories2(children, family.keywords));
+    } catch {
+    }
+  }
+  return leaves;
+}
+async function probeProductHighlights(client) {
+  const attempts = [];
+  for (const family of ALTERNATIVE_CATEGORY_FAMILIES.slice(0, MAX_CATEGORIES)) {
+    const leaves = await discoverLeaves(client, family);
+    for (const leaf of leaves.slice(0, MAX_LEAVES_PER_FAMILY2)) {
+      try {
+        const response = await client.get(
+          `/highlights/MLB/category/${assertMlbId(leaf.id, "category")}`
+        );
+        attempts.push({
+          rootId: family.id,
+          rootName: family.name,
+          categoryId: leaf.id,
+          categoryName: leaf.name,
+          httpStatus: response.status,
+          content: (response.data?.content ?? []).slice(0, 20).flatMap(
+            (row) => typeof row.id === "string" && typeof row.type === "string" ? [{ id: row.id, type: row.type, position: typeof row.position === "number" ? row.position : null }] : []
+          )
+        });
+        break;
+      } catch (error) {
+        const status = error instanceof MeliApiError ? error.status : 0;
+        attempts.push({ rootId: family.id, rootName: family.name, categoryId: leaf.id, categoryName: leaf.name, httpStatus: status, content: [] });
+        if (status === 429) break;
+      }
+    }
+    if (client.encounteredRateLimit) break;
+  }
+  return attempts;
+}
+function sanitizeOffer(productId, offer, source, authenticatedUserId) {
+  if (typeof offer.item_id !== "string" || !/^MLB\d+$/.test(offer.item_id)) return null;
+  const sellerId2 = typeof offer.seller_id === "number" ? offer.seller_id : null;
+  return {
+    productId,
+    itemId: offer.item_id,
+    sellerId: sellerId2,
+    categoryId: typeof offer.category_id === "string" ? offer.category_id : null,
+    price: typeof offer.price === "number" ? offer.price : null,
+    originalPrice: typeof offer.original_price === "number" ? offer.original_price : null,
+    currencyId: typeof offer.currency_id === "string" ? offer.currency_id : null,
+    condition: typeof offer.condition === "string" ? offer.condition : null,
+    source,
+    thirdParty: isCatalogThirdParty(sellerId2, authenticatedUserId),
+    embeddedReputationLevel: typeof offer.seller?.reputation_level_id === "string" ? offer.seller.reputation_level_id : null
+  };
+}
+function sanitizeBuyBoxWinner(offer) {
+  if (!offer) return null;
+  const safe = {};
+  if (typeof offer.item_id === "string") safe.item_id = offer.item_id;
+  if (typeof offer.seller_id === "number") safe.seller_id = offer.seller_id;
+  if (typeof offer.category_id === "string") safe.category_id = offer.category_id;
+  if (typeof offer.price === "number") safe.price = offer.price;
+  if (typeof offer.original_price === "number" || offer.original_price === null) safe.original_price = offer.original_price;
+  if (typeof offer.currency_id === "string") safe.currency_id = offer.currency_id;
+  if (typeof offer.condition === "string") safe.condition = offer.condition;
+  if (typeof offer.available_quantity === "number") safe.available_quantity = offer.available_quantity;
+  if (typeof offer.sold_quantity === "number") safe.sold_quantity = offer.sold_quantity;
+  if (typeof offer.product_id === "string") safe.product_id = offer.product_id;
+  if (typeof offer.site_id === "string") safe.site_id = offer.site_id;
+  if (typeof offer.shipping?.free_shipping === "boolean") safe.shipping = { free_shipping: offer.shipping.free_shipping };
+  if (typeof offer.seller?.reputation_level_id === "string") safe.seller = { reputation_level_id: offer.seller.reputation_level_id };
+  return safe;
+}
+async function probeProducts(client, candidates, authenticatedUserId) {
+  const output = [];
+  for (const candidate of candidates.slice(0, MAX_PRODUCT_DETAILS)) {
+    const base = {
+      productId: candidate.productId,
+      sourceCategoryIds: candidate.sourceCategoryIds,
+      httpStatus: 0,
+      status: null,
+      name: null,
+      domainId: null,
+      familyName: null,
+      attributeCount: 0,
+      soldQuantity: null,
+      parentId: null,
+      childrenIds: [],
+      permalink: null,
+      buyBoxWinner: null,
+      offerPathHttpStatus: 0,
+      offerPagingTotal: null,
+      offers: [],
+      classification: "PRODUCT_FETCH_FAILED"
+    };
+    try {
+      const id = assertCatalogProductId(candidate.productId);
+      const detailResponse = await client.get(`/products/${id}`);
+      const detail = detailResponse.data;
+      base.httpStatus = detailResponse.status;
+      if (!detail || detail.id !== id) throw new Error("Produto de catálogo sem payload válido");
+      base.status = typeof detail.status === "string" ? detail.status : null;
+      base.name = typeof detail.name === "string" ? detail.name : null;
+      base.domainId = typeof detail.domain_id === "string" ? detail.domain_id : null;
+      base.familyName = typeof detail.family_name === "string" ? detail.family_name : null;
+      base.attributeCount = Array.isArray(detail.attributes) ? detail.attributes.length : 0;
+      base.soldQuantity = typeof detail.sold_quantity === "number" ? detail.sold_quantity : null;
+      base.parentId = typeof detail.parent_id === "string" ? detail.parent_id : null;
+      base.childrenIds = (detail.children_ids ?? []).filter(isValidCatalogProductId).slice(0, 20);
+      base.permalink = typeof detail.permalink === "string" ? detail.permalink : null;
+      base.buyBoxWinner = sanitizeBuyBoxWinner(detail.buy_box_winner);
+      if (output.length < MAX_OFFER_RESOLUTIONS) {
+        try {
+          const offerResponse = await client.get(`/products/${id}/items`);
+          base.offerPathHttpStatus = offerResponse.status;
+          base.offerPagingTotal = typeof offerResponse.data?.paging?.total === "number" ? offerResponse.data.paging.total : null;
+          base.offers = (offerResponse.data?.results ?? []).slice(0, 5).flatMap((offer) => {
+            const sanitized = sanitizeOffer(id, offer, "PRODUCT_ITEMS", authenticatedUserId);
+            return sanitized ? [sanitized] : [];
+          });
+        } catch (error) {
+          base.offerPathHttpStatus = error instanceof MeliApiError ? error.status : 0;
+        }
+      }
+      if (!base.offers.length && base.buyBoxWinner) {
+        const winner = sanitizeOffer(id, base.buyBoxWinner, "BUY_BOX_WINNER", authenticatedUserId);
+        if (winner) base.offers = [winner];
+      }
+      base.classification = classifyCatalogProduct(base.httpStatus, base.offerPathHttpStatus, base.offers.length);
+    } catch (error) {
+      base.httpStatus = error instanceof MeliApiError ? error.status : base.httpStatus;
+      base.classification = "PRODUCT_FETCH_FAILED";
+    }
+    output.push(base);
+    if (client.encounteredRateLimit) break;
+  }
+  return output;
+}
+function uniqueOffers(products) {
+  const seen = /* @__PURE__ */ new Set();
+  return products.flatMap((product) => product.offers).filter((offer) => {
+    if (seen.has(offer.itemId)) return false;
+    seen.add(offer.itemId);
+    return true;
+  });
+}
+async function probeCatalogItems(client, offers) {
+  const output = [];
+  for (const offer of offers.slice(0, MAX_ITEM_DETAILS3)) {
+    try {
+      const response = await client.get(`/items/${assertMlbId(offer.itemId, "item")}`);
+      const item = response.data;
+      output.push({
+        productId: offer.productId,
+        itemId: offer.itemId,
+        httpStatus: response.status,
+        sellerId: typeof item?.seller_id === "number" ? item.seller_id : null,
+        catalogProductId: typeof item?.catalog_product_id === "string" ? item.catalog_product_id : null,
+        catalogProductMatch: catalogProductMatchesItem(offer.productId, item?.catalog_product_id),
+        title: typeof item?.title === "string" ? item.title : null,
+        status: typeof item?.status === "string" ? item.status : null,
+        price: typeof item?.price === "number" ? item.price : null,
+        currencyId: typeof item?.currency_id === "string" ? item.currency_id : null,
+        permalink: typeof item?.permalink === "string" ? item.permalink : null
+      });
+    } catch (error) {
+      output.push({
+        productId: offer.productId,
+        itemId: offer.itemId,
+        httpStatus: error instanceof MeliApiError ? error.status : 0,
+        sellerId: null,
+        catalogProductId: null,
+        catalogProductMatch: null,
+        title: null,
+        status: null,
+        price: null,
+        currencyId: null,
+        permalink: null
+      });
+    }
+    if (client.encounteredRateLimit) break;
+  }
+  return output;
+}
+async function probeCatalogPrices(client, offers) {
+  const output = [];
+  for (const offer of offers.filter((row) => row.thirdParty).slice(0, 5)) {
+    try {
+      const response = await client.get(`/items/${assertMlbId(offer.itemId, "item")}/sale_price`);
+      output.push({ itemId: offer.itemId, httpStatus: response.status, data: response.data ? normalizeSalePrice(response.data) : null });
+    } catch (error) {
+      output.push({ itemId: offer.itemId, httpStatus: error instanceof MeliApiError ? error.status : 0, data: null });
+    }
+    if (client.encounteredRateLimit) break;
+  }
+  return output;
+}
+async function runCatalogProductDiscoveryProbe(accessToken, authenticatedUserId) {
+  const client = new MeliClient({ accessToken, timeoutMs: 12e3 });
+  const errors = [];
+  const highlightAttempts = await probeProductHighlights(client);
+  await sleep(100);
+  const productCandidates = deduplicateCatalogProducts(highlightAttempts);
+  const products = await probeProducts(client, productCandidates, authenticatedUserId);
+  await sleep(100);
+  const offers = uniqueOffers(products);
+  const thirdPartyOffers = offers.filter((offer) => offer.thirdParty);
+  const items = client.encounteredRateLimit ? [] : await probeCatalogItems(client, offers);
+  await sleep(100);
+  const prices = client.encounteredRateLimit ? [] : await probeCatalogPrices(client, thirdPartyOffers);
+  await sleep(100);
+  const sellerInput = thirdPartyOffers.slice(0, 5).flatMap(
+    (offer) => offer.sellerId === null ? [] : [{ id: offer.itemId, seller_id: offer.sellerId, catalog_product_id: offer.productId }]
+  );
+  const sellers = client.encounteredRateLimit ? [] : await probeSellers(client, sellerInput);
+  const currentPrices = prices.filter((row) => typeof row.data?.amount === "number" && row.data.amount > 0).length;
+  const repeatability = {
+    categoriesWithProducts: new Set(productCandidates.flatMap((candidate) => candidate.sourceCategoryIds)).size,
+    productDetailsPass: products.filter((product) => product.httpStatus === 200).length,
+    associatedOffers: offers.length,
+    thirdPartyOffers: thirdPartyOffers.length,
+    currentPrices,
+    sellersWithReputation: sellers.filter(hasCatalogSellerReputation).length
+  };
+  if (client.encounteredRateLimit) errors.push("HTTP 429 observado; expansão da amostra interrompida.");
+  const result = {
+    generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    formalStatus: classifyCatalogProductStatus({ productCandidates: productCandidates.length, ...repeatability }),
+    oauth: "PASS",
+    authenticatedUserId,
+    highlightAttempts,
+    productCandidates,
+    products,
+    offers,
+    items,
+    prices,
+    sellers,
+    officialOfferPath: {
+      documented: true,
+      endpoint: "GET /products/{PRODUCT_ID}/items",
+      documentation: CATALOG_COMPETITION_DOCUMENTATION,
+      buyBoxEndpoint: "GET /products/{PRODUCT_ID}",
+      buyBoxDocumentation: CATALOG_PRODUCT_DETAIL_DOCUMENTATION
+    },
+    buyBox: products.some((product) => product.buyBoxWinner) ? "BUY_BOX_AVAILABLE" : products.some((product) => product.httpStatus === 200) ? "BUY_BOX_NOT_APPLICABLE" : "BUY_BOX_RESTRICTED",
+    repeatability,
+    requestCount: client.requestCount,
+    rateLimitHeaders: client.observedHeaders.filter((headers) => Object.keys(headers).some((key) => key.includes("ratelimit") || key === "retry-after")),
+    stoppedOnRateLimit: client.encounteredRateLimit,
+    errors
+  };
+  const safe = sanitizeForReport(result);
+  const markdown = renderCatalogProductReport(safe);
+  if (reportContainsSecret(markdown, [accessToken])) throw new Error("Relatório 0A-LIVE-D rejeitado pelo secret scan");
+  return { result: safe, markdown };
+}
+
 // src/ui/pages.ts
 function escapeHtml(value) {
   return value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
@@ -1655,7 +2119,7 @@ function layout(content) {
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AutoAchado API Probe</title><style>body{font-family:system-ui,sans-serif;max-width:760px;margin:48px auto;padding:0 20px;color:#17202a}h1{margin-bottom:4px}a,button{display:inline-block;background:#1769aa;color:#fff;border:0;border-radius:8px;padding:12px 16px;text-decoration:none;font-weight:650;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f7f9;padding:16px;border-radius:8px}section{margin:28px 0}.muted{color:#667}</style></head><body>${content}</body></html>`;
 }
 function homePage(connected, userLabel) {
-  return layout(`<h1>AutoAchado.AI</h1><p class="muted">API Feasibility Probe</p>${connected ? `<section><p>Mercado Livre conectado ✅</p><p>${escapeHtml(userLabel ?? "Usuário autenticado")}</p><form method="post" action="/probe"><button type="submit">Executar 0A-LIVE</button></form><form method="post" action="/probe/alternative"><button type="submit">Executar 0A-LIVE-B</button></form><form method="post" action="/probe/direct-items"><button type="submit">Executar 0A-LIVE-C</button></form></section>` : `<section><a href="/auth/start">Conectar Mercado Livre</a></section>`}`);
+  return layout(`<h1>AutoAchado.AI</h1><p class="muted">API Feasibility Probe</p>${connected ? `<section><p>Mercado Livre conectado ✅</p><p>${escapeHtml(userLabel ?? "Usuário autenticado")}</p><form method="post" action="/probe"><button type="submit">Executar 0A-LIVE</button></form><form method="post" action="/probe/alternative"><button type="submit">Executar 0A-LIVE-B</button></form><form method="post" action="/probe/direct-items"><button type="submit">Executar 0A-LIVE-C</button></form><form method="post" action="/probe/catalog-products"><button type="submit">Executar 0A-LIVE-D</button></form></section>` : `<section><a href="/auth/start">Conectar Mercado Livre</a></section>`}`);
 }
 function icon(status) {
   return status === "PASS" || status === "AVAILABLE" ? "✅" : status === "FAIL" ? "❌" : "⚠️";
@@ -1674,6 +2138,10 @@ function alternativeProbePage(result, markdown) {
 function directItemProbePage(result, markdown) {
   const dataUrl = `data:text/markdown;charset=utf-8,${encodeURIComponent(markdown)}`;
   return layout(`<h1>AutoAchado.AI — resultado 0A-LIVE-C</h1><section><p><strong>${escapeHtml(result.formalStatus)}</strong></p><p>Highlights 200 ${result.repeatability.highlights200Categories >= 2 ? "✅" : "⚠️"}</p><p>ITEM direto ${result.repeatability.directItemCandidates >= 3 ? "✅" : "⚠️"}</p><p>Detalhes ${result.repeatability.itemDetailsPass >= 3 ? "✅" : "⚠️"}</p><p>Terceiros ${result.repeatability.thirdPartyItems >= 3 ? "✅" : "⚠️"}</p><p>Preço ${result.repeatability.currentPrices >= 3 ? "✅" : "⚠️"}</p><p>Reputação ${result.repeatability.sellersWithReputation > 0 ? "✅" : "⚠️"}</p></section><section><a download="0A-LIVE-C-report.md" href="${escapeHtml(dataUrl)}">Baixar relatório</a></section><details><summary>Ver relatório</summary><pre>${escapeHtml(markdown)}</pre></details>`);
+}
+function catalogProductProbePage(result, markdown) {
+  const dataUrl = `data:text/markdown;charset=utf-8,${encodeURIComponent(markdown)}`;
+  return layout(`<h1>AutoAchado.AI — resultado 0A-LIVE-D</h1><section><p><strong>${escapeHtml(result.formalStatus)}</strong></p><p>PRODUCT ${result.repeatability.productDetailsPass >= 3 ? "✅" : "⚠️"}</p><p>PRODUCT → ofertas ${result.repeatability.associatedOffers >= 3 ? "✅" : "⚠️"}</p><p>Terceiros ${result.repeatability.thirdPartyOffers >= 3 ? "✅" : "⚠️"}</p><p>Preço ${result.repeatability.currentPrices >= 3 ? "✅" : "⚠️"}</p><p>Reputação ${result.repeatability.sellersWithReputation > 0 ? "✅" : "⚠️"}</p><p>Buy box ${result.buyBox === "BUY_BOX_AVAILABLE" ? "✅" : "⚠️"}</p></section><section><a download="0A-LIVE-D-report.md" href="${escapeHtml(dataUrl)}">Baixar relatório</a></section><details><summary>Ver relatório</summary><pre>${escapeHtml(markdown)}</pre></details>`);
 }
 function errorPage(title, message) {
   return layout(`<h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p><p><a href="/">Voltar</a></p>`);
@@ -1794,6 +2262,21 @@ async function handleRequest(request, response) {
       sendHtml(response, 200, directItemProbePage(result, markdown));
     } catch (error) {
       sendHtml(response, 500, errorPage("Probe 0A-LIVE-C não concluído", errorMessage(error)));
+    }
+    return;
+  }
+  if (method === "POST" && url.pathname === "/probe/catalog-products") {
+    try {
+      const config = loadConfig();
+      const session = readTokenSession(request.headers.cookie, config.sessionSecret);
+      if (!session) {
+        sendHtml(response, 401, errorPage("Sessão expirada", "Conecte novamente ao Mercado Livre."));
+        return;
+      }
+      const { result, markdown } = await runCatalogProductDiscoveryProbe(session.accessToken, session.userId);
+      sendHtml(response, 200, catalogProductProbePage(result, markdown));
+    } catch (error) {
+      sendHtml(response, 500, errorPage("Probe 0A-LIVE-D não concluído", errorMessage(error)));
     }
     return;
   }
