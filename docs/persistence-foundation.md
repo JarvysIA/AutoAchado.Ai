@@ -19,6 +19,8 @@ O BUILD 0B1 cria somente a fundação local de persistência. Nenhum cliente de 
 
 As nove tabelas têm RLS habilitado e nenhuma policy para `anon` ou `authenticated`. Os dois papéis também não recebem privilégios de tabela. O papel interno `service_role` recebe somente operações de dados nas tabelas e uso das duas sequences.
 
+Objetos futuros no schema `public` são deny-by-default: o owner `postgres` não concede automaticamente privilégios de tables, sequences ou functions a `anon`, `authenticated`, `service_role` ou `PUBLIC`. Cada migration futura deve declarar seus grants explicitamente.
+
 O schema não contém colunas para tokens, cookies, secrets ou credenciais.
 
 ## Idempotência

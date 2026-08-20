@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(33);
+select plan(41);
 
 select is(
   (
@@ -445,6 +445,98 @@ select ok(
   and
   (select data_type = 'jsonb' from information_schema.columns where table_schema = 'public' and table_name = 'opportunity_candidates' and column_name = 'gate_results'),
   'reason codes and gate results use evolvable jsonb structures'
+);
+
+select ok(
+  not exists (
+    select 1
+    from pg_default_acl d
+    left join pg_namespace n on n.oid = d.defaclnamespace
+    cross join lateral aclexplode(d.defaclacl) a
+    left join pg_roles r on r.oid = a.grantee
+    where d.defaclrole = 'postgres'::regrole
+      and n.nspname = 'public'
+      and d.defaclobjtype = 'r'
+      and r.rolname in ('anon', 'authenticated', 'service_role')
+  ),
+  'future tables grant nothing automatically to Data API roles'
+);
+
+select ok(
+  not exists (
+    select 1
+    from pg_default_acl d
+    left join pg_namespace n on n.oid = d.defaclnamespace
+    cross join lateral aclexplode(d.defaclacl) a
+    left join pg_roles r on r.oid = a.grantee
+    where d.defaclrole = 'postgres'::regrole
+      and n.nspname = 'public'
+      and d.defaclobjtype = 'S'
+      and r.rolname in ('anon', 'authenticated', 'service_role')
+  ),
+  'future sequences grant nothing automatically to Data API roles'
+);
+
+select ok(
+  not exists (
+    select 1
+    from pg_default_acl d
+    left join pg_namespace n on n.oid = d.defaclnamespace
+    cross join lateral aclexplode(d.defaclacl) a
+    left join pg_roles r on r.oid = a.grantee
+    where d.defaclrole = 'postgres'::regrole
+      and (n.nspname = 'public' or d.defaclnamespace = 0)
+      and d.defaclobjtype = 'f'
+      and (a.grantee = 0 or r.rolname in ('anon', 'authenticated', 'service_role'))
+  ),
+  'future functions grant no automatic execute to PUBLIC or Data API roles'
+);
+
+create table public.default_acl_probe_table (id bigint primary key);
+create sequence public.default_acl_probe_sequence;
+create function public.default_acl_probe_function()
+returns integer
+language sql
+immutable
+as $$ select 1 $$;
+
+select ok(
+  not has_table_privilege('anon', 'public.default_acl_probe_table', 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER')
+  and not has_table_privilege('authenticated', 'public.default_acl_probe_table', 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER')
+  and not has_table_privilege('service_role', 'public.default_acl_probe_table', 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER'),
+  'a synthetic future table inherits no Data API role privileges'
+);
+
+select ok(
+  not has_sequence_privilege('anon', 'public.default_acl_probe_sequence', 'USAGE, SELECT, UPDATE')
+  and not has_sequence_privilege('authenticated', 'public.default_acl_probe_sequence', 'USAGE, SELECT, UPDATE')
+  and not has_sequence_privilege('service_role', 'public.default_acl_probe_sequence', 'USAGE, SELECT, UPDATE'),
+  'a synthetic future sequence inherits no Data API role privileges'
+);
+
+select ok(
+  not has_function_privilege('anon', 'public.default_acl_probe_function()', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'public.default_acl_probe_function()', 'EXECUTE')
+  and not has_function_privilege('service_role', 'public.default_acl_probe_function()', 'EXECUTE'),
+  'a synthetic future function grants no execute to Data API roles'
+);
+
+select ok(
+  not exists (
+    select 1
+    from pg_proc p
+    cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+    where p.oid = 'public.default_acl_probe_function()'::regprocedure
+      and a.grantee = 0
+      and a.privilege_type = 'EXECUTE'
+  ),
+  'a synthetic future function grants no execute to PUBLIC'
+);
+
+select ok(
+  has_sequence_privilege('service_role', 'public.highlight_snapshots_highlight_snapshot_id_seq', 'USAGE, SELECT')
+  and has_sequence_privilege('service_role', 'public.price_snapshots_price_snapshot_id_seq', 'USAGE, SELECT'),
+  'existing explicit service_role sequence grants remain intact'
 );
 
 select * from finish();
