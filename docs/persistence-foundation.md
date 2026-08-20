@@ -23,6 +23,16 @@ Objetos futuros no schema `public` são deny-by-default: o owner `postgres` não
 
 O schema não contém colunas para tokens, cookies, secrets ou credenciais.
 
+## OAuth credential control plane 0B2A
+
+O refresh token rotativo do Mercado Livre pertence exclusivamente ao Supabase Vault. A tabela `private.meli_oauth_connections` contém apenas o UUID de referência do Vault e metadata não sensível de estado, versão, lease, falhas e reautorização. Ela não pertence aos schemas expostos pela Data API e nenhum papel de API, inclusive `service_role`, recebe acesso direto.
+
+Quatro RPCs públicas formam a única interface do backend: `initialize_meli_oauth_connection`, `claim_meli_refresh`, `complete_meli_refresh` e `fail_meli_refresh`. Todas são `SECURITY DEFINER`, usam `search_path` vazio, referenciam objetos com schema explícito e concedem `EXECUTE` somente a `service_role`. O schema `vault` permanece fora dos schemas expostos pela Data API e a migration não amplia seus grants administrativos gerenciados por `supabase_admin`; assim, o futuro cliente Data API alcança o segredo somente pela RPC de claim. Ela nunca aceita nome ou UUID arbitrário de secret.
+
+O claim cria um lease exclusivo de dois minutos. Um segundo claim recebe `LOCK_BUSY` sem credencial. Complete e fail exigem o mesmo `lease_id` e `token_version`; respostas antigas não podem substituir uma geração nova. Lease expirado durante `REFRESHING` vira `REFRESH_OUTCOME_UNKNOWN` e exige reautorização, pois não é seguro presumir que o token anterior ainda possa ser usado.
+
+O 0B2A não altera callback, PKCE, cookies, probes ou Vercel, não adiciona cliente Supabase à aplicação e não executa OAuth live. Testes usam valores sintéticos gerados dentro de transação e fazem rollback de metadata e Vault. Nenhuma credencial real é criada. O próximo passo separado é o 0B2B, com adapter Supabase estritamente server-side e provider HTTP falso antes de qualquer gate live.
+
 ## Idempotência
 
 - scans são únicos por `job_type + scheduled_bucket + shard_key`.
