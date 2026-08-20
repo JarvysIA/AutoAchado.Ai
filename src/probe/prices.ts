@@ -9,6 +9,7 @@ export interface NormalizedSalePrice {
   currency_id: string | null;
   reference_date: string | null;
   metadata_shape: string[];
+  promotion_type: string | null;
 }
 
 export interface NormalizedPrice {
@@ -27,12 +28,14 @@ export interface PerItemPriceProbe {
 }
 
 export function normalizeSalePrice(value: SalePriceResponse): NormalizedSalePrice {
+  const metadata = value.metadata && typeof value.metadata === "object" ? (value.metadata as Record<string, unknown>) : null;
   return {
     amount: typeof value.amount === "number" ? value.amount : null,
     regular_amount: typeof value.regular_amount === "number" ? value.regular_amount : null,
     currency_id: typeof value.currency_id === "string" ? value.currency_id : null,
     reference_date: typeof value.reference_date === "string" ? value.reference_date : null,
-    metadata_shape: value.metadata && typeof value.metadata === "object" ? Object.keys(value.metadata as object).sort() : [],
+    metadata_shape: metadata ? Object.keys(metadata).sort() : [],
+    promotion_type: typeof metadata?.promotion_type === "string" ? metadata.promotion_type : null,
   };
 }
 
@@ -61,7 +64,9 @@ export async function probePrices(client: MeliClient, items: ItemDetail[]): Prom
     const id = assertMlbId(item.id, "item");
     const sale = await capture(() => client.get<SalePriceResponse>(`/items/${id}/sale_price`));
     const normalizedSale = sale.data ? normalizeSalePrice(sale.data) : null;
-    const prices = await capture(() => client.get<PricesResponse>(`/items/${id}/prices`));
+    const prices = client.encounteredRateLimit
+      ? { status: 429, data: null }
+      : await capture(() => client.get<PricesResponse>(`/items/${id}/prices`));
     const normalizedPrices = prices.data ? normalizePrices(prices.data) : [];
     results.push({
       itemId: id,
@@ -76,6 +81,7 @@ export async function probePrices(client: MeliClient, items: ItemDetail[]): Prom
         data: normalizedPrices,
       },
     });
+    if (client.encounteredRateLimit) break;
   }
   return results;
 }

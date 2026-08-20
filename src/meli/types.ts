@@ -29,6 +29,7 @@ export interface SearchResponse {
 export interface ItemDetail {
   id: string;
   title?: string;
+  price?: number;
   status?: string;
   condition?: string;
   category_id?: string;
@@ -39,6 +40,7 @@ export interface ItemDetail {
   shipping?: { free_shipping?: boolean };
   available_quantity?: number;
   sold_quantity?: number;
+  user_product_id?: string | null;
 }
 
 export interface UserDetail {
@@ -62,6 +64,22 @@ export interface SalePriceResponse {
   currency_id?: string;
   reference_date?: string;
   metadata?: unknown;
+}
+
+export interface UserProductDetail {
+  id: string;
+  name?: string;
+  family_name?: string | null;
+  family_id?: number | string | null;
+  user_id?: number | string;
+  domain_id?: string;
+  attributes?: unknown[];
+}
+
+export interface UserProductItemsSearchResponse {
+  seller_id?: number | string;
+  results?: string[];
+  paging?: { total?: number; limit?: number; offset?: number };
 }
 
 export interface PricesResponse {

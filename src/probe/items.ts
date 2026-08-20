@@ -19,9 +19,10 @@ export interface MultigetProbeResult {
   perItemCodes: number[];
 }
 
-function sanitizeItemDetail(item: ItemDetail): ItemDetail {
+export function sanitizeItemDetail(item: ItemDetail): ItemDetail {
   const output: ItemDetail = { id: item.id };
   if (item.title !== undefined) output.title = item.title;
+  if (item.price !== undefined) output.price = item.price;
   if (item.status !== undefined) output.status = item.status;
   if (item.condition !== undefined) output.condition = item.condition;
   if (item.category_id !== undefined) output.category_id = item.category_id;
@@ -32,6 +33,7 @@ function sanitizeItemDetail(item: ItemDetail): ItemDetail {
   if (item.shipping?.free_shipping !== undefined) output.shipping = { free_shipping: item.shipping.free_shipping };
   if (item.available_quantity !== undefined) output.available_quantity = item.available_quantity;
   if (item.sold_quantity !== undefined) output.sold_quantity = item.sold_quantity;
+  if (item.user_product_id !== undefined) output.user_product_id = item.user_product_id;
   return output;
 }
 

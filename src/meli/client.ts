@@ -39,6 +39,8 @@ export class MeliApiError extends Error {
 
 export class MeliClient {
   readonly observedHeaders: Array<Record<string, string>> = [];
+  requestCount = 0;
+  encounteredRateLimit = false;
   private readonly accessToken: string | undefined;
   private readonly timeoutMs: number;
   private readonly fetchImpl: typeof fetch;
@@ -70,7 +72,9 @@ export class MeliClient {
         headers.set("Accept", "application/json");
         headers.set("User-Agent", "AutoAchado-API-Probe/0A-LIVE");
         if (this.accessToken) headers.set("Authorization", `Bearer ${this.accessToken}`);
+        this.requestCount += 1;
         const response = await this.fetchImpl(url, { ...init, headers, signal: controller.signal });
+        if (response.status === 429) this.encounteredRateLimit = true;
         const durationMs = Math.round(performance.now() - started);
         const selectedHeaders = Object.fromEntries(
           OBSERVED_HEADERS.flatMap((name) => {

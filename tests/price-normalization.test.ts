@@ -9,6 +9,7 @@ describe("normalização de preços", () => {
       currency_id: "BRL",
       reference_date: null,
       metadata_shape: ["promotion"],
+      promotion_type: null,
     });
   });
 

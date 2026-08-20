@@ -11,6 +11,8 @@ const ALLOWED_PATHS = [
   /^\/items\/MLB\d+(?:\/sale_price|\/prices)?$/,
   /^\/items$/,
   /^\/highlights\/MLB\/category\/MLB\d+$/,
+  /^\/user-products\/MLBU\d+$/,
+  /^\/users\/\d+\/items\/search$/,
 ];
 
 export function assertOfficialApiUrl(pathOrUrl: string): URL {
@@ -34,4 +36,9 @@ export function assertSellerId(value: number | string): string {
   const normalized = String(value);
   if (!/^\d+$/.test(normalized)) throw new Error("ID de seller inválido");
   return normalized;
+}
+
+export function assertUserProductId(value: string): string {
+  if (!/^MLBU\d+$/.test(value)) throw new Error("ID de User Product inválido");
+  return value;
 }

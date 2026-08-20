@@ -61,6 +61,8 @@ Nenhum deploy é executado automaticamente por este BUILD.
 
 O live probe só é iniciado pelo botão `Executar 0A-LIVE`, após OAuth válido. Ele não roda em testes, build ou CI.
 
+O probe alternativo `0A-LIVE-B` é iniciado separadamente pelo botão `Executar 0A-LIVE-B`. Ele não usa `/sites/MLB/search`: testa a cadeia oficial `categoria → highlights → User Product → busca de itens do seller por user_product_id → item → sale_price → seller`.
+
 Na Vercel, o relatório é mantido apenas na resposta e oferecido para download. O filesystem serverless não é considerado persistente. O arquivo `reports/0A-LIVE-report.md` só deve ser adicionado após uma execução real e sanitizada.
 
 ## Endpoints oficiais em escopo
@@ -76,5 +78,14 @@ Na Vercel, o relatório é mantido apenas na resposta e oferecido para download.
 - `GET /items/{ITEM_ID}/prices`
 - `GET /users/{SELLER_ID}`
 - `GET /highlights/MLB/category/{CATEGORY_ID}`
+- `GET /user-products/{USER_PRODUCT_ID}`
+- `GET /users/{SELLER_ID}/items/search?user_product_id={USER_PRODUCT_ID}`
+
+Referências oficiais validadas para o 0A-LIVE-B:
+
+- [Mais vendidos no Mercado Livre](https://developers.mercadolibre.com.mx/en_us/products-analitics-benchmarking/best-sellers-in-mercado-libre)
+- [User Products e preço por variação](https://developers.mercadolibre.com.ar/en_us/products-sync-listings/price-per-variation)
+- [API de preços](https://developers.mercadolivre.com.br/devcenter/api-de-precos)
+- [Reputação de vendedores](https://developers.mercadolibre.com.ar/es_ar/reputacion-de-vendedores)
 
 Respostas restritas são registradas como evidência; não há tentativa de contorno.

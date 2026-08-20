@@ -29,6 +29,7 @@ export async function probeSellers(client: MeliClient, items: ItemDetail[]): Pro
     } catch (error) {
       rows.push({ seller_id: sellerId, http_status: error instanceof MeliApiError ? error.status : 0 });
     }
+    if (client.encounteredRateLimit) break;
   }
   return rows;
 }

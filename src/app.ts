@@ -15,8 +15,9 @@ import {
   type TokenSession,
 } from "./oauth/session.js";
 import { runProbe } from "./probe/runner.js";
+import { runAlternativeDiscoveryProbe } from "./probe/alternative.js";
 import { redactText } from "./report/redaction.js";
-import { errorPage, homePage, probePage } from "./ui/pages.js";
+import { alternativeProbePage, errorPage, homePage, probePage } from "./ui/pages.js";
 
 function errorMessage(error: unknown): string {
   return redactText(error instanceof Error ? error.message : "Falha inesperada");
@@ -108,6 +109,22 @@ export async function handleRequest(request: IncomingMessage, response: ServerRe
       sendHtml(response, 200, probePage(result, markdown));
     } catch (error) {
       sendHtml(response, 500, errorPage("Probe não concluído", errorMessage(error)));
+    }
+    return;
+  }
+
+  if (method === "POST" && url.pathname === "/probe/alternative") {
+    try {
+      const config = loadConfig();
+      const session = readTokenSession(request.headers.cookie, config.sessionSecret);
+      if (!session) {
+        sendHtml(response, 401, errorPage("Sessão expirada", "Conecte novamente ao Mercado Livre."));
+        return;
+      }
+      const { result, markdown } = await runAlternativeDiscoveryProbe(session.accessToken, session.userId);
+      sendHtml(response, 200, alternativeProbePage(result, markdown));
+    } catch (error) {
+      sendHtml(response, 500, errorPage("Probe 0A-LIVE-B não concluído", errorMessage(error)));
     }
     return;
   }
