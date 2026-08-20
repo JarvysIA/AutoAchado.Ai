@@ -11,8 +11,14 @@ describe("redaction", () => {
   });
 
   it("remove chaves sensíveis de objetos", () => {
-    expect(sanitizeForReport({ access_token: "secret", nested: { client_secret: "secret2", ok: 1 } })).toEqual({
+    expect(sanitizeForReport({ access_token: "secret", apikey: "secret3", nested: { client_secret: "secret2", ok: 1 } })).toEqual({
       nested: { ok: 1 },
     });
+  });
+
+  it("remove Supabase Secret Key e URL de banco", () => {
+    const output = redactText("SUPABASE_SECRET_KEY=sb_secret_fake_canary postgresql://fake_user:fake_pass@host/db");
+    expect(output).not.toContain("sb_secret_fake_canary");
+    expect(output).not.toContain("fake_user:fake_pass");
   });
 });

@@ -31,7 +31,21 @@ Quatro RPCs públicas formam a única interface do backend: `initialize_meli_oau
 
 O claim cria um lease exclusivo de dois minutos. Um segundo claim recebe `LOCK_BUSY` sem credencial. Complete e fail exigem o mesmo `lease_id` e `token_version`; respostas antigas não podem substituir uma geração nova. Lease expirado durante `REFRESHING` vira `REFRESH_OUTCOME_UNKNOWN` e exige reautorização, pois não é seguro presumir que o token anterior ainda possa ser usado.
 
-O 0B2A não altera callback, PKCE, cookies, probes ou Vercel, não adiciona cliente Supabase à aplicação e não executa OAuth live. Testes usam valores sintéticos gerados dentro de transação e fazem rollback de metadata e Vault. Nenhuma credencial real é criada. O próximo passo separado é o 0B2B, com adapter Supabase estritamente server-side e provider HTTP falso antes de qualquer gate live.
+O 0B2A não altera callback, PKCE, cookies, probes ou Vercel e não executa OAuth live. Testes usam valores sintéticos gerados dentro de transação e fazem rollback de metadata e Vault. Nenhuma credencial real é criada.
+
+## Server-side OAuth rotation service 0B2B
+
+O cliente oficial `@supabase/supabase-js` existe somente sob `src/server`. Sua configuração é lazy, desativa persistência de sessão, auto-refresh e detecção de sessão em URL. A aplicação e os probes 0A continuam inicializando sem as novas variáveis; elas só são validadas quando o factory interno do serviço de rotação for chamado.
+
+O adapter expõe apenas os quatro contratos específicos do 0B2A e valida em runtime cada row devolvida. Um outcome diferente de `CLAIMED` acompanhado de refresh token é rejeitado como `CONTROL_PLANE_RESPONSE_INVALID`. Nenhum erro copia row, payload ou mensagem remota para logs.
+
+O provider Mercado Livre faz um único `POST` form-urlencoded ao endpoint oficial de token, com timeout de dez segundos e sem o retry genérico usado pelos probes. `invalid_grant` exige reautorização; `invalid_client` desabilita por erro de configuração; timeout, reset, 429, 5xx e payload de sucesso inválido fecham como outcome desconhecido porque não há garantia de que o refresh token one-time-use permaneça reutilizável.
+
+O serviço executa `claim → refresh → complete`. O access token só é devolvido em memória depois de `complete_meli_refresh` confirmar a nova versão no Vault. Falha ou resultado ambíguo do complete nunca libera o access token; uma tentativa best-effort de `fail_meli_refresh(OUTCOME_UNKNOWN)` é protegida pelo lease e CAS, portanto não altera uma rotação que já tenha sido confirmada. Logs usam allowlist de metadata e a sanitização cobre tokens, Authorization/Bearer, chaves `sb_secret_`, `apikey` e URLs PostgreSQL.
+
+O 0B2B não cria endpoint público, não conecta o callback, não persiste access token, não armazena refresh token fora do Vault, não cria migration e não executa OAuth live. A integração local via Data API não faz parte do gate automático porque o perfil `pnpm db:start` inicia deliberadamente apenas PostgreSQL/Vault e exclui PostgREST; o adapter é validado com as assinaturas SQL exatas e fakes de transporte, enquanto as RPCs reais e o locking continuam cobertos pelo pgTAP do 0B2A.
+
+Antes do 0B2C, configurar diretamente na Vercel, sem compartilhar valores em chat: `SUPABASE_URL` (Project URL), `SUPABASE_SECRET_KEY` (Secret Key moderna marcada Sensitive) e `MELI_EXPECTED_USER_ID`. Não criar `MELI_REFRESH_TOKEN`, `REFRESH_TOKEN`, `MELI_ACCESS_TOKEN` ou `SUPABASE_SERVICE_ROLE_KEY`. O próximo passo separado é o 0B2C, que persistirá a autorização humana inicial no Vault.
 
 ## Idempotência
 
