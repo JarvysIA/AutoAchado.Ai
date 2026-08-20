@@ -2,7 +2,7 @@
 
 Ferramenta técnica descartável para validar, exclusivamente por APIs oficiais, a viabilidade de consultar ofertas automotivas públicas no Mercado Livre Brasil.
 
-Este repositório não contém o produto final. Não há banco de dados, Supabase, afiliados, WhatsApp, scraping ou histórico persistente.
+Este repositório não contém o produto final. O BUILD 0B1 inclui somente uma fundação local de persistência PostgreSQL/Supabase para desenvolvimento; não há projeto Supabase remoto, scheduler, afiliados, WhatsApp ou scraping.
 
 O 0A-LIVE-D testa a cadeia oficial `CATEGORY → HIGHLIGHTS(type=PRODUCT) → /products/{id} → /products/{id}/items → ITEM → sale_price → seller` pela rota `POST /probe/catalog-products`. A execução live requer OAuth na aplicação implantada e não roda automaticamente em CI.
 
@@ -37,6 +37,19 @@ pnpm typecheck
 pnpm test
 pnpm dev
 ```
+
+## Persistência local 0B1
+
+Com o Docker Desktop ativo, a migration e os testes de banco podem ser executados sem credenciais remotas:
+
+```powershell
+pnpm db:start
+pnpm db:reset
+pnpm test:db
+pnpm db:stop
+```
+
+O modelo, as decisões de segurança e a estratégia de idempotência estão documentados em [`docs/persistence-foundation.md`](docs/persistence-foundation.md). A aplicação do probe ainda não inicializa cliente de banco.
 
 A Redirect URI oficial cadastrada aponta para a Vercel. Portanto, o servidor local serve para testes unitários e inspeção da página; o OAuth real não deve ser simulado em localhost.
 
