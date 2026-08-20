@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { reportContainsSecret, sanitizeForReport } from "../src/report/redaction";
+import { reportContainsSecret, sanitizeForReport } from "../src/report/redaction.js";
 
 describe("segurança do relatório", () => {
   it("não persiste tokens depois da sanitização", () => {

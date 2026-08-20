@@ -1,5 +1,5 @@
-import type { AppConfig } from "../config";
-import { MELI_API_ORIGIN, MELI_AUTHORIZATION_ORIGIN } from "../meli/endpoints";
+import type { AppConfig } from "../config.js";
+import { MELI_API_ORIGIN, MELI_AUTHORIZATION_ORIGIN } from "../meli/endpoints.js";
 
 export interface TokenResponse {
   access_token: string;

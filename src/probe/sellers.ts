@@ -1,6 +1,6 @@
-import { MeliClient, MeliApiError } from "../meli/client";
-import { assertSellerId } from "../meli/endpoints";
-import type { ItemDetail, UserDetail } from "../meli/types";
+import { MeliClient, MeliApiError } from "../meli/client.js";
+import { assertSellerId } from "../meli/endpoints.js";
+import type { ItemDetail, UserDetail } from "../meli/types.js";
 
 export interface SellerProbeRow {
   seller_id: number;

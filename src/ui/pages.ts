@@ -1,4 +1,4 @@
-import type { ProbeResult } from "../probe/runner";
+import type { ProbeResult } from "../probe/runner.js";
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!);

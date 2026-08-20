@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertOfficialApiUrl } from "../src/meli/endpoints";
+import { assertOfficialApiUrl } from "../src/meli/endpoints.js";
 
 describe("allowlist oficial", () => {
   it("aceita endpoint oficial permitido", () => {

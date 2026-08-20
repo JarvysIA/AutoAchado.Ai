@@ -1,7 +1,7 @@
-import { MeliClient, MeliApiError } from "../meli/client";
-import { assertMlbId } from "../meli/endpoints";
-import type { ItemDetail, PricesResponse, SalePriceResponse } from "../meli/types";
-import { Availability, classifyAvailability } from "../report/availability";
+import { MeliClient, MeliApiError } from "../meli/client.js";
+import { assertMlbId } from "../meli/endpoints.js";
+import type { ItemDetail, PricesResponse, SalePriceResponse } from "../meli/types.js";
+import { Availability, classifyAvailability } from "../report/availability.js";
 
 export interface NormalizedSalePrice {
   amount: number | null;

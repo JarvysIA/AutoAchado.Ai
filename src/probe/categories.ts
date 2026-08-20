@@ -1,6 +1,6 @@
-import { MeliClient } from "../meli/client";
-import { assertMlbId } from "../meli/endpoints";
-import type { MeliCategory, MeliCategorySummary } from "../meli/types";
+import { MeliClient } from "../meli/client.js";
+import { assertMlbId } from "../meli/endpoints.js";
+import type { MeliCategory, MeliCategorySummary } from "../meli/types.js";
 
 export interface CategoriesProbeResult {
   status: "PASS" | "PARTIAL" | "FAIL";

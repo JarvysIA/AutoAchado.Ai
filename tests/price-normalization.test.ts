@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizePrices, normalizeSalePrice } from "../src/probe/prices";
+import { normalizePrices, normalizeSalePrice } from "../src/probe/prices.js";
 
 describe("normalização de preços", () => {
   it("normaliza sale_price sem inventar campos", () => {

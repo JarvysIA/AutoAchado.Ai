@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { MeliApiError, MeliClient } from "../src/meli/client";
-import { retryDecision } from "../src/meli/resilience";
+import { MeliApiError, MeliClient } from "../src/meli/client.js";
+import { retryDecision } from "../src/meli/resilience.js";
 
 describe("retry e backoff", () => {
   it("usa Retry-After e não repete 400/401/403/404", () => {

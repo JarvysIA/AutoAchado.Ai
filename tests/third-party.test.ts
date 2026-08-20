@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isThirdPartyItem } from "../src/probe/items";
+import { isThirdPartyItem } from "../src/probe/items.js";
 
 describe("item de terceiro", () => {
   it("só confirma terceiro quando seller_id é conhecido e diferente", () => {

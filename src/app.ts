@@ -1,11 +1,11 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { loadConfig } from "./config";
-import { sendHtml, redirect } from "./http/responses";
-import { requestUrl } from "./http/router";
-import { MeliClient } from "./meli/client";
-import type { UserDetail } from "./meli/types";
-import { buildAuthorizationUrl, exchangeAuthorizationCode } from "./oauth/client";
-import { createCodeChallenge, generateCodeVerifier, generateState, isStateFresh, validateState } from "./oauth/pkce";
+import { loadConfig } from "./config.js";
+import { sendHtml, redirect } from "./http/responses.js";
+import { requestUrl } from "./http/router.js";
+import { MeliClient } from "./meli/client.js";
+import type { UserDetail } from "./meli/types.js";
+import { buildAuthorizationUrl, exchangeAuthorizationCode } from "./oauth/client.js";
+import { createCodeChallenge, generateCodeVerifier, generateState, isStateFresh, validateState } from "./oauth/pkce.js";
 import {
   clearOAuthCookie,
   createOAuthCookie,
@@ -13,10 +13,10 @@ import {
   readOAuthTransaction,
   readTokenSession,
   type TokenSession,
-} from "./oauth/session";
-import { runProbe } from "./probe/runner";
-import { redactText } from "./report/redaction";
-import { errorPage, homePage, probePage } from "./ui/pages";
+} from "./oauth/session.js";
+import { runProbe } from "./probe/runner.js";
+import { redactText } from "./report/redaction.js";
+import { errorPage, homePage, probePage } from "./ui/pages.js";
 
 function errorMessage(error: unknown): string {
   return redactText(error instanceof Error ? error.message : "Falha inesperada");

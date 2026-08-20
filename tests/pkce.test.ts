@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createCodeChallenge, generateCodeVerifier } from "../src/oauth/pkce";
+import { createCodeChallenge, generateCodeVerifier } from "../src/oauth/pkce.js";
 
 describe("PKCE", () => {
   it("gera code_verifier seguro no intervalo aceito pelo PKCE", () => {

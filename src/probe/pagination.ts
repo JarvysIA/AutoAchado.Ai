@@ -1,6 +1,6 @@
-import { MeliClient, MeliApiError } from "../meli/client";
-import { assertMlbId } from "../meli/endpoints";
-import type { MeliCategorySummary, SearchResponse } from "../meli/types";
+import { MeliClient, MeliApiError } from "../meli/client.js";
+import { assertMlbId } from "../meli/endpoints.js";
+import type { MeliCategorySummary, SearchResponse } from "../meli/types.js";
 
 export interface PaginationPage {
   requestedOffset: number;

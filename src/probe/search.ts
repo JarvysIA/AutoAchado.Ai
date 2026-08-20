@@ -1,6 +1,6 @@
-import { MeliClient, MeliApiError } from "../meli/client";
-import { assertMlbId } from "../meli/endpoints";
-import type { MeliCategorySummary, SearchItem, SearchResponse } from "../meli/types";
+import { MeliClient, MeliApiError } from "../meli/client.js";
+import { assertMlbId } from "../meli/endpoints.js";
+import type { MeliCategorySummary, SearchItem, SearchResponse } from "../meli/types.js";
 
 export interface SanitizedSearchItem {
   item_id: string;

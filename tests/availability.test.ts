@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Availability, classifyAvailability } from "../src/report/availability";
+import { Availability, classifyAvailability } from "../src/report/availability.js";
 
 describe("availability", () => {
   it.each([

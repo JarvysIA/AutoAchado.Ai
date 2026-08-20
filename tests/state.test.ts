@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generateState, isStateFresh, validateState } from "../src/oauth/pkce";
+import { generateState, isStateFresh, validateState } from "../src/oauth/pkce.js";
 
 describe("state OAuth", () => {
   it("valida somente state idêntico", () => {

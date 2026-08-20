@@ -1,15 +1,15 @@
-import { DEFAULT_CLIENT_ID, DEFAULT_REDIRECT_URI } from "../config";
-import { MeliClient, MeliApiError } from "../meli/client";
-import type { UserDetail } from "../meli/types";
-import { reportContainsSecret, sanitizeForReport } from "../report/redaction";
-import { renderReport } from "../report/renderer";
-import { probeCategories, type CategoriesProbeResult } from "./categories";
-import { probeHighlights, type HighlightCategoryResult } from "./highlights";
-import { probeItems, probeMultiget, type ItemProbeResult, type MultigetProbeResult } from "./items";
-import { probePagination, type PaginationPage } from "./pagination";
-import { probePrices, type PerItemPriceProbe } from "./prices";
-import { probeSearch, type SearchProbeResult } from "./search";
-import { probeSellers, type SellerProbeRow } from "./sellers";
+import { DEFAULT_CLIENT_ID, DEFAULT_REDIRECT_URI } from "../config.js";
+import { MeliClient, MeliApiError } from "../meli/client.js";
+import type { UserDetail } from "../meli/types.js";
+import { reportContainsSecret, sanitizeForReport } from "../report/redaction.js";
+import { renderReport } from "../report/renderer.js";
+import { probeCategories, type CategoriesProbeResult } from "./categories.js";
+import { probeHighlights, type HighlightCategoryResult } from "./highlights.js";
+import { probeItems, probeMultiget, type ItemProbeResult, type MultigetProbeResult } from "./items.js";
+import { probePagination, type PaginationPage } from "./pagination.js";
+import { probePrices, type PerItemPriceProbe } from "./prices.js";
+import { probeSearch, type SearchProbeResult } from "./search.js";
+import { probeSellers, type SellerProbeRow } from "./sellers.js";
 
 export interface ProbeResult {
   generatedAt: string;

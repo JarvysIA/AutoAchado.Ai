@@ -1,5 +1,5 @@
-import { assertOfficialApiUrl } from "./endpoints";
-import { retryDecision, sleep } from "./resilience";
+import { assertOfficialApiUrl } from "./endpoints.js";
+import { retryDecision, sleep } from "./resilience.js";
 
 export interface ApiResponse<T> {
   status: number;

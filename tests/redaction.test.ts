@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { redactText, sanitizeForReport } from "../src/report/redaction";
+import { redactText, sanitizeForReport } from "../src/report/redaction.js";
 
 describe("redaction", () => {
   it("remove Bearer e formatos conhecidos de token", () => {

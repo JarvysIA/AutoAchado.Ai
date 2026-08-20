@@ -1,4 +1,4 @@
-import type { ProbeResult } from "../probe/runner";
+import type { ProbeResult } from "../probe/runner.js";
 
 function passPartialFail(success: boolean, partial: boolean): "PASS" | "PARTIAL" | "FAIL" {
   return success ? "PASS" : partial ? "PARTIAL" : "FAIL";

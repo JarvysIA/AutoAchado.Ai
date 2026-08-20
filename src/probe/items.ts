@@ -1,7 +1,7 @@
-import { MeliClient, MeliApiError } from "../meli/client";
-import { assertMlbId } from "../meli/endpoints";
-import type { ItemDetail } from "../meli/types";
-import type { SanitizedSearchItem } from "./search";
+import { MeliClient, MeliApiError } from "../meli/client.js";
+import { assertMlbId } from "../meli/endpoints.js";
+import type { ItemDetail } from "../meli/types.js";
+import type { SanitizedSearchItem } from "./search.js";
 
 export interface ItemProbeResult {
   status: "PASS" | "PARTIAL" | "FAIL";

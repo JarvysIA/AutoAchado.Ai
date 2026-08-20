@@ -1,4 +1,4 @@
-import { clearCookie, parseCookies, seal, secureCookie, unseal } from "../http/cookies";
+import { clearCookie, parseCookies, seal, secureCookie, unseal } from "../http/cookies.js";
 
 export const OAUTH_COOKIE = "__Host-autoachado_oauth";
 export const TOKEN_COOKIE = "__Host-autoachado_session";
