@@ -63,6 +63,8 @@ O live probe só é iniciado pelo botão `Executar 0A-LIVE`, após OAuth válido
 
 O probe alternativo `0A-LIVE-B` é iniciado separadamente pelo botão `Executar 0A-LIVE-B`. Ele não usa `/sites/MLB/search`: testa a cadeia oficial `categoria → highlights → User Product → busca de itens do seller por user_product_id → item → sale_price → seller`.
 
+O probe `0A-LIVE-C` é iniciado pelo botão `Executar 0A-LIVE-C`. Ele usa exclusivamente entradas `type=ITEM` devolvidas diretamente por Highlights e mantém `PRODUCT` e `USER_PRODUCT` apenas como observações separadas.
+
 Na Vercel, o relatório é mantido apenas na resposta e oferecido para download. O filesystem serverless não é considerado persistente. O arquivo `reports/0A-LIVE-report.md` só deve ser adicionado após uma execução real e sanitizada.
 
 ## Endpoints oficiais em escopo
@@ -87,5 +89,9 @@ Referências oficiais validadas para o 0A-LIVE-B:
 - [User Products e preço por variação](https://developers.mercadolibre.com.ar/en_us/products-sync-listings/price-per-variation)
 - [API de preços](https://developers.mercadolivre.com.br/devcenter/api-de-precos)
 - [Reputação de vendedores](https://developers.mercadolibre.com.ar/es_ar/reputacion-de-vendedores)
+
+Referência oficial específica para o 0A-LIVE-C:
+
+- [Highlights: ITEM, PRODUCT e USER_PRODUCT](https://developers.mercadolivre.com.br/pt_br/gerenciamento-perguntas-respostas/mais-vendidos-no-mercado-livre)
 
 Respostas restritas são registradas como evidência; não há tentativa de contorno.

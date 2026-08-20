@@ -1257,6 +1257,396 @@ async function runAlternativeDiscoveryProbe(accessToken, authenticatedUserId) {
   return { result: safe, markdown };
 }
 
+// src/report/direct-item-renderer.ts
+function json3(value) {
+  return JSON.stringify(value, null, 2);
+}
+function renderDirectItemReport(result) {
+  return `# 0A-LIVE-C — Direct ITEM Discovery
+
+## Status formal
+
+${result.formalStatus}
+
+## Ambiente
+
+- data/hora: ${result.generatedAt}
+- runtime: ${process.env.VERCEL ? "Vercel" : "Node.js local"}
+- Client ID: ${DEFAULT_CLIENT_ID}
+- Redirect URI: ${DEFAULT_REDIRECT_URI}
+- requests aproximadas: ${result.requestCount}
+
+## OAuth
+
+${result.oauth}
+
+- authenticated_user_id: ${result.authenticatedUserId}
+
+## Categorias testadas
+
+${json3(result.highlightAttempts.map((attempt) => ({
+    rootId: attempt.rootId,
+    rootName: attempt.rootName,
+    categoryId: attempt.categoryId,
+    categoryName: attempt.categoryName,
+    httpStatus: attempt.httpStatus
+  })))}
+
+## Highlights
+
+- ITEM: ${result.highlightTypeCounts.ITEM}
+- PRODUCT: ${result.highlightTypeCounts.PRODUCT}
+- USER_PRODUCT: ${result.highlightTypeCounts.USER_PRODUCT}
+- outros: ${result.highlightTypeCounts.OTHER}
+- tentativas: ${json3(result.highlightAttempts)}
+
+## Direct ITEM candidates
+
+- candidatos únicos: ${result.candidates.length}
+- dados: ${json3(result.candidates)}
+
+## Item detail
+
+- PASS_ITEM_DETAIL: ${result.repeatability.itemDetailsPass}/${result.itemDetails.length}
+- dados: ${json3(result.itemDetails)}
+
+## Third-party confirmation
+
+- user autenticado: ${result.authenticatedUserId}
+- itens de terceiros: ${result.repeatability.thirdPartyItems}
+- sellers distintos: ${new Set(
+    result.itemDetails.flatMap((row) => row.thirdParty && row.data?.seller_id ? [row.data.seller_id] : [])
+  ).size}
+
+## sale_price
+
+- CURRENT_PRICE_PASS: ${result.repeatability.currentPrices}/${result.prices.length}
+- regular_amount disponível: ${result.prices.filter((row) => typeof row.salePrice.data?.regular_amount === "number").length}/${result.prices.length}
+- dados: ${json3(result.prices.map((row) => ({ itemId: row.itemId, salePrice: row.salePrice })))}
+
+## prices
+
+Recurso adicional e não bloqueante.
+
+${json3(result.prices.map((row) => ({ itemId: row.itemId, prices: row.prices })))}
+
+## Seller reputation
+
+- sellers com indicador público: ${result.repeatability.sellersWithReputation}/${result.sellers.length}
+- dados: ${json3(result.sellers)}
+
+## Repetibilidade
+
+${json3(result.repeatability)}
+
+## PRODUCT observations
+
+${json3(result.productObservations)}
+
+## Compliance
+
+- somente OAuth e APIs oficiais documentadas
+- PRODUCT e USER_PRODUCT não foram tratados como ITEM
+- sem scraping, browser automation, endpoint privado ou bypass de 403
+- expansão interrompida após 429: ${result.stoppedOnRateLimit}
+- headers de rate limit: ${json3(result.rateLimitHeaders)}
+
+## Limitações
+
+${result.errors.length > 0 ? result.errors.map((error) => `- ${error}`).join("\n") : "Nenhuma limitação adicional registrada nesta execução."}
+
+## Conclusão técnica
+
+${result.formalStatus}
+
+Este status se limita à ramificação Direct ITEM Discovery e não altera automaticamente a decisão global do AutoAchado.AI.
+
+## Próximo passo recomendado
+
+Usar a evidência desta execução para decidir se a ramificação direta é repetível ou se a observação PRODUCT deve ser estudada separadamente em um eventual 0A-LIVE-D.
+`;
+}
+
+// src/probe/direct-items.ts
+var MAX_LEAVES_PER_FAMILY = 3;
+var MAX_CATEGORY_NODES_PER_FAMILY = 14;
+var MAX_DIRECT_ITEM_CANDIDATES = 20;
+var MAX_ITEM_DETAILS2 = 10;
+var MAX_SELLERS = 5;
+var EXTRA_PREFERENCES = {
+  MLB456111: ["oleo", "fluido", "aditivo", "lubrificante"],
+  MLB2238: ["pneus para carros", "passeio", "automotivo", "pneu"],
+  MLB22693: ["filtro", "freio", "suspensao", "motor"],
+  MLB188063: ["cera", "shampoo", "limpeza", "polimento"],
+  MLB1747: ["tapete", "capa", "iluminacao", "acessorio"]
+};
+function normalize3(value) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+function isValidDirectItemId(value) {
+  return /^MLB\d+$/.test(value);
+}
+function isDirectItemHighlight(row) {
+  return row.type === "ITEM" && isValidDirectItemId(row.id);
+}
+function deduplicateDirectItems(attempts) {
+  const byId = /* @__PURE__ */ new Map();
+  for (const attempt of attempts) {
+    for (const row of attempt.content) {
+      if (!isDirectItemHighlight(row)) continue;
+      const evidence = byId.get(row.id) ?? { categories: /* @__PURE__ */ new Set(), positions: /* @__PURE__ */ new Set() };
+      evidence.categories.add(attempt.categoryId);
+      if (row.position !== null) evidence.positions.add(row.position);
+      byId.set(row.id, evidence);
+    }
+  }
+  return [...byId].slice(0, MAX_DIRECT_ITEM_CANDIDATES).map(([itemId, evidence]) => ({ itemId, sourceCategoryIds: [...evidence.categories], positions: [...evidence.positions] }));
+}
+function isDirectThirdParty(sellerId2, authenticatedUserId) {
+  return typeof sellerId2 === "number" && sellerId2 !== authenticatedUserId;
+}
+function isItemDetailPass(row) {
+  return row.httpStatus === 200 && row.data !== null && isValidDirectItemId(row.data.id) && typeof row.data.seller_id === "number";
+}
+function isCurrentPricePass(row) {
+  return typeof row.salePrice.data?.amount === "number" && row.salePrice.data.amount > 0;
+}
+function hasDirectSellerReputation(row) {
+  return typeof row.levelId === "string" || typeof row.powerSellerStatus === "string" || typeof row.transactionsCompleted === "number" || row.ratings !== null;
+}
+function shouldTryNextLeaf(httpStatus) {
+  return httpStatus !== 200 && httpStatus !== 429;
+}
+function classifyDirectItemStatus(input) {
+  if (input.directItemCandidates < 3) return "BLOCKED_0A_LIVE_NO_DIRECT_ITEMS";
+  if (input.itemDetailsPass === 0) return "BLOCKED_0A_LIVE_DIRECT_ITEM_DETAIL";
+  if (input.thirdPartyItems > 0 && input.currentPrices === 0) return "BLOCKED_0A_LIVE_DIRECT_ITEM_PRICE";
+  if (input.highlights200Categories >= 2 && input.itemDetailsPass >= 3 && input.thirdPartyItems >= 3 && input.currentPrices >= 3 && input.sellersWithReputation >= 1) {
+    return "PASS_0A_LIVE_DIRECT_ITEM_DISCOVERY";
+  }
+  return "PARTIAL_0A_LIVE_DIRECT_ITEM_DISCOVERY";
+}
+function rankCategories(categories, rootId) {
+  const preferences = EXTRA_PREFERENCES[rootId] ?? [];
+  const score = (category) => {
+    const name = normalize3(category.name);
+    const positive = preferences.reduce(
+      (total, keyword, index) => total + (name.includes(keyword) ? (preferences.length - index) * 10 : 0),
+      0
+    );
+    const agriculturalPenalty = name.includes("agricola") ? 100 : 0;
+    return positive - agriculturalPenalty;
+  };
+  return [...categories].filter((category) => isRelevantCategoryName(category.name) && isValidDirectItemId(category.id)).sort((left, right) => score(right) - score(left) || left.name.localeCompare(right.name) || left.id.localeCompare(right.id));
+}
+async function discoverLeafCandidates(client, family) {
+  const queue = [{ id: family.id, name: family.name }];
+  const visited = /* @__PURE__ */ new Set();
+  const leaves = [];
+  while (queue.length > 0 && leaves.length < MAX_LEAVES_PER_FAMILY && visited.size < MAX_CATEGORY_NODES_PER_FAMILY && !client.encounteredRateLimit) {
+    const next = queue.shift();
+    if (!next || visited.has(next.id)) continue;
+    visited.add(next.id);
+    try {
+      const response = await client.get(`/categories/${assertMlbId(next.id, "category")}`);
+      const detail = response.data;
+      if (!detail) continue;
+      const children = detail.children_categories ?? [];
+      if (children.length === 0) {
+        if (isRelevantCategoryName(detail.name)) leaves.push({ id: detail.id, name: detail.name });
+      } else {
+        queue.push(...rankCategories(children, family.id));
+      }
+    } catch {
+    }
+  }
+  return leaves;
+}
+async function probeHighlightsWithFallback(client, family, leaves) {
+  const attempts = [];
+  for (const leaf of leaves.slice(0, MAX_LEAVES_PER_FAMILY)) {
+    try {
+      const response = await client.get(
+        `/highlights/MLB/category/${assertMlbId(leaf.id, "category")}`
+      );
+      attempts.push({
+        rootId: family.id,
+        rootName: family.name,
+        categoryId: leaf.id,
+        categoryName: leaf.name,
+        httpStatus: response.status,
+        content: (response.data?.content ?? []).slice(0, 20).flatMap(
+          (row) => typeof row.id === "string" && typeof row.type === "string" ? [{ id: row.id, type: row.type, position: typeof row.position === "number" ? row.position : null }] : []
+        )
+      });
+      break;
+    } catch (error) {
+      const status = error instanceof MeliApiError ? error.status : 0;
+      attempts.push({
+        rootId: family.id,
+        rootName: family.name,
+        categoryId: leaf.id,
+        categoryName: leaf.name,
+        httpStatus: status,
+        content: []
+      });
+      if (!shouldTryNextLeaf(status)) break;
+    }
+  }
+  return attempts;
+}
+function sanitizeDirectItem(item) {
+  const output = { id: item.id };
+  const keys = [
+    "title",
+    "seller_id",
+    "category_id",
+    "price",
+    "base_price",
+    "original_price",
+    "currency_id",
+    "condition",
+    "status",
+    "catalog_product_id",
+    "permalink",
+    "available_quantity",
+    "sold_quantity"
+  ];
+  for (const key of keys) {
+    if (item[key] !== void 0) Object.assign(output, { [key]: item[key] });
+  }
+  return output;
+}
+async function probeDirectItemDetails(client, candidates, authenticatedUserId) {
+  const output = [];
+  for (const candidate of candidates.slice(0, MAX_ITEM_DETAILS2)) {
+    try {
+      const response = await client.get(`/items/${assertMlbId(candidate.itemId, "item")}`);
+      const data = response.data ? sanitizeDirectItem(response.data) : null;
+      output.push({
+        itemId: candidate.itemId,
+        sourceCategoryIds: candidate.sourceCategoryIds,
+        httpStatus: response.status,
+        data,
+        thirdParty: isDirectThirdParty(data?.seller_id, authenticatedUserId)
+      });
+    } catch (error) {
+      output.push({
+        itemId: candidate.itemId,
+        sourceCategoryIds: candidate.sourceCategoryIds,
+        httpStatus: error instanceof MeliApiError ? error.status : 0,
+        data: null,
+        thirdParty: false
+      });
+    }
+    if (client.encounteredRateLimit) break;
+  }
+  return output;
+}
+async function probeDirectSellers(client, items) {
+  const sellerIds = [...new Set(items.flatMap((item) => item.thirdParty && item.data?.seller_id ? [item.data.seller_id] : []))].slice(
+    0,
+    MAX_SELLERS
+  );
+  const output = [];
+  for (const sellerId2 of sellerIds) {
+    try {
+      const response = await client.get(`/users/${assertSellerId(sellerId2)}`);
+      const data = response.data;
+      output.push({
+        sellerId: sellerId2,
+        httpStatus: response.status,
+        nickname: typeof data?.nickname === "string" ? data.nickname : null,
+        levelId: typeof data?.seller_reputation?.level_id === "string" ? data.seller_reputation.level_id : null,
+        powerSellerStatus: typeof data?.seller_reputation?.power_seller_status === "string" ? data.seller_reputation.power_seller_status : null,
+        transactionsCompleted: typeof data?.seller_reputation?.transactions?.completed === "number" ? data.seller_reputation.transactions.completed : null,
+        ratings: data?.seller_reputation?.transactions?.ratings ?? null,
+        siteStatus: typeof data?.status?.site_status === "string" ? data.status.site_status : null
+      });
+    } catch (error) {
+      output.push({
+        sellerId: sellerId2,
+        httpStatus: error instanceof MeliApiError ? error.status : 0,
+        nickname: null,
+        levelId: null,
+        powerSellerStatus: null,
+        transactionsCompleted: null,
+        ratings: null,
+        siteStatus: null
+      });
+    }
+    if (client.encounteredRateLimit) break;
+  }
+  return output;
+}
+function countHighlightTypes(attempts) {
+  const counts = { ITEM: 0, PRODUCT: 0, USER_PRODUCT: 0, OTHER: 0 };
+  for (const row of attempts.flatMap((attempt) => attempt.content)) {
+    if (row.type === "ITEM" || row.type === "PRODUCT" || row.type === "USER_PRODUCT") counts[row.type] += 1;
+    else counts.OTHER += 1;
+  }
+  return counts;
+}
+async function runDirectItemDiscoveryProbe(accessToken, authenticatedUserId) {
+  const client = new MeliClient({ accessToken, timeoutMs: 12e3 });
+  const highlightAttempts = [];
+  const errors = [];
+  for (const family of ALTERNATIVE_CATEGORY_FAMILIES) {
+    const leaves = await discoverLeafCandidates(client, family);
+    highlightAttempts.push(...await probeHighlightsWithFallback(client, family, leaves));
+    if (client.encounteredRateLimit) break;
+  }
+  await sleep(100);
+  const candidates = deduplicateDirectItems(highlightAttempts);
+  const itemDetails = await probeDirectItemDetails(client, candidates, authenticatedUserId);
+  await sleep(100);
+  const thirdPartyItems = itemDetails.filter((row) => isItemDetailPass(row) && row.thirdParty && row.data);
+  const priceInput = thirdPartyItems.flatMap((row) => row.data ? [row.data] : []);
+  const prices = client.encounteredRateLimit ? [] : await probePrices(client, priceInput);
+  await sleep(100);
+  const sellers = client.encounteredRateLimit ? [] : await probeDirectSellers(client, thirdPartyItems);
+  const counts = {
+    highlights200Categories: new Set(
+      highlightAttempts.filter((attempt) => attempt.httpStatus === 200).map((attempt) => attempt.categoryId)
+    ).size,
+    directItemCandidates: candidates.length,
+    itemDetailsPass: itemDetails.filter(isItemDetailPass).length,
+    thirdPartyItems: thirdPartyItems.length,
+    currentPrices: prices.filter(isCurrentPricePass).length,
+    sellersWithReputation: sellers.filter(hasDirectSellerReputation).length
+  };
+  if (client.encounteredRateLimit) errors.push("HTTP 429 observado; expansão da amostra interrompida.");
+  const highlightTypeCounts = countHighlightTypes(highlightAttempts);
+  const result = {
+    generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    formalStatus: classifyDirectItemStatus(counts),
+    oauth: "PASS",
+    authenticatedUserId,
+    highlightAttempts,
+    highlightTypeCounts,
+    candidates,
+    itemDetails,
+    prices,
+    sellers,
+    repeatability: counts,
+    productObservations: {
+      count: highlightTypeCounts.PRODUCT,
+      action: "OBSERVED_ONLY",
+      note: "PRODUCT é catálogo oficial e não foi tratado como ITEM. Uma eventual resolução oficial fica adiada para 0A-LIVE-D."
+    },
+    requestCount: client.requestCount,
+    rateLimitHeaders: client.observedHeaders.filter(
+      (headers) => Object.keys(headers).some((key) => key.includes("ratelimit") || key === "retry-after")
+    ),
+    stoppedOnRateLimit: client.encounteredRateLimit,
+    errors
+  };
+  const safe = sanitizeForReport(result);
+  const markdown = renderDirectItemReport(safe);
+  if (reportContainsSecret(markdown, [accessToken])) throw new Error("Relatório 0A-LIVE-C rejeitado pelo secret scan");
+  return { result: safe, markdown };
+}
+
 // src/ui/pages.ts
 function escapeHtml(value) {
   return value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
@@ -1265,7 +1655,7 @@ function layout(content) {
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AutoAchado API Probe</title><style>body{font-family:system-ui,sans-serif;max-width:760px;margin:48px auto;padding:0 20px;color:#17202a}h1{margin-bottom:4px}a,button{display:inline-block;background:#1769aa;color:#fff;border:0;border-radius:8px;padding:12px 16px;text-decoration:none;font-weight:650;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f7f9;padding:16px;border-radius:8px}section{margin:28px 0}.muted{color:#667}</style></head><body>${content}</body></html>`;
 }
 function homePage(connected, userLabel) {
-  return layout(`<h1>AutoAchado.AI</h1><p class="muted">API Feasibility Probe</p>${connected ? `<section><p>Mercado Livre conectado ✅</p><p>${escapeHtml(userLabel ?? "Usuário autenticado")}</p><form method="post" action="/probe"><button type="submit">Executar 0A-LIVE</button></form><form method="post" action="/probe/alternative"><button type="submit">Executar 0A-LIVE-B</button></form></section>` : `<section><a href="/auth/start">Conectar Mercado Livre</a></section>`}`);
+  return layout(`<h1>AutoAchado.AI</h1><p class="muted">API Feasibility Probe</p>${connected ? `<section><p>Mercado Livre conectado ✅</p><p>${escapeHtml(userLabel ?? "Usuário autenticado")}</p><form method="post" action="/probe"><button type="submit">Executar 0A-LIVE</button></form><form method="post" action="/probe/alternative"><button type="submit">Executar 0A-LIVE-B</button></form><form method="post" action="/probe/direct-items"><button type="submit">Executar 0A-LIVE-C</button></form></section>` : `<section><a href="/auth/start">Conectar Mercado Livre</a></section>`}`);
 }
 function icon(status) {
   return status === "PASS" || status === "AVAILABLE" ? "✅" : status === "FAIL" ? "❌" : "⚠️";
@@ -1280,6 +1670,10 @@ function probePage(result, markdown) {
 function alternativeProbePage(result, markdown) {
   const dataUrl = `data:text/markdown;charset=utf-8,${encodeURIComponent(markdown)}`;
   return layout(`<h1>AutoAchado.AI — resultado 0A-LIVE-B</h1><section><p><strong>${escapeHtml(result.formalStatus)}</strong></p><p>Categorias ${result.categories.length >= 5 ? "✅" : "⚠️"}</p><p>Highlights ${result.highlights.some((row) => row.type === "USER_PRODUCT") ? "✅" : "⚠️"}</p><p>MLBU → MLB ${result.userProducts.some((row) => row.itemIds.length > 0) ? "✅" : "⚠️"}</p><p>Terceiros ${result.repeatability.thirdPartyProducts >= 3 ? "✅" : "⚠️"}</p><p>Preço ${result.repeatability.currentPrices >= 3 ? "✅" : "⚠️"}</p><p>Reputação ${result.repeatability.sellersWithReputation > 0 ? "✅" : "⚠️"}</p></section><section><a download="0A-LIVE-B-report.md" href="${escapeHtml(dataUrl)}">Baixar relatório</a></section><details><summary>Ver relatório</summary><pre>${escapeHtml(markdown)}</pre></details>`);
+}
+function directItemProbePage(result, markdown) {
+  const dataUrl = `data:text/markdown;charset=utf-8,${encodeURIComponent(markdown)}`;
+  return layout(`<h1>AutoAchado.AI — resultado 0A-LIVE-C</h1><section><p><strong>${escapeHtml(result.formalStatus)}</strong></p><p>Highlights 200 ${result.repeatability.highlights200Categories >= 2 ? "✅" : "⚠️"}</p><p>ITEM direto ${result.repeatability.directItemCandidates >= 3 ? "✅" : "⚠️"}</p><p>Detalhes ${result.repeatability.itemDetailsPass >= 3 ? "✅" : "⚠️"}</p><p>Terceiros ${result.repeatability.thirdPartyItems >= 3 ? "✅" : "⚠️"}</p><p>Preço ${result.repeatability.currentPrices >= 3 ? "✅" : "⚠️"}</p><p>Reputação ${result.repeatability.sellersWithReputation > 0 ? "✅" : "⚠️"}</p></section><section><a download="0A-LIVE-C-report.md" href="${escapeHtml(dataUrl)}">Baixar relatório</a></section><details><summary>Ver relatório</summary><pre>${escapeHtml(markdown)}</pre></details>`);
 }
 function errorPage(title, message) {
   return layout(`<h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p><p><a href="/">Voltar</a></p>`);
@@ -1385,6 +1779,21 @@ async function handleRequest(request, response) {
       sendHtml(response, 200, alternativeProbePage(result, markdown));
     } catch (error) {
       sendHtml(response, 500, errorPage("Probe 0A-LIVE-B não concluído", errorMessage(error)));
+    }
+    return;
+  }
+  if (method === "POST" && url.pathname === "/probe/direct-items") {
+    try {
+      const config = loadConfig();
+      const session = readTokenSession(request.headers.cookie, config.sessionSecret);
+      if (!session) {
+        sendHtml(response, 401, errorPage("Sessão expirada", "Conecte novamente ao Mercado Livre."));
+        return;
+      }
+      const { result, markdown } = await runDirectItemDiscoveryProbe(session.accessToken, session.userId);
+      sendHtml(response, 200, directItemProbePage(result, markdown));
+    } catch (error) {
+      sendHtml(response, 500, errorPage("Probe 0A-LIVE-C não concluído", errorMessage(error)));
     }
     return;
   }

@@ -16,8 +16,9 @@ import {
 } from "./oauth/session.js";
 import { runProbe } from "./probe/runner.js";
 import { runAlternativeDiscoveryProbe } from "./probe/alternative.js";
+import { runDirectItemDiscoveryProbe } from "./probe/direct-items.js";
 import { redactText } from "./report/redaction.js";
-import { alternativeProbePage, errorPage, homePage, probePage } from "./ui/pages.js";
+import { alternativeProbePage, directItemProbePage, errorPage, homePage, probePage } from "./ui/pages.js";
 
 function errorMessage(error: unknown): string {
   return redactText(error instanceof Error ? error.message : "Falha inesperada");
@@ -125,6 +126,22 @@ export async function handleRequest(request: IncomingMessage, response: ServerRe
       sendHtml(response, 200, alternativeProbePage(result, markdown));
     } catch (error) {
       sendHtml(response, 500, errorPage("Probe 0A-LIVE-B não concluído", errorMessage(error)));
+    }
+    return;
+  }
+
+  if (method === "POST" && url.pathname === "/probe/direct-items") {
+    try {
+      const config = loadConfig();
+      const session = readTokenSession(request.headers.cookie, config.sessionSecret);
+      if (!session) {
+        sendHtml(response, 401, errorPage("Sessão expirada", "Conecte novamente ao Mercado Livre."));
+        return;
+      }
+      const { result, markdown } = await runDirectItemDiscoveryProbe(session.accessToken, session.userId);
+      sendHtml(response, 200, directItemProbePage(result, markdown));
+    } catch (error) {
+      sendHtml(response, 500, errorPage("Probe 0A-LIVE-C não concluído", errorMessage(error)));
     }
     return;
   }
