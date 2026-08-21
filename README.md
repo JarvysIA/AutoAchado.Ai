@@ -119,3 +119,13 @@ Referência oficial específica para o 0A-LIVE-C:
 - [Highlights: ITEM, PRODUCT e USER_PRODUCT](https://developers.mercadolivre.com.br/pt_br/gerenciamento-perguntas-respostas/mais-vendidos-no-mercado-livre)
 
 Respostas restritas são registradas como evidência; não há tentativa de contorno.
+
+## Taxonomia normalizada 0B3B1
+
+O módulo 0B3B1 prepara, sem persistência, a leitura server-side da taxonomia oficial do Mercado Livre Brasil. Ele suporta apenas `MLB`, valida exclusivamente os três endpoints oficiais de categorias, aceita Bearer opcional por injeção e aplica timeout, retry limitado, allowlist, limites de tamanho e validação de conteúdo.
+
+O dump é convertido em uma árvore imutável com integridade de IDs, relações pai/filho, paths, profundidade, ciclos e presença da raiz automotiva `MLB5672`. `X-Content-MD5` e `X-Content-Created` são apenas capturados como metadata neste estágio; a versão interna usa SHA-256 de uma representação canônica. A semântica do MD5 oficial será determinada somente no gate read-only `0B3B-LIVE`.
+
+Os testes são integralmente offline, usam apenas categorias sintéticas claramente identificadas e não precisam de credenciais, Supabase, Vercel ou internet. O 0B3B1 não cria rota pública, ruleset comercial, classificação, migration ou escrita no registry.
+
+Referências oficiais: [dump de categorias](https://developers.mercadolivre.com.br/pt_br/dump-de-categorias) e [categorias de veículos](https://developers.mercadolivre.com.br/pt_br/convivencia-me1-me2/categorias-e-atributos-veiculos).
