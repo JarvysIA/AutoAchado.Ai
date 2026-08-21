@@ -11,10 +11,61 @@ export type JsonObject = Readonly<Record<string, unknown>>;
 export type ScanStatus = 'PENDING' | 'RUNNING' | 'PARTIAL' | 'COMPLETED' | 'FAILED';
 export type CategoryPriority = 'A' | 'B' | 'C' | 'EXCLUDED';
 export type CategoryScope = 'ALLOWED' | 'REVIEW' | 'EXCLUDED' | 'UNKNOWN';
+export type CategoryDecisionSource = 'AUTO' | 'MANUAL';
 export type HighlightType = 'PRODUCT' | 'ITEM' | 'USER_PRODUCT';
+
+export interface MarketplaceRecord {
+  marketplaceKey: string;
+  name: string;
+  active: boolean;
+  configVersion: string;
+}
+
+export interface CommerceVerticalRecord {
+  verticalKey: string;
+  name: string;
+  description: string | null;
+  active: boolean;
+  configVersion: string;
+}
+
+export interface MarketplaceCategoryRecord {
+  marketplaceCategoryId: string;
+  marketplaceKey: string;
+  siteId: string;
+  externalCategoryId: string;
+  parentMarketplaceCategoryId: string | null;
+  name: string;
+  pathExternalIds: readonly string[];
+  pathNames: readonly string[];
+  isLeaf: boolean;
+  active: boolean;
+  sourceVersion: string | null;
+  firstSeenAt: IsoTimestamp;
+  lastSeenAt: IsoTimestamp;
+  sourceCheckedAt: IsoTimestamp;
+  configVersion: string;
+}
+
+export interface VerticalCategoryMappingRecord {
+  verticalKey: string;
+  marketplaceCategoryId: string;
+  scopeStatus: CategoryScope;
+  priorityTier: CategoryPriority;
+  familyKey: string | null;
+  commercialFamilyKeyDefault: string | null;
+  classificationRule: string | null;
+  classificationVersion: string;
+  manualOverride: boolean;
+  decisionSource: CategoryDecisionSource;
+  decisionReason: string | null;
+  decidedAt: IsoTimestamp | null;
+  active: boolean;
+}
 
 export interface AutomotiveCategoryRecord {
   categoryId: string;
+  marketplaceCategoryId: string | null;
   parentId: string | null;
   name: string;
   path: readonly string[];

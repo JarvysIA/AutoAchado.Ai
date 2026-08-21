@@ -50,8 +50,8 @@ select is(
         'public.opportunity_candidates'::regclass
       )
   ),
-  14,
-  'all fourteen historical and identity foreign keys exist'
+  15,
+  'all fifteen historical, identity and compatibility foreign keys exist'
 );
 
 select is(
