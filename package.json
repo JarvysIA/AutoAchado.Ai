@@ -22,7 +22,8 @@
     "db:start": "supabase start --exclude gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset --local",
-    "test:db": "supabase test db"
+    "test:db": "supabase test db",
+    "test:db:concurrency": "node scripts/test-oauth-initialize-concurrency.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

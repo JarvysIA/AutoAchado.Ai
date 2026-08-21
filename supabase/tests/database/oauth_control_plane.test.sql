@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(77);
+select plan(89);
 
 -- Structure and least-privilege boundary.
 select ok(to_regnamespace('private') is not null, 'private schema exists');
@@ -191,13 +191,25 @@ select ok(
   ),
   'migration adds no postgres-issued Vault function grant to service_role'
 );
+select ok(
+  pg_get_functiondef('public.initialize_meli_oauth_connection(bigint,text)'::regprocedure)
+    like '%pg_advisory_xact_lock%hashtextextended%autoachado:meli:%',
+  'initialize serializes the logical Mercado Livre identity before lookup'
+);
+select ok(
+  pg_get_functiondef('public.initialize_meli_oauth_connection(bigint,text)'::regprocedure)
+    like '%c.status = v_expected_status%'
+  and pg_get_functiondef('public.initialize_meli_oauth_connection(bigint,text)'::regprocedure)
+    like '%c.token_version = v_expected_version%',
+  'reauthorization update has explicit state and version CAS predicates'
+);
 
 -- Initialize and rotate a synthetic credential. Values are assembled at runtime
 -- and only boolean hashes are asserted, so pgTAP never prints the canary.
 create temporary table init_result on commit drop as
 select * from public.initialize_meli_oauth_connection(
   900000001,
-  pg_catalog.concat('TEST_', 'REFRESH_', 'TOKEN_', extensions.gen_random_uuid()::text)
+  pg_catalog.concat('TEST_', 'REFRESH_', 'TOKEN_INITIAL_', 'A')
 );
 
 select is((select outcome from init_result), 'INITIALIZED', 'initialize creates a connection');
@@ -228,21 +240,38 @@ select ok(
 );
 
 drop table init_result;
+create temporary table active_before on commit drop as
+select c.vault_secret_id, c.token_version, c.status, c.lease_id,
+       extensions.digest(s.decrypted_secret, 'sha256') as secret_hash
+from private.meli_oauth_connections c
+join vault.decrypted_secrets s on s.id = c.vault_secret_id
+where c.external_user_id = 900000001;
+
 create temporary table init_result on commit drop as
 select * from public.initialize_meli_oauth_connection(
   900000001,
   pg_catalog.concat('TEST_', 'REFRESH_', 'TOKEN_ROTATED_', 'A')
 );
-select is((select token_version from init_result), 2::bigint, 'second authorization increments token version');
+select is((select outcome from init_result), 'ALREADY_INITIALIZED', 'ACTIVE connection refuses silent replacement');
+select is((select token_version from init_result), 1::bigint, 'ACTIVE authorization does not increment token version');
 select ok(
   (
-    select extensions.digest(s.decrypted_secret, 'sha256') =
-           extensions.digest(pg_catalog.concat('TEST_', 'REFRESH_', 'TOKEN_ROTATED_', 'A'), 'sha256')
-    from private.meli_oauth_connections c
-    join vault.decrypted_secrets s on s.id = c.vault_secret_id
+    select c.vault_secret_id = b.vault_secret_id and c.token_version = b.token_version
+      and c.status = b.status and c.lease_id is not distinct from b.lease_id
+    from private.meli_oauth_connections c cross join active_before b
     where c.external_user_id = 900000001
   ),
-  'second authorization replaces the current Vault value'
+  'ACTIVE authorization preserves metadata and Vault reference'
+);
+select ok(
+  (
+    select extensions.digest(s.decrypted_secret, 'sha256') = b.secret_hash
+    from private.meli_oauth_connections c
+    join vault.decrypted_secrets s on s.id = c.vault_secret_id
+    cross join active_before b
+    where c.external_user_id = 900000001
+  ),
+  'ACTIVE authorization does not replace the current Vault value'
 );
 
 select ok(
@@ -250,9 +279,9 @@ select ok(
     select outcome = 'CLAIMED'
       and external_user_id = 900000001
       and lease_id is not null
-      and expected_version = 2
+      and expected_version = 1
       and extensions.digest(refresh_token, 'sha256') =
-          extensions.digest(pg_catalog.concat('TEST_', 'REFRESH_', 'TOKEN_ROTATED_', 'A'), 'sha256')
+          extensions.digest(pg_catalog.concat('TEST_', 'REFRESH_', 'TOKEN_INITIAL_', 'A'), 'sha256')
     from public.claim_meli_refresh(900000001)
   ),
   'claim returns one exclusive lease and only the associated synthetic credential'
@@ -263,6 +292,39 @@ select ok(
     from private.meli_oauth_connections where external_user_id = 900000001
   ),
   'claim persists REFRESHING lease metadata'
+);
+create temporary table refreshing_before on commit drop as
+select c.vault_secret_id, c.token_version, c.status, c.lease_id, c.lease_acquired_at, c.lease_expires_at,
+       extensions.digest(s.decrypted_secret, 'sha256') as secret_hash
+from private.meli_oauth_connections c
+join vault.decrypted_secrets s on s.id = c.vault_secret_id
+where c.external_user_id = 900000001;
+select is(
+  (select outcome from public.initialize_meli_oauth_connection(
+    900000001, pg_catalog.concat('TEST_', 'REFRESH_', 'TOKEN_DURING_REFRESH_', 'A')
+  )),
+  'LOCK_BUSY',
+  'authorization during REFRESHING reports LOCK_BUSY'
+);
+select ok(
+  (
+    select c.vault_secret_id = b.vault_secret_id and c.token_version = b.token_version
+      and c.status = b.status and c.lease_id = b.lease_id
+      and c.lease_acquired_at = b.lease_acquired_at and c.lease_expires_at = b.lease_expires_at
+    from private.meli_oauth_connections c cross join refreshing_before b
+    where c.external_user_id = 900000001
+  ),
+  'LOCK_BUSY preserves refresh lease and metadata'
+);
+select ok(
+  (
+    select extensions.digest(s.decrypted_secret, 'sha256') = b.secret_hash
+    from private.meli_oauth_connections c
+    join vault.decrypted_secrets s on s.id = c.vault_secret_id
+    cross join refreshing_before b
+    where c.external_user_id = 900000001
+  ),
+  'LOCK_BUSY does not replace the Vault value'
 );
 select ok(
   (
@@ -292,7 +354,7 @@ select is(
 select ok(
   (
     select extensions.digest(s.decrypted_secret, 'sha256') =
-           extensions.digest(pg_catalog.concat('TEST_', 'REFRESH_', 'TOKEN_ROTATED_', 'A'), 'sha256')
+           extensions.digest(pg_catalog.concat('TEST_', 'REFRESH_', 'TOKEN_INITIAL_', 'A'), 'sha256')
     from private.meli_oauth_connections c
     join vault.decrypted_secrets s on s.id = c.vault_secret_id
     where c.external_user_id = 900000001
@@ -317,7 +379,7 @@ select is(
 select ok(
   (
     select extensions.digest(s.decrypted_secret, 'sha256') =
-           extensions.digest(pg_catalog.concat('TEST_', 'REFRESH_', 'TOKEN_ROTATED_', 'A'), 'sha256')
+           extensions.digest(pg_catalog.concat('TEST_', 'REFRESH_', 'TOKEN_INITIAL_', 'A'), 'sha256')
     from private.meli_oauth_connections c
     join vault.decrypted_secrets s on s.id = c.vault_secret_id
     where c.external_user_id = 900000001
@@ -341,7 +403,7 @@ select is(
 );
 select ok(
   (
-    select status = 'ACTIVE' and token_version = 3 and lease_id is null
+    select status = 'ACTIVE' and token_version = 2 and lease_id is null
       and lease_acquired_at is null and lease_expires_at is null
       and last_refresh_at is not null and last_success_at is not null
       and consecutive_failures = 0 and not reauth_required
@@ -364,7 +426,7 @@ select is(
     select outcome from public.complete_meli_refresh(
       900000001,
       extensions.gen_random_uuid(),
-      2,
+      1,
       pg_catalog.concat('TEST_', 'REFRESH_', 'TOKEN_REPLAY_', 'A')
     )
   ),
@@ -383,9 +445,6 @@ select ok(
 );
 
 -- Failure state machine.
-do $$ begin
-  perform * from public.initialize_meli_oauth_connection(900000001, pg_catalog.concat('TEST_', 'REFRESH_', 'TOKEN_FAIL_', 'A'));
-end $$;
 select ok((select outcome = 'CLAIMED' from public.claim_meli_refresh(900000001)), 'SAFE_RETRY setup acquires a lease');
 select is(
   (
@@ -408,7 +467,7 @@ select ok(
 select ok(
   (
     select extensions.digest(s.decrypted_secret, 'sha256') =
-           extensions.digest(pg_catalog.concat('TEST_', 'REFRESH_', 'TOKEN_FAIL_', 'A'), 'sha256')
+           extensions.digest(pg_catalog.concat('TEST_', 'REFRESH_', 'TOKEN_COMPLETED_', 'A'), 'sha256')
     from private.meli_oauth_connections c
     join vault.decrypted_secrets s on s.id = c.vault_secret_id
     where c.external_user_id = 900000001
@@ -436,9 +495,11 @@ select ok(
   'claim rejects REAUTH_REQUIRED without returning a credential'
 );
 
-do $$ begin
-  perform * from public.initialize_meli_oauth_connection(900000001, pg_catalog.concat('TEST_', 'REFRESH_', 'TOKEN_UNKNOWN_', 'A'));
-end $$;
+select is(
+  (select outcome from public.initialize_meli_oauth_connection(900000001, pg_catalog.concat('TEST_', 'REFRESH_', 'TOKEN_UNKNOWN_', 'A'))),
+  'REAUTHORIZED',
+  'human authorization recovers REAUTH_REQUIRED'
+);
 select ok((select outcome = 'CLAIMED' from public.claim_meli_refresh(900000001)), 'OUTCOME_UNKNOWN setup acquires a lease');
 select is(
   (
@@ -459,9 +520,11 @@ select ok(
   'claim rejects ambiguous state without returning a credential'
 );
 
-do $$ begin
-  perform * from public.initialize_meli_oauth_connection(900000001, pg_catalog.concat('TEST_', 'REFRESH_', 'TOKEN_CONFIG_', 'A'));
-end $$;
+select is(
+  (select outcome from public.initialize_meli_oauth_connection(900000001, pg_catalog.concat('TEST_', 'REFRESH_', 'TOKEN_CONFIG_', 'A'))),
+  'REAUTHORIZED',
+  'human authorization recovers REFRESH_OUTCOME_UNKNOWN'
+);
 select ok((select outcome = 'CLAIMED' from public.claim_meli_refresh(900000001)), 'CONFIG_ERROR setup acquires a lease');
 select is(
   (
@@ -480,6 +543,18 @@ select ok(
 select ok(
   (select outcome = 'DISABLED' and refresh_token is null from public.claim_meli_refresh(900000001)),
   'claim rejects DISABLED without returning a credential'
+);
+select is(
+  (select outcome from public.initialize_meli_oauth_connection(900000001, pg_catalog.concat('TEST_', 'REFRESH_', 'TOKEN_DISABLED_', 'A'))),
+  'STATE_NOT_ALLOWED',
+  'DISABLED connection refuses authorization replacement'
+);
+select ok(
+  (
+    select status = 'DISABLED' and token_version = 4 and last_error_code = 'INVALID_CLIENT'
+    from private.meli_oauth_connections where external_user_id = 900000001
+  ),
+  'STATE_NOT_ALLOWED preserves disabled metadata and version'
 );
 
 -- Missing secret and expired lease both fail closed.
@@ -558,6 +633,26 @@ select throws_ok(
   '22023',
   'OAUTH_INVALID_OUTCOME_CLASS',
   'arbitrary outcome class is rejected'
+);
+
+-- Vault and metadata participate in the same transaction/subtransaction.
+do $$
+begin
+  begin
+    perform * from public.initialize_meli_oauth_connection(
+      900000099,
+      pg_catalog.concat('TEST_', 'REFRESH_', 'TOKEN_ROLLBACK_', 'Z')
+    );
+    raise exception using message = 'SYNTHETIC_ROLLBACK';
+  exception when others then
+    null;
+  end;
+end;
+$$;
+select ok(
+  not exists (select 1 from private.meli_oauth_connections where external_user_id = 900000099)
+  and not exists (select 1 from vault.secrets where name = 'autoachado_meli_refresh_900000099'),
+  'rollback after Vault creation leaves neither metadata nor orphan secret'
 );
 
 select * from finish();

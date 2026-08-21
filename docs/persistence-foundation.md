@@ -45,6 +45,16 @@ O serviço executa `claim → refresh → complete`. O access token só é devol
 
 O 0B2B não cria endpoint público, não conecta o callback, não persiste access token, não armazena refresh token fora do Vault, não cria migration e não executa OAuth live. A integração local via Data API não faz parte do gate automático porque o perfil `pnpm db:start` inicia deliberadamente apenas PostgreSQL/Vault e exclui PostgREST; o adapter é validado com as assinaturas SQL exatas e fakes de transporte, enquanto as RPCs reais e o locking continuam cobertos pelo pgTAP do 0B2A.
 
+## Safe initialization and reauthorization CAS 0B2A-FIX1
+
+`initialize_meli_oauth_connection` preserva sua assinatura específica, mas agora serializa a identidade lógica antes da leitura usando advisory transaction lock derivado de `external_user_id`. Isso cobre inclusive a ausência inicial de linha, que não pode ser protegida apenas por `SELECT FOR UPDATE`, sem transformar o lock em mutex global entre sellers diferentes.
+
+Uma conexão inexistente retorna `INITIALIZED` e começa `ACTIVE` na versão 1. Uma conexão `ACTIVE` retorna `ALREADY_INITIALIZED` sem alterar Vault, versão ou metadata. `REFRESHING` retorna `LOCK_BUSY` e preserva integralmente o lease. Somente `REAUTH_REQUIRED` e `REFRESH_OUTCOME_UNKNOWN` permitem substituição humana, retornando `REAUTHORIZED`; `DISABLED` fecha como `STATE_NOT_ALLOWED`.
+
+A reautorização captura estado e versão sob lock e aplica update com CAS explícito de identidade, status e `token_version`, incrementando a versão exatamente uma vez. Qualquer falha inesperada do CAS gera exceção e rollback, sem declarar sucesso. As operações Vault e metadata participam da mesma transação PostgreSQL; o teste de subtransação força falha após a criação do secret e comprova ausência tanto da linha quanto de secret órfão.
+
+Testes com duas conexões PostgreSQL reais comprovam que somente uma inicialização ou reautorização vence, a perdedora recebe outcome seguro, autorização durante refresh preserva o lease e identidades diferentes não se bloqueiam globalmente. Vault continua sendo o único armazenamento do refresh token. Callback, fluxo OAuth do navegador e rotation service permanecem inalterados; o 0B2C continua pendente.
+
 Antes do 0B2C, configurar diretamente na Vercel, sem compartilhar valores em chat: `SUPABASE_URL` (Project URL), `SUPABASE_SECRET_KEY` (Secret Key moderna marcada Sensitive) e `MELI_EXPECTED_USER_ID`. Não criar `MELI_REFRESH_TOKEN`, `REFRESH_TOKEN`, `MELI_ACCESS_TOKEN` ou `SUPABASE_SERVICE_ROLE_KEY`. O próximo passo separado é o 0B2C, que persistirá a autorização humana inicial no Vault.
 
 ## Idempotência

@@ -30,8 +30,15 @@ export type FailureOutcomeClass =
   | "OUTCOME_UNKNOWN"
   | "CONFIG_ERROR";
 
+export type InitializeOutcome =
+  | "INITIALIZED"
+  | "REAUTHORIZED"
+  | "ALREADY_INITIALIZED"
+  | "LOCK_BUSY"
+  | "STATE_NOT_ALLOWED";
+
 export interface InitializeResult {
-  outcome: "INITIALIZED";
+  outcome: InitializeOutcome;
   externalUserId: number;
   tokenVersion: number;
   status: string;
@@ -185,13 +192,27 @@ export class SupabaseMeliOAuthControlPlane implements MeliOAuthControlPlane {
       p_external_user_id: externalUserId,
       p_refresh_token: refreshToken,
     });
-    return {
-      outcome: enumValue(row, "outcome", ["INITIALIZED"] as const),
+    const result: InitializeResult = {
+      outcome: enumValue(row, "outcome", [
+        "INITIALIZED", "REAUTHORIZED", "ALREADY_INITIALIZED", "LOCK_BUSY", "STATE_NOT_ALLOWED",
+      ] as const),
       externalUserId: integerValue(row, "external_user_id"),
       tokenVersion: integerValue(row, "token_version"),
       status: stringValue(row, "status"),
       reauthRequired: booleanValue(row, "reauth_required"),
     };
+    const activeOutcome = result.outcome === "INITIALIZED"
+      || result.outcome === "REAUTHORIZED"
+      || result.outcome === "ALREADY_INITIALIZED";
+    const coherent = result.externalUserId === externalUserId
+      && result.tokenVersion >= 1
+      && (
+        (activeOutcome && result.status === "ACTIVE" && !result.reauthRequired)
+        || (result.outcome === "LOCK_BUSY" && result.status === "REFRESHING")
+        || (result.outcome === "STATE_NOT_ALLOWED" && result.status === "DISABLED" && result.reauthRequired)
+      );
+    if (!coherent) throw new ControlPlaneError(CONTROL_PLANE_RESPONSE_INVALID, false);
+    return result;
   }
 
   async claimRefresh(externalUserId: number): Promise<ClaimResult> {

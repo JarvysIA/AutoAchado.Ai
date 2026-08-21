@@ -57,4 +57,43 @@ describe("adapter RPC Mercado Livre", () => {
     expect(JSON.stringify(await adapter.completeRefresh({ externalUserId: 7, leaseId: claimedRow.lease_id, expectedVersion: 1, newRefreshToken: "new-fake" }))).not.toContain("new-fake");
     expect((await adapter.failRefresh({ externalUserId: 7, leaseId: claimedRow.lease_id, expectedVersion: 1, errorCode: "INVALID_GRANT", outcomeClass: "REAUTH_REQUIRED" })).outcome).toBe("FAILURE_RECORDED");
   });
+
+  it.each([
+    "INITIALIZED",
+    "REAUTHORIZED",
+    "ALREADY_INITIALIZED",
+    "LOCK_BUSY",
+    "STATE_NOT_ALLOWED",
+  ] as const)("aceita outcome state-aware de initialize: %s", async (outcome) => {
+    const state = outcome === "LOCK_BUSY"
+      ? { status: "REFRESHING", reauth_required: false }
+      : outcome === "STATE_NOT_ALLOWED"
+        ? { status: "DISABLED", reauth_required: true }
+        : { status: "ACTIVE", reauth_required: false };
+    const adapter = new SupabaseMeliOAuthControlPlane(async () => ({
+      data: [{ outcome, external_user_id: 7, token_version: 2, ...state }],
+      error: null,
+    }));
+    await expect(adapter.initializeConnection(7, "fake-refresh")).resolves.toMatchObject({ outcome });
+  });
+
+  it("rejeita combinação incoerente de outcome e estado", async () => {
+    const adapter = new SupabaseMeliOAuthControlPlane(async () => ({
+      data: [{ outcome: "LOCK_BUSY", external_user_id: 7, token_version: 2, status: "ACTIVE", reauth_required: false }],
+      error: null,
+    }));
+    await expect(adapter.initializeConnection(7, "fake-refresh")).rejects.toMatchObject({
+      message: CONTROL_PLANE_RESPONSE_INVALID,
+    });
+  });
+
+  it("rejeita outcome de initialize desconhecido", async () => {
+    const adapter = new SupabaseMeliOAuthControlPlane(async () => ({
+      data: [{ outcome: "OVERWRITE", external_user_id: 7, token_version: 2, status: "ACTIVE", reauth_required: false }],
+      error: null,
+    }));
+    await expect(adapter.initializeConnection(7, "fake-refresh")).rejects.toMatchObject({
+      message: CONTROL_PLANE_RESPONSE_INVALID,
+    });
+  });
 });
