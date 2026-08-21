@@ -2,13 +2,21 @@ import { gunzipSync } from "node:zlib";
 import { MELI_API_ORIGIN } from "./endpoints.js";
 import { parseRetryAfter } from "./resilience.js";
 import type { MarketplaceTaxonomyAdapter } from "../taxonomy/adapter.js";
-import { TaxonomyError } from "../taxonomy/errors.js";
+import {
+  TaxonomyError,
+  taxonomyInvalidResponse,
+  withTaxonomyErrorDetails,
+  type TaxonomySafeErrorDetails,
+} from "../taxonomy/errors.js";
 import { calculateInternalChecksum, parseCategoryDetail, parseMeliCategoryTree, parseSiteCategories } from "../taxonomy/parser.js";
 import { TaxonomyTree } from "../taxonomy/tree.js";
 import {
   MARKETPLACE_MERCADO_LIVRE,
   type CategoryDetail,
   type SiteCategory,
+  type TaxonomyCategoryNode,
+  type TaxonomyResponseDiagnostics,
+  type TaxonomyTopLevelKind,
   type TaxonomyTreeEnvelope,
 } from "../taxonomy/types.js";
 
@@ -48,6 +56,14 @@ type TaxonomyOperation = "LIST_SITE_CATEGORIES" | "FETCH_CATEGORY" | "FETCH_CATE
 interface TaxonomyHttpResult {
   payload: unknown;
   headers: Readonly<Record<string, string>>;
+  diagnostics: Readonly<TaxonomyResponseDiagnostics>;
+}
+
+interface BodyReadResult {
+  bytes: Buffer;
+  transportBytes: number;
+  processedBytes: number;
+  bodyHadGzipMagic: boolean;
 }
 
 const TRANSIENT_STATUS = new Set([429, 500, 502, 503, 504]);
@@ -105,11 +121,52 @@ function isJsonContentType(value: string | null): boolean {
   return value !== null && /^application\/json(?:\s*;\s*charset=[^;\s]+)?$/i.test(value.trim());
 }
 
+function safeDiagnosticHeader(value: string | null): string | null {
+  if (value === null) return null;
+  if (value.length > 128 || !/^[\x20-\x7E]+$/.test(value)) return "[INVALID_OR_TOO_LONG]";
+  if (/Bearer\s+|APP_USR-|\bTG-|sb_secret_|postgres(?:ql)?:\/\/|access_token|refresh_token|client_secret|authorization|cookie|supabase_secret_key|apikey/i.test(value)) {
+    return "[REDACTED]";
+  }
+  return value;
+}
+
+function numericContentLength(value: string | null): number | null {
+  if (value === null || !/^\d+$/.test(value)) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
+function getTopLevelKind(value: unknown): TaxonomyTopLevelKind {
+  if (value === null) return "NULL";
+  if (Array.isArray(value)) return "ARRAY";
+  if (typeof value === "object") return "OBJECT";
+  if (typeof value === "string") return "STRING";
+  if (typeof value === "number") return "NUMBER";
+  if (typeof value === "boolean") return "BOOLEAN";
+  return "OTHER";
+}
+
+function responseDiagnostics(details: Partial<TaxonomySafeErrorDetails>): Readonly<TaxonomyResponseDiagnostics> {
+  return Object.freeze({
+    status: details.status ?? null,
+    operation: details.operation ?? null,
+    contentType: details.contentType ?? null,
+    contentEncoding: details.contentEncoding ?? null,
+    contentLength: details.contentLength ?? null,
+    transportBytes: details.transportBytes ?? null,
+    processedBytes: details.processedBytes ?? null,
+    bodyHadGzipMagic: details.bodyHadGzipMagic ?? null,
+    topLevelKind: details.topLevelKind ?? null,
+    topLevelArrayLength: details.topLevelArrayLength ?? null,
+    topLevelObjectKeyCount: details.topLevelObjectKeyCount ?? null,
+  });
+}
+
 function isGzip(bytes: Buffer): boolean {
   return bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
 }
 
-async function readLimitedBody(response: Response, limits: TaxonomyLimits): Promise<Buffer> {
+async function readLimitedBody(response: Response, limits: TaxonomyLimits): Promise<BodyReadResult> {
   const contentLength = response.headers.get("content-length");
   const contentEncoding = response.headers.get("content-encoding")?.toLowerCase() ?? null;
   if (contentLength !== null) {
@@ -119,7 +176,13 @@ async function readLimitedBody(response: Response, limits: TaxonomyLimits): Prom
       throw new TaxonomyError("TAXONOMY_RESPONSE_TOO_LARGE", "Resposta de taxonomia excede o limite");
     }
   }
-  if (!response.body) throw new TaxonomyError("TAXONOMY_INVALID_RESPONSE", "Resposta de taxonomia vazia");
+  if (!response.body) {
+    throw taxonomyInvalidResponse("EMPTY_BODY", {
+      transportBytes: 0,
+      processedBytes: 0,
+      bodyHadGzipMagic: false,
+    });
+  }
 
   const reader = response.body.getReader();
   const chunks: Buffer[] = [];
@@ -143,18 +206,41 @@ async function readLimitedBody(response: Response, limits: TaxonomyLimits): Prom
     reader.releaseLock();
   }
 
-  if (received === 0) throw new TaxonomyError("TAXONOMY_INVALID_RESPONSE", "Resposta de taxonomia vazia");
+  if (received === 0) {
+    throw taxonomyInvalidResponse("EMPTY_BODY", {
+      transportBytes: 0,
+      processedBytes: 0,
+      bodyHadGzipMagic: false,
+    });
+  }
   const receivedBody = Buffer.concat(chunks, received);
-  if (!isGzip(receivedBody)) return receivedBody;
+  if (!isGzip(receivedBody)) {
+    return {
+      bytes: receivedBody,
+      transportBytes: received,
+      processedBytes: received,
+      bodyHadGzipMagic: false,
+    };
+  }
   try {
-    return gunzipSync(receivedBody, { maxOutputLength: limits.maxProcessedBytes });
+    const processedBody = gunzipSync(receivedBody, { maxOutputLength: limits.maxProcessedBytes });
+    return {
+      bytes: processedBody,
+      transportBytes: received,
+      processedBytes: processedBody.byteLength,
+      bodyHadGzipMagic: true,
+    };
   } catch (error) {
     if (error instanceof TaxonomyError) throw error;
     const message = error instanceof Error ? error.message : "";
     if (/larger than|buffer too large|output length/i.test(message)) {
       throw new TaxonomyError("TAXONOMY_RESPONSE_TOO_LARGE", "Resposta de taxonomia excede o limite");
     }
-    throw new TaxonomyError("TAXONOMY_INVALID_RESPONSE", "Resposta gzip de taxonomia inválida");
+    throw taxonomyInvalidResponse("GZIP_INVALID", {
+      transportBytes: received,
+      processedBytes: null,
+      bodyHadGzipMagic: true,
+    });
   }
 }
 
@@ -162,7 +248,7 @@ function parseJson(bytes: Buffer): unknown {
   try {
     return JSON.parse(bytes.toString("utf8")) as unknown;
   } catch {
-    throw new TaxonomyError("TAXONOMY_INVALID_RESPONSE", "JSON de taxonomia inválido");
+    throw taxonomyInvalidResponse("JSON_INVALID", { processedBytes: bytes.byteLength });
   }
 }
 
@@ -232,17 +318,54 @@ export class MeliTaxonomyAdapter implements MarketplaceTaxonomyAdapter {
             retryable: TRANSIENT_STATUS.has(response.status),
           });
         }
+        const diagnosticBase: Partial<TaxonomySafeErrorDetails> = {
+          status: response.status,
+          operation,
+          contentType: safeDiagnosticHeader(response.headers.get("content-type")),
+          contentEncoding: safeDiagnosticHeader(response.headers.get("content-encoding")),
+          contentLength: numericContentLength(response.headers.get("content-length")),
+        };
         if (!isJsonContentType(response.headers.get("content-type"))) {
           await response.body?.cancel();
-          throw new TaxonomyError("TAXONOMY_INVALID_RESPONSE", "Content-Type de taxonomia inválido", { operation });
+          throw taxonomyInvalidResponse("CONTENT_TYPE_INVALID", diagnosticBase);
         }
         const contentEncoding = response.headers.get("content-encoding")?.toLowerCase() ?? null;
         if (contentEncoding !== null && contentEncoding !== "identity" && contentEncoding !== "gzip") {
           await response.body?.cancel();
-          throw new TaxonomyError("TAXONOMY_INVALID_RESPONSE", "Content-Encoding de taxonomia inválido", { operation });
+          throw taxonomyInvalidResponse("CONTENT_ENCODING_INVALID", diagnosticBase);
         }
-        const body = await readLimitedBody(response, this.limits);
-        return { payload: parseJson(body), headers: safeHeaders(response.headers) };
+        let body: BodyReadResult;
+        try {
+          body = await readLimitedBody(response, this.limits);
+        } catch (error) {
+          if (error instanceof TaxonomyError) throw withTaxonomyErrorDetails(error, diagnosticBase);
+          throw error;
+        }
+        const bodyDiagnostics: Partial<TaxonomySafeErrorDetails> = {
+          ...diagnosticBase,
+          transportBytes: body.transportBytes,
+          processedBytes: body.processedBytes,
+          bodyHadGzipMagic: body.bodyHadGzipMagic,
+        };
+        let payload: unknown;
+        try {
+          payload = parseJson(body.bytes);
+        } catch (error) {
+          if (error instanceof TaxonomyError) throw withTaxonomyErrorDetails(error, bodyDiagnostics);
+          throw error;
+        }
+        const topLevelKind = getTopLevelKind(payload);
+        const completeDiagnostics: Partial<TaxonomySafeErrorDetails> = {
+          ...bodyDiagnostics,
+          topLevelKind,
+          topLevelArrayLength: topLevelKind === "ARRAY" ? (payload as unknown[]).length : null,
+          topLevelObjectKeyCount: topLevelKind === "OBJECT" ? Object.keys(payload as Record<string, unknown>).length : null,
+        };
+        return {
+          payload,
+          headers: safeHeaders(response.headers),
+          diagnostics: responseDiagnostics(completeDiagnostics),
+        };
       } catch (error) {
         if (error instanceof TaxonomyError) throw error;
         const timedOut = error instanceof Error && error.name === "AbortError";
@@ -265,31 +388,47 @@ export class MeliTaxonomyAdapter implements MarketplaceTaxonomyAdapter {
   async listSiteCategories(siteId: string): Promise<readonly SiteCategory[]> {
     const supportedSite = assertMlbSite(siteId);
     const response = await this.request(`/sites/${supportedSite}/categories`, "LIST_SITE_CATEGORIES", this.limits.pointTimeoutMs);
-    return parseSiteCategories(response.payload, supportedSite);
+    try {
+      return parseSiteCategories(response.payload, supportedSite);
+    } catch (error) {
+      if (error instanceof TaxonomyError) throw withTaxonomyErrorDetails(error, response.diagnostics);
+      throw error;
+    }
   }
 
   async fetchCategory(categoryId: string): Promise<CategoryDetail> {
     const validCategoryId = assertMlbCategoryId(categoryId);
     const response = await this.request(`/categories/${validCategoryId}`, "FETCH_CATEGORY", this.limits.pointTimeoutMs);
-    const detail = parseCategoryDetail(response.payload, "MLB");
-    if (detail.externalCategoryId !== validCategoryId) {
-      throw new TaxonomyError("TAXONOMY_INVALID_RESPONSE", "Categoria retornada não corresponde à solicitada");
+    try {
+      const detail = parseCategoryDetail(response.payload, "MLB");
+      if (detail.externalCategoryId !== validCategoryId) {
+        throw taxonomyInvalidResponse("CATEGORY_SHAPE_INVALID");
+      }
+      return detail;
+    } catch (error) {
+      if (error instanceof TaxonomyError) throw withTaxonomyErrorDetails(error, response.diagnostics);
+      throw error;
     }
-    return detail;
   }
 
   async fetchCategoryTree(siteId: string): Promise<TaxonomyTreeEnvelope> {
     const supportedSite = assertMlbSite(siteId);
     const response = await this.request(`/sites/${supportedSite}/categories/all`, "FETCH_CATEGORY_TREE", this.limits.dumpTimeoutMs);
-    const nodes = parseMeliCategoryTree(response.payload, supportedSite, {
-      maxNodes: this.limits.maxNodes,
-      maxDepth: this.limits.maxDepth,
-    });
-    new TaxonomyTree(nodes, {
-      maxNodes: this.limits.maxNodes,
-      maxDepth: this.limits.maxDepth,
-      requiredRootId: AUTOMOTIVE_ROOT_CATEGORY_ID,
-    });
+    let nodes: readonly TaxonomyCategoryNode[];
+    try {
+      nodes = parseMeliCategoryTree(response.payload, supportedSite, {
+        maxNodes: this.limits.maxNodes,
+        maxDepth: this.limits.maxDepth,
+      });
+      new TaxonomyTree(nodes, {
+        maxNodes: this.limits.maxNodes,
+        maxDepth: this.limits.maxDepth,
+        requiredRootId: AUTOMOTIVE_ROOT_CATEGORY_ID,
+      });
+    } catch (error) {
+      if (error instanceof TaxonomyError) throw withTaxonomyErrorDetails(error, response.diagnostics);
+      throw error;
+    }
     const internalChecksum = calculateInternalChecksum(nodes);
     return Object.freeze({
       marketplaceKey: MARKETPLACE_MERCADO_LIVRE,
@@ -300,6 +439,7 @@ export class MeliTaxonomyAdapter implements MarketplaceTaxonomyAdapter {
       internalChecksum,
       fetchedAt: this.clock().toISOString(),
       nodes,
+      responseDiagnostics: response.diagnostics,
     });
   }
 }

@@ -82,6 +82,27 @@ describe("parser de taxonomia", () => {
     expect(reasonOf(() => parseMeliCategoryTree(validAutomotiveDump(), "MLB", { maxDepth: 2 }))).toBe("DEPTH_LIMIT");
   });
 
+  it("distingue top-level incompatível de item de categoria inválido", () => {
+    try {
+      parseMeliCategoryTree({ wrapper: [] }, "MLB");
+      throw new Error("esperava erro");
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: "TAXONOMY_INVALID_RESPONSE",
+        details: { reason: "TOP_LEVEL_SHAPE_INVALID", topLevelKind: "OBJECT", topLevelObjectKeyCount: 1 },
+      });
+    }
+    try {
+      parseMeliCategoryTree(["invalid-category"], "MLB");
+      throw new Error("esperava erro");
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: "TAXONOMY_INVALID_RESPONSE",
+        details: { reason: "CATEGORY_SHAPE_INVALID", categoryIndex: 0 },
+      });
+    }
+  });
+
   it("canonicaliza de forma determinística e calcula SHA-256 sem fetchedAt", () => {
     const nodes = parseMeliCategoryTree(validAutomotiveDump(), "MLB");
     const reversed = [...nodes].reverse();

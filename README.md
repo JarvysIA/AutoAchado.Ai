@@ -129,3 +129,5 @@ O dump é convertido em uma árvore imutável com integridade de IDs, relações
 Os testes são integralmente offline, usam apenas categorias sintéticas claramente identificadas e não precisam de credenciais, Supabase, Vercel ou internet. O 0B3B1 não cria rota pública, ruleset comercial, classificação, migration ou escrita no registry.
 
 Referências oficiais: [dump de categorias](https://developers.mercadolivre.com.br/pt_br/dump-de-categorias) e [categorias de veículos](https://developers.mercadolivre.com.br/pt_br/convivencia-me1-me2/categorias-e-atributos-veiculos).
+
+Falhas de resposta da taxonomia carregam somente diagnóstico estrutural por allowlist: status, operação, Content-Type/Encoding limitados, Content-Length numérico, contagem de bytes, presença de magic bytes gzip e tipo do JSON no topo. `transportBytes` significa os bytes entregues ao adapter pelo runtime e não afirma representar os bytes comprimidos na rede quando o `fetch` já realizou auto-decode. Body, objeto `Response`, headers arbitrários e tokens nunca entram no erro.

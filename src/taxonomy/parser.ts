@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { TaxonomyError, taxonomyIntegrityError } from "./errors.js";
+import { taxonomyIntegrityError, taxonomyInvalidResponse, type TaxonomySafeErrorDetails } from "./errors.js";
 import {
   MARKETPLACE_MERCADO_LIVRE,
   type CategoryDetail,
@@ -11,40 +11,63 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function invalidResponse(): never {
-  throw new TaxonomyError("TAXONOMY_INVALID_RESPONSE", "Resposta de taxonomia inválida");
+function topLevelKind(value: unknown): "ARRAY" | "OBJECT" | "STRING" | "NUMBER" | "BOOLEAN" | "NULL" | "OTHER" {
+  if (value === null) return "NULL";
+  if (Array.isArray(value)) return "ARRAY";
+  if (typeof value === "object") return "OBJECT";
+  if (typeof value === "string") return "STRING";
+  if (typeof value === "number") return "NUMBER";
+  if (typeof value === "boolean") return "BOOLEAN";
+  return "OTHER";
 }
 
-function readCategoryId(value: unknown, siteId: string): string {
-  if (typeof value !== "string" || !/^[A-Z]{3}\d+$/.test(value)) return invalidResponse();
+function topLevelDetails(value: unknown): Pick<
+  TaxonomySafeErrorDetails,
+  "topLevelKind" | "topLevelArrayLength" | "topLevelObjectKeyCount"
+> {
+  const kind = topLevelKind(value);
+  return {
+    topLevelKind: kind,
+    topLevelArrayLength: kind === "ARRAY" ? (value as unknown[]).length : null,
+    topLevelObjectKeyCount: kind === "OBJECT" ? Object.keys(value as Record<string, unknown>).length : null,
+  };
+}
+
+function invalidCategoryShape(categoryIndex: number | null = null): never {
+  throw taxonomyInvalidResponse("CATEGORY_SHAPE_INVALID", { categoryIndex });
+}
+
+function readCategoryId(value: unknown, siteId: string, categoryIndex: number | null): string {
+  if (typeof value !== "string" || !/^[A-Z]{3}\d+$/.test(value)) return invalidCategoryShape(categoryIndex);
   if (!value.startsWith(siteId)) throw taxonomyIntegrityError("SITE_MISMATCH");
   return value;
 }
 
-function readName(value: unknown): string {
-  if (typeof value !== "string" || value.trim().length === 0) return invalidResponse();
+function readName(value: unknown, categoryIndex: number | null): string {
+  if (typeof value !== "string" || value.trim().length === 0) return invalidCategoryShape(categoryIndex);
   return value;
 }
 
-function readSummary(value: unknown, siteId: string): SiteCategory {
-  if (!isRecord(value)) return invalidResponse();
+function readSummary(value: unknown, siteId: string, categoryIndex: number | null = null): SiteCategory {
+  if (!isRecord(value)) return invalidCategoryShape(categoryIndex);
   return Object.freeze({
-    externalCategoryId: readCategoryId(value.id, siteId),
-    name: readName(value.name),
+    externalCategoryId: readCategoryId(value.id, siteId, categoryIndex),
+    name: readName(value.name, categoryIndex),
   });
 }
 
-function readSummaryArray(value: unknown, siteId: string): readonly SiteCategory[] {
-  if (!Array.isArray(value)) return invalidResponse();
-  return Object.freeze(value.map((entry) => readSummary(entry, siteId)));
+function readSummaryArray(value: unknown, siteId: string, exposeIndex = false): readonly SiteCategory[] {
+  if (!Array.isArray(value)) return invalidCategoryShape();
+  return Object.freeze(value.map((entry, index) => readSummary(entry, siteId, exposeIndex ? index : null)));
 }
 
 export function parseSiteCategories(payload: unknown, siteId: string): readonly SiteCategory[] {
-  return readSummaryArray(payload, siteId);
+  if (!Array.isArray(payload)) throw taxonomyInvalidResponse("TOP_LEVEL_SHAPE_INVALID", topLevelDetails(payload));
+  return readSummaryArray(payload, siteId, true);
 }
 
 export function parseCategoryDetail(payload: unknown, siteId: string): CategoryDetail {
-  if (!isRecord(payload)) return invalidResponse();
+  if (!isRecord(payload)) throw taxonomyInvalidResponse("TOP_LEVEL_SHAPE_INVALID", topLevelDetails(payload));
   const summary = readSummary(payload, siteId);
   const children = payload.children_categories === undefined
     ? Object.freeze([]) as readonly SiteCategory[]
@@ -69,13 +92,14 @@ interface WalkContext {
   depth: number;
   maxDepth: number;
   maxNodes: number;
+  rootIndex: number;
 }
 
 function walkCategory(value: unknown, context: WalkContext): void {
   if (context.depth > context.maxDepth) throw taxonomyIntegrityError("DEPTH_LIMIT");
   if (context.output.length >= context.maxNodes) throw taxonomyIntegrityError("NODE_LIMIT");
-  if (!isRecord(value)) return invalidResponse();
-  const summary = readSummary(value, context.siteId);
+  if (!isRecord(value)) return invalidCategoryShape(context.depth === 1 ? context.rootIndex : null);
+  const summary = readSummary(value, context.siteId, context.depth === 1 ? context.rootIndex : null);
   const children = value.children_categories === undefined
     ? Object.freeze([]) as readonly SiteCategory[]
     : readSummaryArray(value.children_categories, context.siteId);
@@ -105,7 +129,7 @@ function walkCategory(value: unknown, context: WalkContext): void {
 
   const rawChildren = value.children_categories;
   if (rawChildren !== undefined) {
-    if (!Array.isArray(rawChildren)) return invalidResponse();
+    if (!Array.isArray(rawChildren)) return invalidCategoryShape(context.depth === 1 ? context.rootIndex : null);
     for (const child of rawChildren) {
       walkCategory(child, {
         siteId: context.siteId,
@@ -116,6 +140,7 @@ function walkCategory(value: unknown, context: WalkContext): void {
         depth: context.depth + 1,
         maxDepth: context.maxDepth,
         maxNodes: context.maxNodes,
+        rootIndex: context.rootIndex,
       });
     }
   }
@@ -126,11 +151,13 @@ export function parseMeliCategoryTree(
   siteId: string,
   limits: Readonly<{ maxNodes?: number; maxDepth?: number }> = {},
 ): readonly TaxonomyCategoryNode[] {
-  if (!Array.isArray(payload) || payload.length === 0) return invalidResponse();
+  if (!Array.isArray(payload) || payload.length === 0) {
+    throw taxonomyInvalidResponse("TOP_LEVEL_SHAPE_INVALID", topLevelDetails(payload));
+  }
   const output: TaxonomyCategoryNode[] = [];
   const maxNodes = limits.maxNodes ?? 100_000;
   const maxDepth = limits.maxDepth ?? 64;
-  for (const category of payload) {
+  for (const [rootIndex, category] of payload.entries()) {
     walkCategory(category, {
       siteId,
       parentExternalCategoryId: null,
@@ -140,6 +167,7 @@ export function parseMeliCategoryTree(
       depth: 1,
       maxDepth,
       maxNodes,
+      rootIndex,
     });
   }
   return Object.freeze(output);

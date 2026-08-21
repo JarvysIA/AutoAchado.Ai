@@ -1,6 +1,22 @@
 export const MARKETPLACE_MERCADO_LIVRE = "MERCADO_LIVRE" as const;
 export type MarketplaceKey = string;
 
+export type TaxonomyTopLevelKind = "ARRAY" | "OBJECT" | "STRING" | "NUMBER" | "BOOLEAN" | "NULL" | "OTHER";
+
+export interface TaxonomyResponseDiagnostics {
+  status: number | null;
+  operation: string | null;
+  contentType: string | null;
+  contentEncoding: string | null;
+  contentLength: number | null;
+  transportBytes: number | null;
+  processedBytes: number | null;
+  bodyHadGzipMagic: boolean | null;
+  topLevelKind: TaxonomyTopLevelKind | null;
+  topLevelArrayLength: number | null;
+  topLevelObjectKeyCount: number | null;
+}
+
 export interface SiteCategory {
   externalCategoryId: string;
   name: string;
@@ -31,6 +47,7 @@ export interface TaxonomyTreeEnvelope extends TaxonomySourceMetadata {
   marketplaceKey: MarketplaceKey;
   siteId: string;
   nodes: readonly TaxonomyCategoryNode[];
+  responseDiagnostics: Readonly<TaxonomyResponseDiagnostics>;
 }
 
 export interface MarketplaceTaxonomyAdapter {
