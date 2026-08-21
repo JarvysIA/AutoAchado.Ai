@@ -10,6 +10,7 @@ import {
   siteCategoriesPayload,
   TEST_ROOT_ID,
   validAutomotiveDump,
+  validAutomotiveObjectMap,
 } from "../fixtures/meli-taxonomy.js";
 
 const jsonResponse = (body: unknown, status = 200, headers: Record<string, string> = {}): Response => new Response(
@@ -193,6 +194,54 @@ describe("adapter Mercado Livre de taxonomia", () => {
       headers: { "Content-Type": "application/json", "Content-Encoding": "gzip" },
     }));
     await expect(new MeliTaxonomyAdapter({ fetchImpl }).fetchCategoryTree("MLB")).resolves.toMatchObject({ siteId: "MLB" });
+  });
+
+  it("aceita object-map e preserva diagnóstico estrutural no envelope", async () => {
+    const payload = validAutomotiveObjectMap();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(payload));
+    const result = await new MeliTaxonomyAdapter({ fetchImpl }).fetchCategoryTree("MLB");
+    expect(result.nodes).toHaveLength(Object.keys(payload).length);
+    expect(result.responseDiagnostics).toMatchObject({
+      status: 200,
+      topLevelKind: "OBJECT",
+      topLevelArrayLength: null,
+      topLevelObjectKeyCount: Object.keys(payload).length,
+    });
+    expect(result.nodes.some((node) => node.externalCategoryId === TEST_ROOT_ID)).toBe(true);
+  });
+
+  it("rejeita object-map inválido sem retry e sem expor value", async () => {
+    const canary = "must-not-appear-in-taxonomy-error";
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({
+      MLB900000099: { id: "MLB900000099", name: canary, children_categories: canary, path_from_root: [] },
+    }));
+    let captured: unknown;
+    try {
+      await new MeliTaxonomyAdapter({ fetchImpl }).fetchCategoryTree("MLB");
+    } catch (error) {
+      captured = error;
+    }
+    expect(captured).toMatchObject({
+      code: "TAXONOMY_INVALID_RESPONSE",
+      details: { reason: "CATEGORY_SHAPE_INVALID", topLevelKind: "OBJECT", topLevelObjectKeyCount: 1 },
+    });
+    expect(JSON.stringify(captured)).not.toContain(canary);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("exige MLB5672 após normalizar um object-map válido", async () => {
+    const otherRootId = "MLB900000099";
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({
+      [otherRootId]: {
+        id: otherRootId,
+        name: "Raiz Sintética Alternativa",
+        children_categories: [],
+        path_from_root: [{ id: otherRootId, name: "Raiz Sintética Alternativa" }],
+      },
+    }));
+    await expect(new MeliTaxonomyAdapter({ fetchImpl }).fetchCategoryTree("MLB"))
+      .rejects.toMatchObject({ code: "TAXONOMY_INTEGRITY_ERROR", details: { reason: "ROOT_MISSING" } });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
   it("captura metadata sem validar semântica do MD5 e cria checksum/version internos", async () => {

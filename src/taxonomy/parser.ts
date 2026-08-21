@@ -8,7 +8,9 @@ import {
 } from "./types.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 }
 
 function topLevelKind(value: unknown): "ARRAY" | "OBJECT" | "STRING" | "NUMBER" | "BOOLEAN" | "NULL" | "OTHER" {
@@ -146,17 +148,13 @@ function walkCategory(value: unknown, context: WalkContext): void {
   }
 }
 
-export function parseMeliCategoryTree(
-  payload: unknown,
+function parseMeliCategoryTreeArray(
+  payload: readonly unknown[],
   siteId: string,
-  limits: Readonly<{ maxNodes?: number; maxDepth?: number }> = {},
+  maxNodes: number,
+  maxDepth: number,
 ): readonly TaxonomyCategoryNode[] {
-  if (!Array.isArray(payload) || payload.length === 0) {
-    throw taxonomyInvalidResponse("TOP_LEVEL_SHAPE_INVALID", topLevelDetails(payload));
-  }
   const output: TaxonomyCategoryNode[] = [];
-  const maxNodes = limits.maxNodes ?? 100_000;
-  const maxDepth = limits.maxDepth ?? 64;
   for (const [rootIndex, category] of payload.entries()) {
     walkCategory(category, {
       siteId,
@@ -171,6 +169,77 @@ export function parseMeliCategoryTree(
     });
   }
   return Object.freeze(output);
+}
+
+function parseMeliCategoryTreeObjectMap(
+  payload: Record<string, unknown>,
+  siteId: string,
+  maxNodes: number,
+  maxDepth: number,
+): readonly TaxonomyCategoryNode[] {
+  const keys = Object.keys(payload);
+  if (keys.length > maxNodes) throw taxonomyIntegrityError("NODE_LIMIT");
+
+  const output = keys
+    .sort((left, right) => left.localeCompare(right))
+    .map((mapKey, categoryIndex): TaxonomyCategoryNode => {
+      const value = payload[mapKey];
+      if (!/^MLB\d+$/.test(mapKey)) return invalidCategoryShape(categoryIndex);
+      if (!isRecord(value)) return invalidCategoryShape(categoryIndex);
+
+      const summary = readSummary(value, siteId, categoryIndex);
+      if (summary.externalCategoryId !== mapKey) return invalidCategoryShape(categoryIndex);
+      if (!Object.hasOwn(value, "children_categories") || !Object.hasOwn(value, "path_from_root")) {
+        return invalidCategoryShape(categoryIndex);
+      }
+
+      const children = readSummaryArray(value.children_categories, siteId);
+      const path = readSummaryArray(value.path_from_root, siteId);
+      if (path.length === 0) return invalidCategoryShape(categoryIndex);
+      if (path.length > maxDepth) throw taxonomyIntegrityError("DEPTH_LIMIT");
+
+      const currentPathEntry = path[path.length - 1]!;
+      if (currentPathEntry.externalCategoryId !== summary.externalCategoryId || currentPathEntry.name !== summary.name) {
+        throw taxonomyIntegrityError("PATH_MISMATCH");
+      }
+      const parentExternalCategoryId = path.length === 1
+        ? null
+        : path[path.length - 2]!.externalCategoryId;
+
+      return Object.freeze({
+        marketplaceKey: MARKETPLACE_MERCADO_LIVRE,
+        siteId,
+        externalCategoryId: summary.externalCategoryId,
+        name: summary.name,
+        parentExternalCategoryId,
+        childrenExternalCategoryIds: Object.freeze(children.map((child) => child.externalCategoryId)),
+        pathExternalCategoryIds: Object.freeze(path.map((entry) => entry.externalCategoryId)),
+        pathNames: Object.freeze(path.map((entry) => entry.name)),
+        isLeaf: children.length === 0,
+      });
+    });
+
+  return Object.freeze(output);
+}
+
+export function parseMeliCategoryTree(
+  payload: unknown,
+  siteId: string,
+  limits: Readonly<{ maxNodes?: number; maxDepth?: number }> = {},
+): readonly TaxonomyCategoryNode[] {
+  const maxNodes = limits.maxNodes ?? 100_000;
+  const maxDepth = limits.maxDepth ?? 64;
+  if (Array.isArray(payload)) {
+    if (payload.length === 0) throw taxonomyInvalidResponse("TOP_LEVEL_SHAPE_INVALID", topLevelDetails(payload));
+    return parseMeliCategoryTreeArray(payload, siteId, maxNodes, maxDepth);
+  }
+  if (isRecord(payload)) {
+    if (Object.keys(payload).length === 0) {
+      throw taxonomyInvalidResponse("TOP_LEVEL_SHAPE_INVALID", topLevelDetails(payload));
+    }
+    return parseMeliCategoryTreeObjectMap(payload, siteId, maxNodes, maxDepth);
+  }
+  throw taxonomyInvalidResponse("TOP_LEVEL_SHAPE_INVALID", topLevelDetails(payload));
 }
 
 function canonicalNode(node: TaxonomyCategoryNode): Record<string, unknown> {

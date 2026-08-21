@@ -126,6 +126,8 @@ O módulo 0B3B1 prepara, sem persistência, a leitura server-side da taxonomia o
 
 O dump é convertido em uma árvore imutável com integridade de IDs, relações pai/filho, paths, profundidade, ciclos e presença da raiz automotiva `MLB5672`. `X-Content-MD5` e `X-Content-Created` são apenas capturados como metadata neste estágio; a versão interna usa SHA-256 de uma representação canônica. A semântica do MD5 oficial será determinada somente no gate read-only `0B3B-LIVE`.
 
+Os gates read-only R2/R2S comprovaram que o dump atual é um object-map indexado por category ID: cada value contém `id`, `name`, `children_categories` e `path_from_root`, sem campo `parent` explícito. O parser aceita esse contrato estrito, exige igualdade entre map key e `value.id`, deriva o parent pelo path e preserva o formato ARRAY legado. Objetos arbitrários continuam rejeitados. Persistência e classificação comercial permanecem fora deste módulo, e a semântica do MD5 continua não resolvida.
+
 Os testes são integralmente offline, usam apenas categorias sintéticas claramente identificadas e não precisam de credenciais, Supabase, Vercel ou internet. O 0B3B1 não cria rota pública, ruleset comercial, classificação, migration ou escrita no registry.
 
 Referências oficiais: [dump de categorias](https://developers.mercadolivre.com.br/pt_br/dump-de-categorias) e [categorias de veículos](https://developers.mercadolivre.com.br/pt_br/convivencia-me1-me2/categorias-e-atributos-veiculos).

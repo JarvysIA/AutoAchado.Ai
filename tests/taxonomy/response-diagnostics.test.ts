@@ -101,7 +101,6 @@ describe("diagnóstico seguro de resposta de taxonomia", () => {
   });
 
   it.each([
-    [JSON.stringify({ wrapper: [] }), "OBJECT", null, 1],
     [JSON.stringify("tree"), "STRING", null, null],
     [JSON.stringify(null), "NULL", null, null],
   ] as const)("diagnostica top-level %s sem expor conteúdo", async (body, kind, arrayLength, objectKeyCount) => {
@@ -116,6 +115,25 @@ describe("diagnóstico seguro de resposta de taxonomia", () => {
       topLevelArrayLength: arrayLength,
       topLevelObjectKeyCount: objectKeyCount,
     });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("diagnostica object-map inválido sem expor conteúdo", async () => {
+    const rejectedContent = "must-not-appear-in-object-map-error";
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(response(JSON.stringify({ wrapper: rejectedContent })));
+    const error = await captureError(() => new MeliTaxonomyAdapter({ fetchImpl }).fetchCategoryTree("MLB"));
+    expect(error).toMatchObject({
+      code: "TAXONOMY_INVALID_RESPONSE",
+      details: {
+        status: 200,
+        operation: "FETCH_CATEGORY_TREE",
+        reason: "CATEGORY_SHAPE_INVALID",
+        topLevelKind: "OBJECT",
+        topLevelObjectKeyCount: 1,
+        categoryIndex: 0,
+      },
+    });
+    expect(JSON.stringify(error)).not.toContain(rejectedContent);
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
