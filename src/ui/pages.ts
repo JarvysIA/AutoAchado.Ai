@@ -12,7 +12,27 @@ function layout(content: string): string {
 }
 
 export function homePage(connected: boolean, userLabel?: string): string {
-  return layout(`<h1>AutoAchado.AI</h1><p class="muted">API Feasibility Probe</p>${connected ? `<section><p>Mercado Livre conectado ✅</p><p>${escapeHtml(userLabel ?? "Usuário autenticado")}</p><form method="post" action="/probe"><button type="submit">Executar 0A-LIVE</button></form><form method="post" action="/probe/alternative"><button type="submit">Executar 0A-LIVE-B</button></form><form method="post" action="/probe/direct-items"><button type="submit">Executar 0A-LIVE-C</button></form><form method="post" action="/probe/catalog-products"><button type="submit">Executar 0A-LIVE-D</button></form></section>` : `<section><a href="/auth/start">Conectar Mercado Livre</a></section>`}`);
+  return layout(`<h1>AutoAchado.AI</h1><p class="muted">API Feasibility Probe</p>${connected ? `<section><p>Mercado Livre autorizado ✅</p><p>${escapeHtml(userLabel ?? "Autorização segura ativa")}</p><p class="muted">A credencial de renovação permanece somente no cofre seguro.</p></section>` : `<section><a href="/auth/start">Conectar Mercado Livre</a></section>`}`);
+}
+
+export function authorizationResultPage(outcome: string): string {
+  const messages: Record<string, string> = {
+    AUTHORIZED_AND_STORED: "Mercado Livre autorizado com sucesso.",
+    REAUTHORIZED_AND_STORED: "Mercado Livre reautorizado com sucesso.",
+    AUTHORIZATION_ALREADY_ACTIVE: "Mercado Livre já está autorizado.",
+    LOCK_BUSY: "A credencial está sendo renovada. Tente novamente mais tarde.",
+    STATE_NOT_ALLOWED: "A autorização não pode ser alterada no estado atual.",
+    STATE_INVALID: "A solicitação de autorização expirou ou é inválida.",
+    PKCE_INVALID: "A sessão segura da autorização é inválida.",
+    TOKEN_EXCHANGE_FAILED: "A autorização não pôde ser concluída.",
+    TOKEN_RESPONSE_INVALID: "O provedor retornou uma resposta inválida.",
+    USER_VALIDATION_FAILED: "Não foi possível confirmar a identidade autorizada.",
+    USER_MISMATCH: "A conta autorizada não corresponde à conta esperada.",
+    CONTROL_PLANE_FAILED: "Não foi possível armazenar a autorização com segurança.",
+    OUTCOME_UNKNOWN: "O resultado da autorização é incerto. Nenhuma nova tentativa automática será feita.",
+    CONFIG_ERROR: "A configuração server-side da autorização está incompleta.",
+  };
+  return layout(`<h1>AutoAchado.AI</h1><p>${escapeHtml(messages[outcome] ?? "A autorização não pôde ser concluída.")}</p><p class="muted">${escapeHtml(outcome)}</p><p><a href="/">Voltar</a></p>`);
 }
 
 function icon(status: string): string {

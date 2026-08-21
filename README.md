@@ -2,7 +2,7 @@
 
 Ferramenta técnica descartável para validar, exclusivamente por APIs oficiais, a viabilidade de consultar ofertas automotivas públicas no Mercado Livre Brasil.
 
-Este repositório não contém o produto final. O BUILD 0B1 inclui somente uma fundação local de persistência PostgreSQL/Supabase para desenvolvimento; não há projeto Supabase remoto, scheduler, afiliados, WhatsApp ou scraping.
+Este repositório não contém o produto final. A fundação PostgreSQL/Supabase e o plano de controle OAuth estão aplicados local e remotamente; não há scheduler, afiliados, WhatsApp ou scraping.
 
 O 0A-LIVE-D testa a cadeia oficial `CATEGORY → HIGHLIGHTS(type=PRODUCT) → /products/{id} → /products/{id}/items → ITEM → sale_price → seller` pela rota `POST /probe/catalog-products`. A execução live requer OAuth na aplicação implantada e não roda automaticamente em CI.
 
@@ -23,6 +23,9 @@ MELI_CLIENT_ID
 MELI_CLIENT_SECRET
 MELI_REDIRECT_URI
 SESSION_SECRET
+SUPABASE_URL
+SUPABASE_SECRET_KEY
+MELI_EXPECTED_USER_ID
 ```
 
 Use `.env.example` apenas como referência. Não preencha nem versione um `.env` real.
@@ -65,16 +68,22 @@ No checkpoint de deploy, o usuário deverá:
 
 1. conectar manualmente o repositório `JarvysIA/AutoAchado.Ai` à Vercel;
 2. garantir que o projeto/domínio usado corresponda a `autoachado-ai.vercel.app`;
-3. cadastrar as quatro variáveis de ambiente no painel da Vercel;
+3. cadastrar as variáveis de ambiente listadas acima no painel da Vercel;
 4. inserir o Client Secret diretamente no painel, nunca no chat;
 5. fazer o primeiro deploy;
 6. abrir a aplicação e iniciar o OAuth pelo botão oficial.
 
-Nenhum deploy é executado automaticamente por este BUILD.
+`SUPABASE_SECRET_KEY`, `MELI_CLIENT_SECRET` e `SESSION_SECRET` são exclusivamente server-side. Não crie `MELI_REFRESH_TOKEN`, `REFRESH_TOKEN` ou `MELI_ACCESS_TOKEN` na Vercel: o refresh token rotativo é armazenado somente no Supabase Vault.
+
+## Autorização persistente 0B2C
+
+O callback oficial valida `state` e PKCE, troca o authorization code uma única vez, confirma a identidade tanto na resposta do token quanto em `/users/me` e chama a RPC específica de inicialização do control plane. O refresh token é encaminhado diretamente ao Vault e não entra em cookie, página, log ou tabela operacional. O access token existe somente em memória durante a validação de `/users/me`.
+
+Após sucesso, o navegador recebe apenas uma sessão cifrada de confirmação com `user_id` e instante de autorização. Os probes manuais antigos foram desativados porque não é seguro manter tokens no cookie; a futura coleta server-side usará o serviço de rotação do 0B2B.
 
 ## Live probe
 
-O live probe só é iniciado pelo botão `Executar 0A-LIVE`, após OAuth válido. Ele não roda em testes, build ou CI.
+Os probes manuais 0A não são mais executáveis após o 0B2C, pois a sessão do navegador não contém tokens. Os respectivos módulos e evidências históricas permanecem no repositório, sem scraping ou rotas privadas.
 
 O probe alternativo `0A-LIVE-B` é iniciado separadamente pelo botão `Executar 0A-LIVE-B`. Ele não usa `/sites/MLB/search`: testa a cadeia oficial `categoria → highlights → User Product → busca de itens do seller por user_product_id → item → sale_price → seller`.
 

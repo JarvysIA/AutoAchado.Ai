@@ -53,9 +53,19 @@ Uma conexão inexistente retorna `INITIALIZED` e começa `ACTIVE` na versão 1. 
 
 A reautorização captura estado e versão sob lock e aplica update com CAS explícito de identidade, status e `token_version`, incrementando a versão exatamente uma vez. Qualquer falha inesperada do CAS gera exceção e rollback, sem declarar sucesso. As operações Vault e metadata participam da mesma transação PostgreSQL; o teste de subtransação força falha após a criação do secret e comprova ausência tanto da linha quanto de secret órfão.
 
-Testes com duas conexões PostgreSQL reais comprovam que somente uma inicialização ou reautorização vence, a perdedora recebe outcome seguro, autorização durante refresh preserva o lease e identidades diferentes não se bloqueiam globalmente. Vault continua sendo o único armazenamento do refresh token. Callback, fluxo OAuth do navegador e rotation service permanecem inalterados; o 0B2C continua pendente.
+Testes com duas conexões PostgreSQL reais comprovam que somente uma inicialização ou reautorização vence, a perdedora recebe outcome seguro, autorização durante refresh preserva o lease e identidades diferentes não se bloqueiam globalmente. Vault continua sendo o único armazenamento do refresh token.
 
-Antes do 0B2C, configurar diretamente na Vercel, sem compartilhar valores em chat: `SUPABASE_URL` (Project URL), `SUPABASE_SECRET_KEY` (Secret Key moderna marcada Sensitive) e `MELI_EXPECTED_USER_ID`. Não criar `MELI_REFRESH_TOKEN`, `REFRESH_TOKEN`, `MELI_ACCESS_TOKEN` ou `SUPABASE_SERVICE_ROLE_KEY`. O próximo passo separado é o 0B2C, que persistirá a autorização humana inicial no Vault.
+## Initial authorization persistence 0B2C
+
+O callback humano mantém o fluxo oficial Authorization Code + PKCE S256 e valida rigorosamente `state`, verifier e validade temporal antes da troca. A resposta do token é validada em runtime; `user_id` precisa coincidir com `MELI_EXPECTED_USER_ID` e com a identidade confirmada em `/users/me`.
+
+Depois da validação, o callback chama exclusivamente `initialize_meli_oauth_connection`. `INITIALIZED` e `REAUTHORIZED` confirmam persistência no Vault; `ALREADY_INITIALIZED` é sucesso idempotente e não substitui uma credencial ativa. `LOCK_BUSY` e `STATE_NOT_ALLOWED` fecham sem alterar a conexão. Erros de transporte do control plane ou resultado ambíguo da troca nunca são apresentados como sucesso.
+
+O refresh token existe apenas na resposta transitória do provider e no argumento da RPC; seu único armazenamento persistente é o Vault. O access token permanece em memória somente até `/users/me` e nunca é liberado antes da persistência segura. A sessão cifrada do navegador contém apenas `authorized`, `userId` e `authorizedAt`; o callback sobrescreve cookies legados que continham tokens e sempre limpa o cookie temporário de OAuth.
+
+Como a sessão deixou de conter access token, as rotas manuais dos probes 0A retornam estado desativado sem iniciar coleta. Nenhuma rota pública de refresh/rotate/token foi criada. O OAuth live continua sendo um gate humano separado após deploy; testes usam somente fakes e canários sintéticos.
+
+As variáveis `SUPABASE_URL`, `SUPABASE_SECRET_KEY` e `MELI_EXPECTED_USER_ID` devem existir diretamente na Vercel, sem serem compartilhadas por chat. Não criar `MELI_REFRESH_TOKEN`, `REFRESH_TOKEN`, `MELI_ACCESS_TOKEN` ou `SUPABASE_SERVICE_ROLE_KEY`.
 
 ## Idempotência
 
