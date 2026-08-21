@@ -50,11 +50,13 @@ function parseSuccessPayload(value: unknown): RefreshResult {
   }
   const accessToken = value.access_token;
   const refreshToken = value.refresh_token;
+  const tokenType = value.token_type;
   const expiresIn = value.expires_in;
   const userId = value.user_id;
   if (
     typeof accessToken !== "string" || accessToken.length === 0
     || typeof refreshToken !== "string" || refreshToken.length === 0
+    || typeof tokenType !== "string" || tokenType.toLowerCase() !== "bearer"
     || typeof expiresIn !== "number" || !Number.isSafeInteger(expiresIn) || expiresIn <= 0
     || typeof userId !== "number" || !Number.isSafeInteger(userId) || userId <= 0
   ) {

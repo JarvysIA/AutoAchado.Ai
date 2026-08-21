@@ -7,7 +7,7 @@ const jsonResponse = (body: unknown, status: number) => new Response(JSON.string
 describe("provider oficial de refresh Mercado Livre", () => {
   it("usa POST form-urlencoded, timeout e não repete", async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({
-      access_token: "fake-access", refresh_token: "fake-next-refresh", expires_in: 21600, user_id: 296984475,
+      access_token: "fake-access", refresh_token: "fake-next-refresh", token_type: "Bearer", expires_in: 21600, user_id: 296984475,
     }, 200));
     const provider = new MeliHttpTokenProvider(options(fetchImpl));
     await expect(provider.refresh("fake-current-refresh")).resolves.toMatchObject({ accessToken: "fake-access", refreshToken: "fake-next-refresh" });
@@ -18,6 +18,31 @@ describe("provider oficial de refresh Mercado Livre", () => {
     const body = init?.body as URLSearchParams;
     expect(body.get("grant_type")).toBe("refresh_token");
     expect(body.get("client_secret")).toBe("fake-client-secret");
+  });
+
+  it("aceita Bearer sem depender de capitalização", async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({
+      access_token: "fake-access", refresh_token: "fake-next-refresh", token_type: "bearer", expires_in: 21600, user_id: 296984475,
+    }, 200));
+    const provider = new MeliHttpTokenProvider(options(fetchImpl));
+    await expect(provider.refresh("fake-current-refresh")).resolves.toMatchObject({ accessToken: "fake-access" });
+  });
+
+  it.each([
+    ["ausente", undefined],
+    ["inválido", "MAC"],
+    ["não textual", 123],
+  ])("rejeita token_type %s sem retry", async (_case, tokenType) => {
+    const payload: Record<string, unknown> = {
+      access_token: "fake-access", refresh_token: "fake-next-refresh", expires_in: 21600, user_id: 296984475,
+    };
+    if (tokenType !== undefined) payload.token_type = tokenType;
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(payload, 200));
+    const provider = new MeliHttpTokenProvider(options(fetchImpl));
+    await expect(provider.refresh("fake-current-refresh")).rejects.toMatchObject({
+      errorCode: "RESPONSE_INVALID", disposition: "OUTCOME_UNKNOWN",
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
   it.each([
