@@ -9,7 +9,8 @@ export type IsoDate = string;
 export type JsonObject = Readonly<Record<string, unknown>>;
 
 export type ScanStatus = 'PENDING' | 'RUNNING' | 'PARTIAL' | 'COMPLETED' | 'FAILED';
-export type CategoryPriority = 'A' | 'B' | 'C' | 'EXCLUDED';
+export type RegistryCategoryPriorityTier = 'A' | 'B' | 'C';
+export type LegacyAutomotiveCategoryPriority = RegistryCategoryPriorityTier | 'EXCLUDED';
 export type CategoryScope = 'ALLOWED' | 'REVIEW' | 'EXCLUDED' | 'UNKNOWN';
 export type CategoryDecisionSource = 'AUTO' | 'MANUAL';
 export type HighlightType = 'PRODUCT' | 'ITEM' | 'USER_PRODUCT';
@@ -51,7 +52,7 @@ export interface VerticalCategoryMappingRecord {
   verticalKey: string;
   marketplaceCategoryId: string;
   scopeStatus: CategoryScope;
-  priorityTier: CategoryPriority;
+  priorityTier: RegistryCategoryPriorityTier | null;
   familyKey: string | null;
   commercialFamilyKeyDefault: string | null;
   classificationRule: string | null;
@@ -71,7 +72,7 @@ export interface AutomotiveCategoryRecord {
   path: readonly string[];
   familyKey: string | null;
   commercialFamilyKey: string | null;
-  priorityTier: CategoryPriority;
+  priorityTier: LegacyAutomotiveCategoryPriority;
   scopeStatus: CategoryScope;
   isLeaf: boolean;
   manualOverride: boolean | null;

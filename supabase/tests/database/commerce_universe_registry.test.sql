@@ -467,7 +467,7 @@ select lives_ok(
       classification_version, decision_source
     ) values (
       'TEST_VERTICAL', '10000000-0000-4000-8000-000000000001',
-      'REVIEW', 'C', 'db-test-v1', 'AUTO'
+      'REVIEW', null, 'db-test-v1', 'AUTO'
     )$$,
   'the same external category can map to a second vertical'
 );
@@ -490,7 +490,7 @@ select throws_ok(
       'INVALID', 'A', 'db-test-v1', 'AUTO'
     )$$,
   '23514',
-  'new row for relation "vertical_category_mappings" violates check constraint "vertical_category_mappings_scope_status_check"',
+  'new row for relation "vertical_category_mappings" violates check constraint "vertical_category_mappings_scope_priority_consistency_check"',
   'scope status is allowlisted'
 );
 
@@ -529,7 +529,7 @@ select throws_ok(
       'EXCLUDED', 'A', 'db-test-v1', 'AUTO'
     )$$,
   '23514',
-  'new row for relation "vertical_category_mappings" violates check constraint "vertical_category_mappings_excluded_consistency_check"',
+  'new row for relation "vertical_category_mappings" violates check constraint "vertical_category_mappings_scope_priority_consistency_check"',
   'excluded scope cannot use an active discovery tier'
 );
 
@@ -542,7 +542,7 @@ select throws_ok(
       'ALLOWED', 'EXCLUDED', 'db-test-v1', 'AUTO'
     )$$,
   '23514',
-  'new row for relation "vertical_category_mappings" violates check constraint "vertical_category_mappings_excluded_consistency_check"',
+  'new row for relation "vertical_category_mappings" violates check constraint "vertical_category_mappings_priority_tier_check"',
   'excluded tier cannot use an active scope'
 );
 
@@ -552,9 +552,9 @@ select lives_ok(
       classification_version, decision_source
     ) values (
       'AUTOMOTIVE', '10000000-0000-4000-8000-000000000002',
-      'EXCLUDED', 'EXCLUDED', 'db-test-v1', 'AUTO'
+      'EXCLUDED', null, 'db-test-v1', 'AUTO'
     )$$,
-  'excluded scope and tier are accepted together'
+  'excluded scope is accepted without a priority tier'
 );
 
 insert into public.marketplace_categories (
@@ -574,7 +574,7 @@ select throws_ok(
       'ALLOWED', 'A', 'db-test-v1', true, 'AUTO'
     )$$,
   '23514',
-  'new row for relation "vertical_category_mappings" violates check constraint "vertical_category_mappings_manual_source_check"',
+  'new row for relation "vertical_category_mappings" violates check constraint "vertical_category_mappings_manual_source_consistency_check"',
   'manual override cannot have an automatic decision source'
 );
 
@@ -608,7 +608,7 @@ select lives_ok(
       classification_version, manual_override, decision_source
     ) values (
       'AUTOMOTIVE', '10000000-0000-4000-8000-000000000008',
-      'REVIEW', 'C', 'db-test-v1', false, 'AUTO'
+      'REVIEW', null, 'db-test-v1', false, 'AUTO'
     )$$,
   'an automatic non-override classification is accepted'
 );
