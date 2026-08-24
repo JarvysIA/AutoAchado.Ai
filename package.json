@@ -15,6 +15,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "snapshot:automotive-taxonomy": "tsx scripts/generate-automotive-taxonomy-snapshot.ts",
     "smoke:runtime": "pnpm smoke:vercel-runtime",
     "smoke:vercel-runtime": "node scripts/smoke-runtime.mjs",
     "smoke:vercel-http": "node scripts/smoke-vercel-http.mjs",
