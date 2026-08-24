@@ -159,18 +159,13 @@ select ok(
 );
 
 select ok(
-  (
-    select bool_and(has_table_privilege(
-      'service_role', format('%I.%I', t.table_schema, t.table_name), 'SELECT, INSERT, UPDATE'
-    ))
-    from information_schema.tables t
-    where t.table_schema = 'public'
-      and t.table_name in (
-        'marketplaces', 'commerce_verticals',
-        'marketplace_categories', 'vertical_category_mappings'
-      )
-  ),
-  'service_role has only the required registry write operations'
+  has_table_privilege('service_role', 'public.marketplaces', 'SELECT, INSERT, UPDATE')
+  and has_table_privilege('service_role', 'public.commerce_verticals', 'SELECT, INSERT, UPDATE')
+  and has_table_privilege('service_role', 'public.marketplace_categories', 'SELECT')
+  and has_table_privilege('service_role', 'public.vertical_category_mappings', 'SELECT')
+  and not has_table_privilege('service_role', 'public.marketplace_categories', 'INSERT, UPDATE')
+  and not has_table_privilege('service_role', 'public.vertical_category_mappings', 'INSERT, UPDATE'),
+  'service_role writes seed registries directly and mutable registry state only through RPC'
 );
 
 select ok(
