@@ -53,7 +53,7 @@ const excludedAncestor = (
   reason: AutomotiveCategoryRule["reason"] = "EXCLUDED_ANCESTOR",
 ): AutomotiveCategoryRule => ({ ...excluded(categoryId, ruleId, reason) });
 
-const exactRules: AutomotiveCategoryRule[] = [
+const baselineExactRules: AutomotiveCategoryRule[] = [
   review(AUTOMOTIVE_ROOT_CATEGORY_ID, "root.mixed-review", "MIXED_BRANCH_REVIEW"),
   excluded("MLB377674", "services.self", "SERVICE_CATEGORY"),
   excluded("MLB457400", "tire-installation.service", "SERVICE_CATEGORY"),
@@ -206,6 +206,91 @@ const exactRules: AutomotiveCategoryRule[] = [
   review("MLB5802", "root-other.review", "RESIDUAL_REVIEW"),
 ];
 
+const allowedOverrides = (
+  categoryIds: readonly string[],
+  decisionId: string,
+  priorityTier: AutomotivePriorityTier,
+  familyKey: string,
+): readonly AutomotiveCategoryRule[] => categoryIds.map((categoryId) =>
+  allowed(categoryId, `auto214.${decisionId}.${categoryId}`, priorityTier, familyKey));
+
+const auto214AToBOverrides: readonly AutomotiveCategoryRule[] = [
+  ...allowedOverrides(["MLB2219"], "a-to-b", "B", "car_accessories"),
+  ...allowedOverrides([
+    "MLB22723", "MLB263728", "MLB270872", "MLB271174", "MLB363814", "MLB392348",
+    "MLB429409", "MLB430552", "MLB430584", "MLB433258", "MLB455776",
+  ], "a-to-b", "B", "automotive_cleaning"),
+  ...allowedOverrides(["MLB370798", "MLB63533"], "a-to-b", "B", "tire_inflators"),
+  ...allowedOverrides(["MLB179794"], "a-to-b", "B", "vehicle_security"),
+  ...allowedOverrides(["MLB431319"], "a-to-b", "B", "filters"),
+  ...allowedOverrides([
+    "MLB438870", "MLB456124", "MLB456128", "MLB456142", "MLB457915", "MLB457979",
+  ], "a-to-b", "B", "lubricants_fluids"),
+];
+
+const auto214ToCOverrides: readonly AutomotiveCategoryRule[] = [
+  ...allowedOverrides([
+    "MLB418751", "MLB459196", "MLB459362", "MLB459363", "MLB459364", "MLB459367",
+  ], "to-c", "C", "car_accessories"),
+  ...allowedOverrides(["MLB46596", "MLB46670"], "to-c", "C", "motorcycle_accessories"),
+  ...allowedOverrides([
+    "MLB116341", "MLB116342", "MLB431132", "MLB437796", "MLB437797", "MLB455307",
+    "MLB455313",
+  ], "to-c", "C", "vehicle_tools"),
+  ...allowedOverrides([
+    "MLB115699", "MLB22369", "MLB251640", "MLB277344", "MLB418061", "MLB419998",
+    "MLB420074", "MLB420089", "MLB433784", "MLB440301", "MLB440306",
+  ], "to-c", "C", "vehicle_security"),
+  ...allowedOverrides(["MLB278120", "MLB431961"], "to-c", "C", "filters"),
+  ...allowedOverrides([
+    "MLB191728", "MLB194836", "MLB22645", "MLB458221", "MLB458237", "MLB458238",
+    "MLB458239", "MLB458240", "MLB458241", "MLB458242", "MLB458246",
+  ], "to-c", "C", "lighting"),
+  ...allowedOverrides(["MLB47099", "MLB47100", "MLB63581"], "to-c", "C", "brakes"),
+  ...allowedOverrides([
+    "MLB127436", "MLB430193", "MLB433273", "MLB438488", "MLB438558", "MLB438559",
+    "MLB45320", "MLB61635",
+  ], "to-c", "C", "car_audio"),
+  ...allowedOverrides([
+    "MLB120497", "MLB120498", "MLB271557", "MLB271558", "MLB49555", "MLB49557",
+  ], "to-c", "C", "vehicle_navigation"),
+];
+
+const auto214BorderlineOverrides: readonly AutomotiveCategoryRule[] = [
+  ...allowedOverrides(["MLB432538", "MLB456123"], "borderline-a", "A", "lubricants_fluids"),
+  ...allowedOverrides(["MLB392346"], "borderline-b", "B", "automotive_cleaning"),
+  ...allowedOverrides(["MLB458249"], "borderline-b", "B", "lighting"),
+  ...allowedOverrides(["MLB3386"], "borderline-b", "B", "car_audio"),
+  ...allowedOverrides([
+    "MLB194028", "MLB429227", "MLB439465",
+  ], "borderline-b", "B", "lubricants_fluids"),
+  ...allowedOverrides(["MLB8532"], "borderline-b", "B", "vehicle_navigation"),
+  ...allowedOverrides([
+    "MLB22675", "MLB271259", "MLB458058",
+  ], "borderline-c", "C", "motorcycle_accessories"),
+  ...allowedOverrides(["MLB440131"], "borderline-c", "C", "vehicle_tools"),
+  ...allowedOverrides(["MLB437338"], "borderline-c", "C", "vehicle_security"),
+  ...allowedOverrides([
+    "MLB458223", "MLB458233", "MLB458235", "MLB458244",
+  ], "borderline-c", "C", "lighting"),
+  ...allowedOverrides(["MLB45372"], "borderline-c", "C", "car_audio"),
+  review("MLB116501", "auto214.borderline-review.MLB116501"),
+  review("MLB440302", "auto214.borderline-review.MLB440302", "MIXED_BRANCH_REVIEW"),
+  review("MLB194016", "auto214.borderline-review.MLB194016"),
+  excluded("MLB437340", "auto214.borderline-excluded.MLB437340"),
+];
+
+const commercialOverrides = [
+  ...auto214AToBOverrides,
+  ...auto214ToCOverrides,
+  ...auto214BorderlineOverrides,
+];
+const commercialOverrideIds = new Set(commercialOverrides.map((rule) => rule.categoryId));
+const exactRules: AutomotiveCategoryRule[] = [
+  ...commercialOverrides,
+  ...baselineExactRules.filter((rule) => !commercialOverrideIds.has(rule.categoryId)),
+];
+
 const ancestorRules: AutomotiveCategoryRule[] = [
   excludedAncestor("MLB377674", "services.descendants", "SERVICE_CATEGORY"),
   excludedAncestor("MLB458209", "complete-motorcycles.descendants", "COMPLETE_VEHICLE_CATEGORY"),
@@ -235,7 +320,6 @@ const ancestorRules: AutomotiveCategoryRule[] = [
   reviewAncestor("MLB45558", "motorcycle-parts.brakes-mixed-descendants"),
   reviewAncestor("MLB3935", "motorcycle-parts.lighting-mixed-descendants"),
   reviewAncestor("MLB2227", "tools.residual-descendants"),
-  allowedAncestor("MLB440135", "tools.inflators.descendants", "A", "tire_inflators"),
   allowedAncestor("MLB455301", "tools.scanners.descendants", "B", "vehicle_tools"),
   allowedAncestor("MLB437795", "tools.inspection.descendants", "B", "vehicle_tools"),
   allowedAncestor("MLB455304", "tools.battery.descendants", "B", "vehicle_tools"),

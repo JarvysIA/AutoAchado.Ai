@@ -61,14 +61,40 @@ if (Object.values(businessInvariants).some((passed) => !passed)) {
   throw new Error("AUTOMOTIVE_CLASSIFIER_BUSINESS_INVARIANT_FAILED");
 }
 
+const auto214Rules = AUTOMOTIVE_MLB_RULES_V1.exactRules.filter((rule) =>
+  rule.ruleId.startsWith("auto214."));
+const commercialInvariants = {
+  AUTO_DISCOVERY_FINAL_COUNT_144: automatic.length === 144,
+  AUTO_DISCOVERY_NO_QUOTA: automatic.length === results.filter((result) =>
+    result.scopeStatus === "ALLOWED" && (result.priorityTier === "A" || result.priorityTier === "B")).length,
+  AUTO_DISCOVERY_SELLABILITY_REVIEW_APPLIED: auto214Rules.length === 101,
+  BORDERLINE_HUMAN_DECISIONS_APPLIED: auto214Rules.filter((rule) =>
+    rule.ruleId.startsWith("auto214.borderline-")).length === 23,
+  A_TO_B_22_APPLIED: auto214Rules.filter((rule) =>
+    rule.ruleId.startsWith("auto214.a-to-b.")).length === 22,
+  TO_C_56_APPLIED: auto214Rules.filter((rule) =>
+    rule.ruleId.startsWith("auto214.to-c.")).length === 56,
+};
+if (Object.values(commercialInvariants).some((passed) => !passed)) {
+  throw new Error("AUTOMOTIVE_CLASSIFIER_COMMERCIAL_INVARIANT_FAILED");
+}
+
 const rootRows = tree.getChildren("MLB5672").map((branch) => {
   const branchResults = subtreeResults(branch.externalCategoryId);
-  return `| ${branch.externalCategoryId} | ${branch.name} | ${branchResults.length} | ${countScope(branchResults, "ALLOWED")} | ${countScope(branchResults, "REVIEW")} | ${countScope(branchResults, "EXCLUDED")} | ${countScope(branchResults, "UNKNOWN")} | ${branchResults.filter(isAutomaticAutomotiveDiscoveryEligible).length} |`;
+  return `| ${branch.externalCategoryId} | ${branch.name} | ${branchResults.length} | ${countScope(branchResults, "ALLOWED")} | ${countScope(branchResults, "REVIEW")} | ${countScope(branchResults, "EXCLUDED")} | ${countScope(branchResults, "UNKNOWN")} | ${countTier(branchResults, "A")} | ${countTier(branchResults, "B")} | ${countTier(branchResults, "C")} | ${branchResults.filter(isAutomaticAutomotiveDiscoveryEligible).length} |`;
 });
 
 const ruleCounts = new Map<string, number>();
 for (const result of results) ruleCounts.set(result.ruleId, (ruleCounts.get(result.ruleId) ?? 0) + 1);
 const topRules = [...ruleCounts.entries()].sort((left, right) => right[1] - left[1]).slice(0, 20)
+  .map(([ruleId, count]) => `| ${ruleId} | ${count} |`);
+const automaticRuleCounts = new Map<string, number>();
+for (const result of automatic) {
+  automaticRuleCounts.set(result.ruleId, (automaticRuleCounts.get(result.ruleId) ?? 0) + 1);
+}
+const topAutomaticRules = [...automaticRuleCounts.entries()]
+  .filter(([, count]) => count >= 5)
+  .sort((left, right) => right[1] - left[1])
   .map(([ruleId, count]) => `| ${ruleId} | ${count} |`);
 const configuredRuleIds = [...AUTOMOTIVE_MLB_RULES_V1.exactRules, ...AUTOMOTIVE_MLB_RULES_V1.ancestorRules]
   .map((rule) => rule.ruleId);
@@ -118,8 +144,8 @@ Gerado offline a partir do snapshot sanitizado e versionado. Nenhuma API, OAuth,
 
 ## Coverage by root branch
 
-| ID | Branch | Total | ALLOWED | REVIEW | EXCLUDED | UNKNOWN | Automatic |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| ID | Branch | Total | ALLOWED | REVIEW | EXCLUDED | UNKNOWN | A | B | C | Automatic |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 ${rootRows.join("\n")}
 
 ## Top matching rules
@@ -127,6 +153,12 @@ ${rootRows.join("\n")}
 | Rule | Nodes |
 | --- | ---: |
 ${topRules.join("\n")}
+
+## Automatic rules with at least 5 categories
+
+| Rule | Automatic categories |
+| --- | ---: |
+${topAutomaticRules.join("\n")}
 
 ## UNKNOWN / REVIEW summary
 
@@ -139,6 +171,10 @@ Rules without match: ${unmatchedRules.length === 0 ? "nenhuma" : unmatchedRules.
 ## Business invariants
 
 ${Object.entries(businessInvariants).map(([name, passed]) => `- ${name}: **${invariant(passed)}**`).join("\n")}
+
+## Commercial invariants
+
+${Object.entries(commercialInvariants).map(([name, passed]) => `- ${name}: **${invariant(passed)}**`).join("\n")}
 
 ## Sellability invariants
 
