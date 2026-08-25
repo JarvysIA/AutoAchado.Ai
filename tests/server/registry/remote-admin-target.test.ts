@@ -94,10 +94,13 @@ describe("remote registry admin read target", () => {
     const source = await readFile(
       new URL("../../../src/server/registry/remote-admin-target.ts", import.meta.url), "utf8",
     );
-    expect(source).toContain('"projects"');
-    expect(source).toContain('"api-keys"');
-    expect(source).toContain('"--reveal"');
-    expect(source).toContain("shell: false");
+    const credentialSource = await readFile(
+      new URL("../../../src/server/registry/remote-admin-credential.ts", import.meta.url), "utf8",
+    );
+    expect(credentialSource).toContain('"projects"');
+    expect(credentialSource).toContain('"api-keys"');
+    expect(credentialSource).toContain('"--reveal"');
+    expect(credentialSource).toContain("shell: false");
     expect(source).not.toMatch(/\.rpc\s*\(/);
     expect(source).not.toMatch(/\.(?:insert|update|upsert|delete)\s*\(/);
     expect(source).not.toContain("registryApplyClientFromSupabase");

@@ -88,3 +88,21 @@ produces a 1,603,538-byte payload: 3,269 category inserts, 3,269 mapping inserts
 
 C4C does not enable remote writes. A separately authorized C4-LIVE gate owns the first remote apply
 and must rebuild a fresh remote preview; the C4C token must not be reused as authorization.
+
+## First remote apply tooling (LIVE-A)
+
+O comando administrativo dedicado é pnpm commerce:registry:first-remote-apply.
+
+Ele é separado da CLI principal, força o preset de primeiro sync e usa confirmação exata no
+domínio AUTOACHADO:LIVE:REMOTE:.... O token read-only de C4C
+(AUTOACHADO:REMOTE:...) nunca confirma uma escrita LIVE. Antes de qualquer cliente de
+apply, o fluxo executa preview, confirmação, nova resolução do target e credencial, segundo
+prepare e comparação integral do fingerprint/token.
+
+Em LIVE-A, somente --preview e --preview --json podem ser executados contra o remoto
+real. O modo confirmado fica preparado para o gate operacional LIVE-B, mas não faz parte de
+testes, build ou CI. O apply explícito executa exatamente uma RPC, sem retry automático, e
+exige post-read, post-diff e convergência. Não existe rollback automático.
+
+A CLI principal permanece com remote estritamente read-only e continua bloqueando
+pnpm commerce:registry:sync -- --remote --apply.
