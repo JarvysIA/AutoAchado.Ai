@@ -13,7 +13,7 @@ import { COMMERCE_REGISTRY_SYNC_CONFIG_VERSION, type CommerceRegistrySyncPlan } 
 import { applyCommerceRegistrySync, callAtomicRegistryApplyRpc, registryApplyClientFromSupabase } from "../src/server/registry/executor.js";
 import { loadCurrentCommerceRegistryState, registryReadClientFromSupabase, type RegistryReadClient, type RegistryReadQuery } from "../src/server/registry/current-state.js";
 import { TaxonomyTree } from "../src/taxonomy/tree.js";
-import { snapshotToTaxonomyTree, validateAutomotiveTaxonomySnapshot } from "../tests/helpers/automotive-taxonomy-snapshot.js";
+import { snapshotToTaxonomyTree, validateAutomotiveTaxonomySnapshot } from "../src/taxonomy/automotive-snapshot.js";
 
 const EXPECTED_CHECKSUM="c9e15babf11f24faa009641f174810eabb1459a705d74b8d4d0c3a6c1e77ded2";
 const root=resolve(import.meta.dirname,"..");

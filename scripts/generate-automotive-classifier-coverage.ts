@@ -14,7 +14,7 @@ import {
   checksumAutomotiveTaxonomySnapshot,
   snapshotToTaxonomyTree,
   validateAutomotiveTaxonomySnapshot,
-} from "../tests/helpers/automotive-taxonomy-snapshot.js";
+} from "../src/taxonomy/automotive-snapshot.js";
 
 const snapshotPath = new URL("../tests/fixtures/meli-automotive-taxonomy.snapshot.json", import.meta.url);
 const reportPath = new URL("../reports/0B3B2-classifier-coverage.md", import.meta.url);

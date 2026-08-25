@@ -9,7 +9,7 @@ import {
   checksumAutomotiveTaxonomySnapshot,
   serializeAutomotiveTaxonomySnapshot,
   validateAutomotiveTaxonomySnapshot,
-} from "../tests/helpers/automotive-taxonomy-snapshot.js";
+} from "../src/taxonomy/automotive-snapshot.js";
 
 const EXPECTED_R3_HASH = "1D8E71C468205D3D16A1D1C1A381969254B4F6A8B3B8ED5D907FAA7C6BF62714";
 const R3_NODE_COUNT = 3269;
