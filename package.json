@@ -26,6 +26,7 @@
     "test:db": "supabase test db",
     "test:registry-local-e2e": "tsx scripts/test-registry-sync-local-e2e.ts",
     "test:registry-cli-local-apply-e2e": "tsx scripts/test-registry-sync-cli-local-apply-e2e.ts",
+    "test:registry-cli-remote-read": "tsx scripts/test-registry-sync-cli-remote-read.ts",
     "commerce:registry:sync": "tsx scripts/commerce-registry-sync.ts",
     "test:db:concurrency": "node scripts/test-oauth-initialize-concurrency.mjs"
   },

@@ -18,6 +18,12 @@ const target = Object.freeze({
   projectRef: null,
   baseUrl: "http://127.0.0.1:54321",
 });
+const remoteTarget = Object.freeze({
+  kind: "REMOTE" as const,
+  label: "REMOTE" as const,
+  projectRef: "nrwhzfahjypybjyajmrj" as const,
+  baseUrl: "https://nrwhzfahjypybjyajmrj.supabase.co",
+});
 
 function preview(status: "READY" | "BLOCKED" = "READY"): RegistrySyncPreview {
   return {
@@ -69,6 +75,7 @@ function harness(value: RegistrySyncPreview = preview(), options: { tty?: boolea
   const stdout: string[] = [];
   const stderr: string[] = [];
   let targetCalls = 0;
+  let remoteTargetCalls = 0;
   let applyTargetCalls = 0;
   let dryCalls = 0;
   let applyCalls = 0;
@@ -76,8 +83,12 @@ function harness(value: RegistrySyncPreview = preview(), options: { tty?: boolea
   let applyFactoryCalls = 0;
   let firstSync: boolean | null = null;
   const dependencies: RegistrySyncCliDependencies = {
-    resolveTarget: () => { targetCalls += 1; return { target, readClient }; },
-    resolveApplyTarget: () => {
+    resolveLocalTarget: () => { targetCalls += 1; return { target, readClient }; },
+    resolveRemoteTarget: () => {
+      remoteTargetCalls += 1;
+      return { target: remoteTarget, readClient, credentialResolveMs: 1 };
+    },
+    resolveLocalApplyTarget: () => {
       applyTargetCalls += 1;
       return { target, readClient, createApplyClient: async () => { applyFactoryCalls += 1; return applyClient; } };
     },
@@ -97,37 +108,43 @@ function harness(value: RegistrySyncPreview = preview(), options: { tty?: boolea
     stderr: (text) => stderr.push(text),
   };
   return { dependencies, stdout, stderr, calls: () => ({
-    targetCalls, applyTargetCalls, dryCalls, applyCalls, promptCalls, applyFactoryCalls, firstSync,
+    targetCalls, remoteTargetCalls, applyTargetCalls, dryCalls, applyCalls, promptCalls, applyFactoryCalls, firstSync,
   }) };
 }
 
 describe("commerce registry sync CLI", () => {
-  it("parseia as flags C4B estritamente", () => {
-    expect(parseRegistrySyncCliArgs([])).toEqual({ json: false, firstSync: false, apply: false, confirmationToken: null });
+  it("parseia as flags C4C estritamente", () => {
+    expect(parseRegistrySyncCliArgs([])).toEqual({
+      json: false, firstSync: false, apply: false, remote: false, confirmationToken: null,
+    });
     expect(parseRegistrySyncCliArgs(["--apply", "--confirm", " token "])).toEqual({
-      json: false, firstSync: false, apply: true, confirmationToken: " token ",
+      json: false, firstSync: false, apply: true, remote: false, confirmationToken: " token ",
     });
     expect(parseRegistrySyncCliArgs(["--", "--first-sync", "--json"])).toEqual({
-      json: true, firstSync: true, apply: false, confirmationToken: null,
+      json: true, firstSync: true, apply: false, remote: false, confirmationToken: null,
+    });
+    expect(parseRegistrySyncCliArgs(["--remote", "--first-sync"])).toEqual({
+      json: false, firstSync: true, apply: false, remote: true, confirmationToken: null,
     });
     for (const args of [
       ["--confirm"], ["--confirm", "token"], ["--wat"], ["--json", "--json"],
       ["--apply", "--confirm", "one", "--confirm", "two"],
     ]) expect(() => parseRegistrySyncCliArgs(args)).toThrowError(/Argumentos inválidos/);
     expect(() => parseRegistrySyncCliArgs(["--remote", "--apply", "--confirm", "anything"]))
-      .toThrowError(/Remote indisponível/);
+      .toThrowError(/Apply remoto indisponível/);
   });
 
   it.each([
-    [["--remote"], "REGISTRY_SYNC_REMOTE_NOT_ENABLED", 1],
-    [["--remote", "--apply", "--confirm", "anything"], "REGISTRY_SYNC_REMOTE_NOT_ENABLED", 1],
+    [["--remote", "--apply"], "REGISTRY_SYNC_REMOTE_APPLY_NOT_ENABLED", 1],
+    [["--remote", "--apply", "--confirm", "anything"], "REGISTRY_SYNC_REMOTE_APPLY_NOT_ENABLED", 1],
+    [["--remote", "--confirm", "anything"], "REGISTRY_SYNC_INVALID_ARGUMENTS", 2],
     [["--confirm", "token"], "REGISTRY_SYNC_INVALID_ARGUMENTS", 2],
     [["--wat"], "REGISTRY_SYNC_INVALID_ARGUMENTS", 2],
     [["--json", "--json"], "REGISTRY_SYNC_INVALID_ARGUMENTS", 2],
   ] as const)("bloqueia %j antes de target/read/apply", async (args, marker, exitCode) => {
     const test = harness();
     await expect(runCommerceRegistrySyncCli(args, test.dependencies)).resolves.toBe(exitCode);
-    expect(test.calls()).toMatchObject({ targetCalls: 0, applyTargetCalls: 0, dryCalls: 0, applyCalls: 0 });
+    expect(test.calls()).toMatchObject({ targetCalls: 0, remoteTargetCalls: 0, applyTargetCalls: 0, dryCalls: 0, applyCalls: 0 });
     expect(test.stderr.join("")).toContain(marker);
   });
 
@@ -157,6 +174,22 @@ describe("commerce registry sync CLI", () => {
     expect(test.stderr).toEqual([]);
     expect(test.stdout).toHaveLength(1);
     expect(JSON.parse(test.stdout[0]!)).toMatchObject({ mode: "DRY_RUN", safety: { rpcApplyCalls: 0 } });
+  });
+
+  it.each([
+    ["human", ["--remote"]],
+    ["json", ["--remote", "--json"]],
+    ["first-sync", ["--remote", "--first-sync"]],
+    ["first-sync JSON", ["--remote", "--first-sync", "--json"]],
+  ])("roteia remote dry-run read-only em %s", async (_name, args) => {
+    const value = { ...preview(), target: remoteTarget,
+      fingerprint: { algorithm: "sha256" as const, value: "remote", token: "AUTOACHADO:REMOTE:MLB5672:3269:ABCDEF123456" } };
+    const test = harness(value);
+    await expect(runCommerceRegistrySyncCli(args, test.dependencies)).resolves.toBe(0);
+    expect(test.calls()).toMatchObject({ targetCalls: 0, remoteTargetCalls: 1, dryCalls: 1, applyCalls: 0 });
+    const output = test.stdout.join("");
+    if (args.includes("--json")) expect(JSON.parse(output)).toMatchObject({ target: { kind: "REMOTE" } });
+    else expect(output).toContain("AUTOACHADO REGISTRY SYNC — REMOTE READ-ONLY");
   });
 
   it("encaminha token fornecido e emite um objeto JSON de apply", async () => {
@@ -205,7 +238,7 @@ describe("commerce registry sync CLI", () => {
     const test = harness();
     const dependencies: RegistrySyncCliDependencies = {
       ...test.dependencies,
-      resolveTarget: () => { throw new Error("sb_secret_fake_canary Authorization apikey Bearer"); },
+      resolveLocalTarget: () => { throw new Error("sb_secret_fake_canary Authorization apikey Bearer"); },
     };
     await expect(runCommerceRegistrySyncCli(["--json"], dependencies)).resolves.toBe(1);
     const output = [...test.stdout, ...test.stderr].join("");

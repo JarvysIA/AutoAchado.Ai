@@ -7,6 +7,7 @@ import type {
 } from "../../commerce/registry/types.js";
 import {
   resolveLocalRegistryApplyTarget,
+  type LocalRegistrySyncTarget,
   type RegistrySyncTarget,
   type ResolvedLocalRegistryApplyTarget,
 } from "./admin-target.js";
@@ -95,7 +96,7 @@ export interface RegistrySyncApplyRunResult {
 }
 
 export interface RunRegistrySyncApplyInput {
-  readonly target: RegistrySyncTarget;
+  readonly target: LocalRegistrySyncTarget;
   readonly readClient: RegistryReadClient;
   readonly preset: RegistrySyncDryRunPreset;
   readonly firstSync: boolean;
@@ -224,6 +225,12 @@ function errorCode(error: unknown): string {
 export async function runRegistrySyncApply(
   input: RunRegistrySyncApplyInput,
 ): Promise<Readonly<RegistrySyncApplyRunResult>> {
+  if ((input.target as RegistrySyncTarget).kind !== "LOCAL") {
+    throw registrySyncDryRunError(
+      "REGISTRY_SYNC_REMOTE_APPLY_NOT_ENABLED",
+      "Apply remoto indisponível neste build",
+    );
+  }
   const nowMs = input.nowMs ?? (() => performance.now());
   let started = nowMs();
   const initial = await prepareRegistrySyncRun({

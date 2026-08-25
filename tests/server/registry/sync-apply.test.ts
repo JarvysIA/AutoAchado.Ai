@@ -224,6 +224,27 @@ function input(
 }
 
 describe("confirmed local registry apply", () => {
+  it("bloqueia target REMOTE direto antes de prepare, read, confirmation ou RPC", async () => {
+    const client = new ApplyClient(() => ({ data: result(), error: null }));
+    let confirmationCalls = 0;
+    let applyTargetCalls = 0;
+    const remoteInput = {
+      ...input(new Store(), new Store(), client),
+      target: {
+        kind: "REMOTE", label: "REMOTE", projectRef: "nrwhzfahjypybjyajmrj",
+        baseUrl: "https://nrwhzfahjypybjyajmrj.supabase.co",
+      },
+      readConfirmationToken: async () => { confirmationCalls += 1; return "never"; },
+      resolveApplyTarget: () => { applyTargetCalls += 1; throw new Error("never"); },
+    } as unknown as RunRegistrySyncApplyInput;
+    await expect(runRegistrySyncApply(remoteInput)).rejects.toMatchObject({
+      code: "REGISTRY_SYNC_REMOTE_APPLY_NOT_ENABLED",
+    });
+    expect(confirmationCalls).toBe(0);
+    expect(applyTargetCalls).toBe(0);
+    expect(client.calls).toBe(0);
+  });
+
   it("aplica o payload preparado com exatamente uma RPC, zero retry e post convergence", async () => {
     const initial = new Store();
     const refreshed = new Store();

@@ -5,6 +5,7 @@ import {
   resolveLocalRegistryAdminTarget,
   resolveLocalRegistryApplyTarget,
 } from "../src/server/registry/admin-target.js";
+import { resolveRemoteRegistryAdminTarget } from "../src/server/registry/remote-admin-target.js";
 import { automotiveRegistryDryRunPreset } from "../src/server/registry/automotive-registry-preset.js";
 import type {
   RegistrySyncApplyRunResult,
@@ -21,12 +22,14 @@ export interface RegistrySyncCliOptions {
   readonly json: boolean;
   readonly firstSync: boolean;
   readonly apply: boolean;
+  readonly remote: boolean;
   readonly confirmationToken: string | null;
 }
 
 export interface RegistrySyncCliDependencies {
-  readonly resolveTarget: typeof resolveLocalRegistryAdminTarget;
-  readonly resolveApplyTarget: typeof resolveLocalRegistryApplyTarget;
+  readonly resolveLocalTarget: typeof resolveLocalRegistryAdminTarget;
+  readonly resolveRemoteTarget: typeof resolveRemoteRegistryAdminTarget;
+  readonly resolveLocalApplyTarget: typeof resolveLocalRegistryApplyTarget;
   readonly runDryRun: typeof runRegistrySyncDryRun;
   readonly runApply: (input: RunRegistrySyncApplyInput) => Promise<Readonly<RegistrySyncApplyRunResult>>;
   readonly isTty: () => boolean;
@@ -46,8 +49,9 @@ async function readInteractiveConfirmation(expectedToken: string): Promise<strin
 }
 
 const defaultDependencies: RegistrySyncCliDependencies = {
-  resolveTarget: resolveLocalRegistryAdminTarget,
-  resolveApplyTarget: resolveLocalRegistryApplyTarget,
+  resolveLocalTarget: resolveLocalRegistryAdminTarget,
+  resolveRemoteTarget: resolveRemoteRegistryAdminTarget,
+  resolveLocalApplyTarget: resolveLocalRegistryApplyTarget,
   runDryRun: runRegistrySyncDryRun,
   runApply: async (input) => (await import("../src/server/registry/sync-apply.js")).runRegistrySyncApply(input),
   isTty: () => process.stdin.isTTY === true && process.stdout.isTTY === true,
@@ -90,13 +94,19 @@ export function parseRegistrySyncCliArgs(argv: readonly string[]): Readonly<Regi
       }
     }
   }
-  if (remote) {
-    throw registrySyncDryRunError("REGISTRY_SYNC_REMOTE_NOT_ENABLED", "Remote indisponível neste build");
-  }
-  if (confirmValueMissing || (confirmSeen && !apply)) {
+  if (confirmValueMissing) {
     throw registrySyncDryRunError("REGISTRY_SYNC_INVALID_ARGUMENTS", "Argumentos inválidos");
   }
-  return Object.freeze({ json, firstSync, apply, confirmationToken });
+  if (remote && apply) {
+    throw registrySyncDryRunError(
+      "REGISTRY_SYNC_REMOTE_APPLY_NOT_ENABLED",
+      "Apply remoto indisponível neste build",
+    );
+  }
+  if (confirmSeen && !apply) {
+    throw registrySyncDryRunError("REGISTRY_SYNC_INVALID_ARGUMENTS", "Argumentos inválidos");
+  }
+  return Object.freeze({ json, firstSync, apply, remote, confirmationToken });
 }
 
 export function renderRegistrySyncPreview(preview: RegistrySyncPreview): string {
@@ -107,11 +117,14 @@ export function renderRegistrySyncPreview(preview: RegistrySyncPreview): string 
   const finalStatus = preview.safety.previewStatus === "READY"
     ? "DRY_RUN_OK"
     : `BLOCKED:${preview.safety.blockers[0] ?? "REGISTRY_SYNC_DRY_RUN_FAILED"}`;
+  const targetLines = ["TARGET", `  ${preview.target.label}`];
+  if (preview.target.projectRef !== null) targetLines.push("", "PROJECT", `  ${preview.target.projectRef}`);
   return [
-    "AUTOACHADO REGISTRY SYNC — DRY RUN",
+    preview.target.kind === "REMOTE"
+      ? "AUTOACHADO REGISTRY SYNC — REMOTE READ-ONLY"
+      : "AUTOACHADO REGISTRY SYNC — DRY RUN",
     "",
-    "TARGET",
-    `  ${preview.target.label}`,
+    ...targetLines,
     "",
     "SOURCE",
     `  Preset: ${preview.presetId}`,
@@ -220,7 +233,19 @@ export async function runCommerceRegistrySyncCli(
       );
     }
 
-    const resolved = dependencies.resolveTarget();
+    if (options.remote) {
+      const resolved = dependencies.resolveRemoteTarget();
+      const preview = await dependencies.runDryRun({
+        target: resolved.target,
+        readClient: resolved.readClient,
+        preset: automotiveRegistryDryRunPreset,
+        firstSync: options.firstSync,
+      });
+      dependencies.stdout(options.json ? `${JSON.stringify(preview)}\n` : renderRegistrySyncPreview(preview));
+      return preview.safety.previewStatus === "READY" ? 0 : 1;
+    }
+
+    const resolved = dependencies.resolveLocalTarget();
     if (!options.apply) {
       const preview = await dependencies.runDryRun({
         target: resolved.target,
@@ -247,7 +272,7 @@ export async function runCommerceRegistrySyncCli(
         initialPreviewPrinted = true;
         return dependencies.readConfirmationToken(preview.fingerprint.token);
       },
-      resolveApplyTarget: dependencies.resolveApplyTarget,
+      resolveApplyTarget: dependencies.resolveLocalApplyTarget,
     });
     dependencies.stdout(options.json
       ? `${JSON.stringify(result)}\n`

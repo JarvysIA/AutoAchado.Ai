@@ -8,15 +8,26 @@ import {
 import type { RegistryApplyRpcClient } from "./executor.js";
 import { registrySyncDryRunError } from "./sync-orchestrator.js";
 
-export interface RegistrySyncTarget {
+export const AUTOACHADO_REMOTE_PROJECT_REF = "nrwhzfahjypybjyajmrj" as const;
+
+export interface LocalRegistrySyncTarget {
   readonly kind: "LOCAL";
   readonly label: "LOCAL";
   readonly projectRef: null;
   readonly baseUrl: string;
 }
 
+export interface RemoteRegistrySyncTarget {
+  readonly kind: "REMOTE";
+  readonly label: "REMOTE";
+  readonly projectRef: typeof AUTOACHADO_REMOTE_PROJECT_REF;
+  readonly baseUrl: string;
+}
+
+export type RegistrySyncTarget = LocalRegistrySyncTarget | RemoteRegistrySyncTarget;
+
 export interface ResolvedLocalRegistryAdminTarget {
-  readonly target: Readonly<RegistrySyncTarget>;
+  readonly target: Readonly<LocalRegistrySyncTarget>;
   readonly readClient: RegistryReadClient;
 }
 

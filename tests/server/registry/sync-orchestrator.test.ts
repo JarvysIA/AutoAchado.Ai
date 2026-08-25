@@ -56,6 +56,12 @@ const localTarget = Object.freeze({
   projectRef: null,
   baseUrl: "http://127.0.0.1:54321",
 });
+const remoteTarget = Object.freeze({
+  kind: "REMOTE" as const,
+  label: "REMOTE" as const,
+  projectRef: "nrwhzfahjypybjyajmrj" as const,
+  baseUrl: "https://nrwhzfahjypybjyajmrj.supabase.co",
+});
 
 function category(overrides: Partial<CurrentMarketplaceCategory> = {}): CurrentMarketplaceCategory {
   return {
@@ -242,6 +248,22 @@ describe("registry sync dry-run core", () => {
     expect(second.performance).not.toEqual(first.performance);
     expect(second.fingerprint).toEqual(first.fingerprint);
     expect(generic.fingerprint.value).not.toBe(first.fingerprint.value);
+  });
+
+  it("vincula fingerprint/token ao target REMOTE sem alterar payload ou preview v1", async () => {
+    const local = await runRegistrySyncDryRun({
+      target: localTarget, readClient: new FakeReadClient(), preset: automotiveRegistryDryRunPreset,
+      firstSync: true, nowMs: () => 1,
+    });
+    const remote = await runRegistrySyncDryRun({
+      target: remoteTarget, readClient: new FakeReadClient(), preset: automotiveRegistryDryRunPreset,
+      firstSync: true, nowMs: () => 1,
+    });
+    expect(remote.contractVersion).toBe("commerce-registry-sync-preview/v1");
+    expect(remote.target).toEqual(remoteTarget);
+    expect(remote.fingerprint.value).not.toBe(local.fingerprint.value);
+    expect(remote.fingerprint.token).toMatch(/^AUTOACHADO:REMOTE:MLB5672:3269:[A-F0-9]{12}$/);
+    expect(remote.payload).toEqual(local.payload);
   });
 
   it("aceita somente target HTTP local e nunca expõe o secret no resultado", () => {

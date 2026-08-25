@@ -1,13 +1,15 @@
 # Commerce Registry Admin CLI
 
-## C4B boundary
+## C4C boundary
 
-`pnpm commerce:registry:sync` is a local-only Commerce Registry administrator. Dry-run remains the
-default and performs no RPC. A write is possible only with `--apply`, an exact token tied to the
-current preview, a second preparation pass, and a second validation of the local target.
+`pnpm commerce:registry:sync` is the Commerce Registry administrative CLI. Dry-run remains the
+default and performs no RPC. A write is possible only for the LOCAL target with `--apply`, an exact
+token tied to the current preview, a second preparation pass, and a second validation of the local
+target.
 
-Remote remains disabled. `--remote` fails with `REGISTRY_SYNC_REMOTE_NOT_ENABLED` before target
-resolution, credentials, Data API access or RPC. The CLI never starts or resets Supabase.
+Remote is available only as an explicit read-only target. `--remote --apply` fails with
+`REGISTRY_SYNC_REMOTE_APPLY_NOT_ENABLED` before credential resolution, Data API access or RPC. The
+CLI never starts or resets Supabase.
 
 ## Commands
 
@@ -19,9 +21,29 @@ resolution, credentials, Data API access or RPC. The CLI never starts or resets 
 - Add `--first-sync` to enforce the frozen 0/0 first-sync baseline.
 - Add `--json` for one machine-readable JSON object. JSON apply always requires `--confirm` and
   never prompts.
+- `pnpm commerce:registry:sync -- --remote`: generic remote read-only dry-run.
+- `pnpm commerce:registry:sync -- --remote --first-sync`: frozen remote first-sync preview.
+- Add `--json` to either remote command for exactly one preview JSON object.
 
 `--confirm` without `--apply`, unknown flags, missing values and duplicates fail closed. A non-TTY
 apply without `--confirm` fails before local target resolution.
+
+## Remote read-only safety
+
+Remote selection is explicit and pinned to project `nrwhzfahjypybjyajmrj` at
+`https://nrwhzfahjypybjyajmrj.supabase.co`. The existing authenticated Supabase CLI retrieves
+exactly one modern `sb_secret_` credential into process memory. There is no legacy service-role
+fallback, environment persistence, raw credential output, remote apply client, executor call, RPC
+or DML path in the remote provider.
+
+The client is immediately narrowed to `RegistryReadClient`, whose current-state reader performs
+paginated SELECTs for registry categories and mappings. Remote previews use the same frozen local
+snapshot, planner, payload, diff and preview contract as local dry-runs. They are not a live Mercado
+Livre taxonomy refresh. A REMOTE fingerprint/token is informational and cannot authorize an apply.
+
+The explicit acceptance command `pnpm test:registry-cli-remote-read` reads before state, runs the
+first-sync preview, reads after state and requires equal counts and semantic digests with zero apply
+RPC and zero DML. It is not part of the default unit suite, build or CI.
 
 ## Confirmation and apply safety
 
@@ -64,5 +86,5 @@ produces a 1,603,538-byte payload: 3,269 category inserts, 3,269 mapping inserts
 
 ## Future boundaries
 
-C4C may add a separately gated remote read-only target. A separately authorized C4-LIVE gate owns
-the first remote apply. Neither capability is available in C4B.
+C4C does not enable remote writes. A separately authorized C4-LIVE gate owns the first remote apply
+and must rebuild a fresh remote preview; the C4C token must not be reused as authorization.
