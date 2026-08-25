@@ -37,10 +37,17 @@ export interface RegistryApplyRpcClient {
   ): PromiseLike<RegistryApplyRpcResult>;
 }
 
-export interface ApplyCommerceRegistrySyncInput {
-  readonly client: RegistryApplyRpcClient;
-  readonly plan: CommerceRegistrySyncPlan;
-}
+export type ApplyCommerceRegistrySyncInput =
+  | Readonly<{
+      client: RegistryApplyRpcClient;
+      plan: CommerceRegistrySyncPlan;
+      payload?: never;
+    }>
+  | Readonly<{
+      client: RegistryApplyRpcClient;
+      payload: AtomicRegistryApplyPayload;
+      plan?: never;
+    }>;
 
 function record(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -90,6 +97,8 @@ export async function callAtomicRegistryApplyRpc(
 export async function applyCommerceRegistrySync(
   input: ApplyCommerceRegistrySyncInput,
 ): Promise<Readonly<CommerceRegistryApplyResult>> {
-  const payload = buildAtomicRegistryApplyPayload(input.plan);
+  const payload = "payload" in input
+    ? input.payload
+    : buildAtomicRegistryApplyPayload(input.plan);
   return callAtomicRegistryApplyRpc(input.client, payload);
 }

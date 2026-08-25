@@ -3,12 +3,16 @@ import {
   buildAtomicRegistryApplyPayload,
   measureAtomicRegistryApplyPayload,
   validateAtomicRegistryApplyPayload,
+  type AtomicRegistryApplyPayload,
 } from "../../commerce/registry/apply-payload.js";
 import { diffCommerceRegistryState } from "../../commerce/registry/diff.js";
 import { buildCommerceRegistrySyncPlan } from "../../commerce/registry/planner.js";
 import type {
   CategoryDiffKind,
   CommerceRegistryPlanSummary,
+  CommerceRegistryStateDiff,
+  CommerceRegistrySyncPlan,
+  CurrentCommerceRegistryState,
   MappingDiffKind,
   RegistryCategoryClassifier,
 } from "../../commerce/registry/types.js";
@@ -32,7 +36,11 @@ export type RegistrySyncDryRunErrorCode =
   | "REGISTRY_SYNC_TARGET_MISMATCH"
   | "REGISTRY_SYNC_REMOTE_NOT_ENABLED"
   | "REGISTRY_SYNC_APPLY_NOT_ENABLED"
+  | "REGISTRY_SYNC_CONFIRMATION_REQUIRED"
+  | "REGISTRY_SYNC_CONFIRMATION_MISMATCH"
   | "REGISTRY_SYNC_EXPECTATION_MISMATCH"
+  | "REGISTRY_SYNC_POST_VERIFY_FAILED"
+  | "REGISTRY_SYNC_APPLY_OUTCOME_UNCERTAIN"
   | "REGISTRY_SYNC_DRY_RUN_FAILED";
 
 export class RegistrySyncDryRunError extends Error {
@@ -92,6 +100,14 @@ export interface RunRegistrySyncDryRunInput {
   readonly nowMs?: () => number;
 }
 
+export interface PreparedRegistrySyncRun {
+  readonly plan: Readonly<CommerceRegistrySyncPlan>;
+  readonly payload: Readonly<AtomicRegistryApplyPayload>;
+  readonly currentState: Readonly<CurrentCommerceRegistryState>;
+  readonly diff: Readonly<CommerceRegistryStateDiff>;
+  readonly preview: Readonly<RegistrySyncPreview>;
+}
+
 function same(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
 }
@@ -124,9 +140,9 @@ function firstSyncMatches(
     && same(diffSummary.mappings, expectation.expectedMappingDiff);
 }
 
-export async function runRegistrySyncDryRun(
+export async function prepareRegistrySyncRun(
   input: RunRegistrySyncDryRunInput,
-): Promise<Readonly<RegistrySyncPreview>> {
+): Promise<Readonly<PreparedRegistrySyncRun>> {
   const nowMs = input.nowMs ?? (() => performance.now());
   const totalStarted = nowMs();
 
@@ -212,8 +228,15 @@ export async function runRegistrySyncDryRun(
   });
   const previewMs = nowMs() - started;
   const totalMs = nowMs() - totalStarted;
-  return Object.freeze({
+  const preview = Object.freeze({
     ...draft,
     performance: Object.freeze({ ...zeroPerformance, previewMs, totalMs }),
   });
+  return Object.freeze({ plan, payload, currentState: current, diff, preview });
+}
+
+export async function runRegistrySyncDryRun(
+  input: RunRegistrySyncDryRunInput,
+): Promise<Readonly<RegistrySyncPreview>> {
+  return (await prepareRegistrySyncRun(input)).preview;
 }

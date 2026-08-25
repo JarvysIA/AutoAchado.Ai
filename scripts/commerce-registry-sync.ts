@@ -1,8 +1,15 @@
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import { RegistrySyncError } from "../src/commerce/registry/errors.js";
-import { resolveLocalRegistryAdminTarget } from "../src/server/registry/admin-target.js";
+import {
+  resolveLocalRegistryAdminTarget,
+  resolveLocalRegistryApplyTarget,
+} from "../src/server/registry/admin-target.js";
 import { automotiveRegistryDryRunPreset } from "../src/server/registry/automotive-registry-preset.js";
+import type {
+  RegistrySyncApplyRunResult,
+  RunRegistrySyncApplyInput,
+} from "../src/server/registry/sync-apply.js";
 import {
   RegistrySyncDryRunError,
   registrySyncDryRunError,
@@ -13,18 +20,38 @@ import type { RegistrySyncPreview } from "../src/server/registry/sync-preview.js
 export interface RegistrySyncCliOptions {
   readonly json: boolean;
   readonly firstSync: boolean;
+  readonly apply: boolean;
+  readonly confirmationToken: string | null;
 }
 
 export interface RegistrySyncCliDependencies {
   readonly resolveTarget: typeof resolveLocalRegistryAdminTarget;
+  readonly resolveApplyTarget: typeof resolveLocalRegistryApplyTarget;
   readonly runDryRun: typeof runRegistrySyncDryRun;
+  readonly runApply: (input: RunRegistrySyncApplyInput) => Promise<Readonly<RegistrySyncApplyRunResult>>;
+  readonly isTty: () => boolean;
+  readonly readConfirmationToken: (expectedToken: string) => Promise<string>;
   readonly stdout: (value: string) => void;
   readonly stderr: (value: string) => void;
 }
 
+async function readInteractiveConfirmation(expectedToken: string): Promise<string> {
+  const { createInterface } = await import("node:readline/promises");
+  const prompt = createInterface({ input: process.stdin, output: process.stderr });
+  try {
+    return await prompt.question(`Digite exatamente o token ${expectedToken}\n> `);
+  } finally {
+    prompt.close();
+  }
+}
+
 const defaultDependencies: RegistrySyncCliDependencies = {
   resolveTarget: resolveLocalRegistryAdminTarget,
+  resolveApplyTarget: resolveLocalRegistryApplyTarget,
   runDryRun: runRegistrySyncDryRun,
+  runApply: async (input) => (await import("../src/server/registry/sync-apply.js")).runRegistrySyncApply(input),
+  isTty: () => process.stdin.isTTY === true && process.stdout.isTTY === true,
+  readConfirmationToken: readInteractiveConfirmation,
   stdout: (value) => process.stdout.write(value),
   stderr: (value) => process.stderr.write(value),
 };
@@ -35,7 +62,9 @@ export function parseRegistrySyncCliArgs(argv: readonly string[]): Readonly<Regi
   let firstSync = false;
   let remote = false;
   let apply = false;
-  let confirm = false;
+  let confirmSeen = false;
+  let confirmationToken: string | null = null;
+  let confirmValueMissing = false;
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index]!;
     if (!["--", "--json", "--first-sync", "--remote", "--apply", "--confirm"].includes(argument)) {
@@ -51,14 +80,23 @@ export function parseRegistrySyncCliArgs(argv: readonly string[]): Readonly<Regi
     if (argument === "--remote") remote = true;
     if (argument === "--apply") apply = true;
     if (argument === "--confirm") {
-      confirm = true;
-      if (argv[index + 1] !== undefined && !argv[index + 1]!.startsWith("--")) index += 1;
+      confirmSeen = true;
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("--")) {
+        confirmValueMissing = true;
+      } else {
+        confirmationToken = value;
+        index += 1;
+      }
     }
   }
-  if (apply) throw registrySyncDryRunError("REGISTRY_SYNC_APPLY_NOT_ENABLED", "Apply indisponível neste build");
-  if (remote) throw registrySyncDryRunError("REGISTRY_SYNC_REMOTE_NOT_ENABLED", "Remote indisponível neste build");
-  if (confirm) throw registrySyncDryRunError("REGISTRY_SYNC_INVALID_ARGUMENTS", "Argumentos inválidos");
-  return Object.freeze({ json, firstSync });
+  if (remote) {
+    throw registrySyncDryRunError("REGISTRY_SYNC_REMOTE_NOT_ENABLED", "Remote indisponível neste build");
+  }
+  if (confirmValueMissing || (confirmSeen && !apply)) {
+    throw registrySyncDryRunError("REGISTRY_SYNC_INVALID_ARGUMENTS", "Argumentos inválidos");
+  }
+  return Object.freeze({ json, firstSync, apply, confirmationToken });
 }
 
 export function renderRegistrySyncPreview(preview: RegistrySyncPreview): string {
@@ -115,6 +153,52 @@ export function renderRegistrySyncPreview(preview: RegistrySyncPreview): string 
   ].join("\n");
 }
 
+export function renderRegistrySyncApplyResult(
+  result: RegistrySyncApplyRunResult,
+  includePreview = true,
+): string {
+  const rpc = result.rpc.result;
+  const post = result.post.currentSummary;
+  const lines = ["AUTOACHADO REGISTRY SYNC — LOCAL APPLY", ""];
+  if (includePreview) lines.push(renderRegistrySyncPreview(result.preview).trimEnd(), "");
+  lines.push(
+    "CONFIRMATION",
+    `  Mode: ${result.confirmation.mode}`,
+    `  Verified: ${result.confirmation.verified}`,
+    "",
+    "RPC RESULT",
+    `  Calls: ${result.rpc.callCount}`,
+    `  Retries: ${result.rpc.retryCount}`,
+    `  Error: ${result.rpc.errorCode ?? "none"}`,
+    `  Categories I/U/R/N: ${rpc ? `${rpc.categories.inserted}/${rpc.categories.updated}/${rpc.categories.reactivated}/${rpc.categories.unchanged}` : "n/a"}`,
+    `  Mappings I/U/R/X/M/N: ${rpc ? `${rpc.mappings.inserted}/${rpc.mappings.updated}/${rpc.mappings.reactivated}/${rpc.mappings.inactivated}/${rpc.mappings.manualOverrideSkipped}/${rpc.mappings.unchanged}` : "n/a"}`,
+    "",
+    "POST STATE",
+    `  Read: ${result.post.readSucceeded ? "PASS" : "FAILED"}`,
+    `  Categories: ${post?.categories ?? "n/a"}`,
+    `  Mappings: ${post?.mappings ?? "n/a"}`,
+    `  Active mappings: ${post?.activeMappings ?? "n/a"}`,
+    "",
+    "CONVERGENCE",
+    `  Converged: ${result.post.converged}`,
+    `  RPC/pre consistent: ${result.post.rpcPreConsistent}`,
+    `  Effective consistent: ${result.post.effectiveConsistent}`,
+    "",
+    "TIMINGS",
+    `  Initial prepare ms: ${result.performance.initialPrepareMs.toFixed(3)}`,
+    `  Refreshed prepare ms: ${result.performance.refreshedPrepareMs.toFixed(3)}`,
+    `  RPC ms: ${result.performance.rpcMs.toFixed(3)}`,
+    `  Post-read ms: ${result.performance.postReadMs.toFixed(3)}`,
+    `  Post-diff ms: ${result.performance.postDiffMs.toFixed(3)}`,
+    `  Execution ms: ${result.performance.executionMs.toFixed(3)}`,
+    "",
+    "FINAL STATUS",
+    result.outcome,
+    "",
+  );
+  return lines.join("\n");
+}
+
 function errorCode(error: unknown): string {
   if (error instanceof RegistrySyncDryRunError || error instanceof RegistrySyncError) return error.code;
   return "REGISTRY_SYNC_DRY_RUN_FAILED";
@@ -127,15 +211,48 @@ export async function runCommerceRegistrySyncCli(
   const jsonRequested = argv.filter((value) => value === "--json").length === 1;
   try {
     const options = parseRegistrySyncCliArgs(argv);
+    const interactive = options.apply && !options.json && options.confirmationToken === null
+      && dependencies.isTty();
+    if (options.apply && options.confirmationToken === null && !interactive) {
+      throw registrySyncDryRunError(
+        "REGISTRY_SYNC_CONFIRMATION_REQUIRED",
+        "Confirmação explícita obrigatória",
+      );
+    }
+
     const resolved = dependencies.resolveTarget();
-    const preview = await dependencies.runDryRun({
+    if (!options.apply) {
+      const preview = await dependencies.runDryRun({
+        target: resolved.target,
+        readClient: resolved.readClient,
+        preset: automotiveRegistryDryRunPreset,
+        firstSync: options.firstSync,
+      });
+      dependencies.stdout(options.json ? `${JSON.stringify(preview)}\n` : renderRegistrySyncPreview(preview));
+      return preview.safety.previewStatus === "READY" ? 0 : 1;
+    }
+
+    let initialPreviewPrinted = false;
+    const result = await dependencies.runApply({
       target: resolved.target,
       readClient: resolved.readClient,
       preset: automotiveRegistryDryRunPreset,
       firstSync: options.firstSync,
+      confirmationMode: options.confirmationToken === null
+        ? "INTERACTIVE_EXACT_TOKEN"
+        : "PROVIDED_EXACT_TOKEN",
+      readConfirmationToken: async (preview) => {
+        if (options.confirmationToken !== null) return options.confirmationToken;
+        dependencies.stdout(renderRegistrySyncPreview(preview));
+        initialPreviewPrinted = true;
+        return dependencies.readConfirmationToken(preview.fingerprint.token);
+      },
+      resolveApplyTarget: dependencies.resolveApplyTarget,
     });
-    dependencies.stdout(options.json ? `${JSON.stringify(preview)}\n` : renderRegistrySyncPreview(preview));
-    return preview.safety.previewStatus === "READY" ? 0 : 1;
+    dependencies.stdout(options.json
+      ? `${JSON.stringify(result)}\n`
+      : renderRegistrySyncApplyResult(result, !initialPreviewPrinted));
+    return result.outcome === "APPLIED_AND_VERIFIED" ? 0 : 1;
   } catch (error) {
     const code = errorCode(error);
     const output = jsonRequested ? `${JSON.stringify({ error: { code } })}\n` : `${code}\n`;

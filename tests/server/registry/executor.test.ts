@@ -67,6 +67,24 @@ describe("server-side registry persistence executor", () => {
     expect(JSON.stringify(client.calls[0])).not.toContain('"diff"');
   });
 
+  it("aceita o payload já preparado e preserva a autoridade de uma única RPC", async () => {
+    const payload = buildAtomicRegistryApplyPayload(plan());
+    const client = new FakeClient();
+    await expect(applyCommerceRegistrySync({ client, payload })).resolves.toEqual(validResult());
+    expect(client.calls).toEqual([{
+      functionName: "apply_commerce_registry_sync",
+      args: { p_payload: payload },
+    }]);
+  });
+
+  it("bloqueia payload preparado inválido antes da RPC", async () => {
+    const payload: any = JSON.parse(JSON.stringify(buildAtomicRegistryApplyPayload(plan())));
+    payload.context.expectedCategoryCount = 2;
+    const client = new FakeClient();
+    await expect(applyCommerceRegistrySync({ client, payload })).rejects.toBeInstanceOf(RegistrySyncError);
+    expect(client.calls).toHaveLength(0);
+  });
+
   it.each([
     "REGISTRY_SYNC_LOCKED", "REGISTRY_MARKETPLACE_NOT_FOUND", "REGISTRY_VERTICAL_NOT_FOUND",
     "REGISTRY_INVALID_PAYLOAD", "REGISTRY_COUNT_MISMATCH", "REGISTRY_DUPLICATE_CATEGORY",

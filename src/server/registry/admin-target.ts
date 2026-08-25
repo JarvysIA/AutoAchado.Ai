@@ -5,6 +5,7 @@ import {
   registryReadClientFromSupabase,
   type RegistryReadClient,
 } from "./current-state.js";
+import type { RegistryApplyRpcClient } from "./executor.js";
 import { registrySyncDryRunError } from "./sync-orchestrator.js";
 
 export interface RegistrySyncTarget {
@@ -19,6 +20,10 @@ export interface ResolvedLocalRegistryAdminTarget {
   readonly readClient: RegistryReadClient;
 }
 
+export interface ResolvedLocalRegistryApplyTarget extends ResolvedLocalRegistryAdminTarget {
+  readonly createApplyClient: () => Promise<RegistryApplyRpcClient>;
+}
+
 export interface LocalSupabaseStatusResult {
   readonly status: number | null;
   readonly stdout: string;
@@ -27,6 +32,14 @@ export interface LocalSupabaseStatusResult {
 export interface ResolveLocalRegistryAdminTargetDependencies {
   readonly runStatus?: () => LocalSupabaseStatusResult;
   readonly createReadClient?: (url: string, secret: string) => RegistryReadClient;
+}
+
+export interface ResolveLocalRegistryApplyTargetDependencies
+  extends ResolveLocalRegistryAdminTargetDependencies {
+  readonly createApplyClient?: (
+    url: string,
+    secret: string,
+  ) => RegistryApplyRpcClient | PromiseLike<RegistryApplyRpcClient>;
 }
 
 function runLocalStatus(): LocalSupabaseStatusResult {
@@ -61,9 +74,9 @@ export function validateLocalRegistryUrl(rawUrl: string): string {
   return url.toString().replace(/\/$/, "");
 }
 
-export function resolveLocalRegistryAdminTarget(
-  dependencies: ResolveLocalRegistryAdminTargetDependencies = {},
-): Readonly<ResolvedLocalRegistryAdminTarget> {
+function localCredentials(
+  dependencies: Pick<ResolveLocalRegistryAdminTargetDependencies, "runStatus">,
+): Readonly<{ baseUrl: string; secret: string }> {
   const result = (dependencies.runStatus ?? runLocalStatus)();
   if (result.status !== 0) {
     throw registrySyncDryRunError("REGISTRY_SYNC_LOCAL_ENV_UNAVAILABLE", "Supabase local indisponível");
@@ -74,13 +87,46 @@ export function resolveLocalRegistryAdminTarget(
   if (!rawUrl || !secret) {
     throw registrySyncDryRunError("REGISTRY_SYNC_LOCAL_ENV_UNAVAILABLE", "Supabase local indisponível");
   }
-  const baseUrl = validateLocalRegistryUrl(rawUrl);
+  return Object.freeze({ baseUrl: validateLocalRegistryUrl(rawUrl), secret });
+}
+
+function supabaseClient(baseUrl: string, secret: string) {
+  return createClient(baseUrl, secret, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
+export function resolveLocalRegistryAdminTarget(
+  dependencies: ResolveLocalRegistryAdminTargetDependencies = {},
+): Readonly<ResolvedLocalRegistryAdminTarget> {
+  const { baseUrl, secret } = localCredentials(dependencies);
   const readClient = dependencies.createReadClient?.(baseUrl, secret)
-    ?? registryReadClientFromSupabase(createClient(baseUrl, secret, {
-      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-    }));
+    ?? registryReadClientFromSupabase(supabaseClient(baseUrl, secret));
   return Object.freeze({
     target: Object.freeze({ kind: "LOCAL", label: "LOCAL", projectRef: null, baseUrl }),
     readClient,
+  });
+}
+
+export function resolveLocalRegistryApplyTarget(
+  expectedBaseUrl: string,
+  dependencies: ResolveLocalRegistryApplyTargetDependencies = {},
+): Readonly<ResolvedLocalRegistryApplyTarget> {
+  const { baseUrl, secret } = localCredentials(dependencies);
+  if (baseUrl !== validateLocalRegistryUrl(expectedBaseUrl)) {
+    throw registrySyncDryRunError("REGISTRY_SYNC_TARGET_MISMATCH", "Target local mudou após confirmação");
+  }
+  const readClient = dependencies.createReadClient?.(baseUrl, secret)
+    ?? registryReadClientFromSupabase(supabaseClient(baseUrl, secret));
+  return Object.freeze({
+    target: Object.freeze({ kind: "LOCAL", label: "LOCAL", projectRef: null, baseUrl }),
+    readClient,
+    createApplyClient: async () => {
+      if (dependencies.createApplyClient) {
+        return dependencies.createApplyClient(baseUrl, secret);
+      }
+      const { registryApplyClientFromSupabase } = await import("./executor.js");
+      return registryApplyClientFromSupabase(supabaseClient(baseUrl, secret));
+    },
   });
 }

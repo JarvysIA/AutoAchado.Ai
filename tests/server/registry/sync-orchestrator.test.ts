@@ -21,7 +21,10 @@ import type {
   RegistryReadQuery,
   RegistryReadResult,
 } from "../../../src/server/registry/current-state.js";
-import { runRegistrySyncDryRun } from "../../../src/server/registry/sync-orchestrator.js";
+import {
+  prepareRegistrySyncRun,
+  runRegistrySyncDryRun,
+} from "../../../src/server/registry/sync-orchestrator.js";
 import {
   REGISTRY_SYNC_SAMPLE_LIMIT,
   digestCurrentCommerceRegistryState,
@@ -144,6 +147,27 @@ describe("registry sync dry-run core", () => {
     expect(preview.fingerprint.token).toMatch(/^AUTOACHADO:LOCAL:MLB5672:3269:[A-F0-9]{12}$/);
   });
 
+  it("expõe um prepared run coerente sem mudar o contrato público do dry-run", async () => {
+    const input = {
+      target: localTarget,
+      readClient: new FakeReadClient(),
+      preset: automotiveRegistryDryRunPreset,
+      firstSync: true,
+      nowMs: () => 1,
+    };
+    const prepared = await prepareRegistrySyncRun(input);
+    const preview = await runRegistrySyncDryRun(input);
+    expect(prepared.plan.summary.categoryCount).toBe(3_269);
+    expect(prepared.payload.rows).toHaveLength(3_269);
+    expect(prepared.currentState).toEqual({
+      categories: [], mappings: [], controlledMappingExternalCategoryIds: [],
+    });
+    expect(prepared.diff.summary.categories.insert).toBe(3_269);
+    expect(prepared.diff.summary.mappings.insert).toBe(3_269);
+    expect(prepared.preview.payload.sha256).toBe(preview.payload.sha256);
+    expect(prepared.preview).toEqual(preview);
+  });
+
   it("bloqueia first-sync quando o current state não está vazio", async () => {
     const source = await loadFrozenAutomotiveRegistrySource();
     const root = source.snapshot.nodes.find((node) => node.externalCategoryId === "MLB5672")!;
@@ -239,17 +263,11 @@ describe("registry sync dry-run core", () => {
     })).toThrowError(/Supabase local indisponível/);
   });
 
-  it("não contém import do executor nem caminhos de write/RPC", async () => {
-    const urls = [
-      "../../../src/server/registry/automotive-registry-preset.ts",
-      "../../../src/server/registry/admin-target.ts",
-      "../../../src/server/registry/sync-preview.ts",
-      "../../../src/server/registry/sync-orchestrator.ts",
-      "../../../src/taxonomy/automotive-snapshot.ts",
-      "../../../scripts/commerce-registry-sync.ts",
-    ];
-    const sources = await Promise.all(urls.map((url) => readFile(new URL(url, import.meta.url), "utf8")));
-    const runtime = sources.join("\n");
+  it("mantém o dry-run orchestrator sem executor nem caminhos de write/RPC", async () => {
+    const runtime = await readFile(
+      new URL("../../../src/server/registry/sync-orchestrator.ts", import.meta.url),
+      "utf8",
+    );
     expect(runtime).not.toContain("applyCommerceRegistrySync");
     expect(runtime).not.toContain("registryApplyClientFromSupabase");
     expect(runtime).not.toMatch(/\.rpc\s*\(/);
