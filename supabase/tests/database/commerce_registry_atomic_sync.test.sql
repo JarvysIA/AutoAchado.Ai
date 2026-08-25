@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(81);
+select plan(87);
 
 select ok(to_regprocedure('public.apply_commerce_registry_sync(jsonb)') is not null, 'atomic registry RPC exists');
 select is((select prorettype from pg_proc where oid='public.apply_commerce_registry_sync(jsonb)'::regprocedure), 'jsonb'::regtype::oid, 'RPC returns jsonb');
@@ -13,6 +13,9 @@ select is((select array_to_string(proconfig, ',') from pg_proc where oid='public
 select ok(not has_function_privilege('service_role','private.commerce_registry_input_rows(jsonb)','EXECUTE'), 'service_role cannot execute private parser');
 select ok(pg_get_functiondef('public.apply_commerce_registry_sync(jsonb)'::regprocedure) like '%pg_try_advisory_xact_lock%', 'RPC uses a try advisory transaction lock');
 select ok(pg_get_functiondef('public.apply_commerce_registry_sync(jsonb)'::regprocedure) not like '%EXECUTE format%', 'RPC contains no dynamic SQL');
+select ok(pg_get_functiondef('public.apply_commerce_registry_sync(jsonb)'::regprocedure) like '%node_name_map as materialized%', 'path validation materializes the node-name lookup map');
+select ok(pg_get_functiondef('public.apply_commerce_registry_sync(jsonb)'::regprocedure) like '%jsonb_object_agg%', 'path validation uses direct JSONB node-name lookups');
+select ok(pg_get_functiondef('public.apply_commerce_registry_sync(jsonb)'::regprocedure) not like '%where not exists (select 1 from public.vertical_category_mappings x%', 'mapping insert omits the redundant anti-join');
 select ok(not has_function_privilege('public','public.apply_commerce_registry_sync(jsonb)','EXECUTE'), 'PUBLIC cannot execute RPC');
 select ok(not has_function_privilege('anon','public.apply_commerce_registry_sync(jsonb)','EXECUTE'), 'anon cannot execute RPC');
 select ok(not has_function_privilege('authenticated','public.apply_commerce_registry_sync(jsonb)','EXECUTE'), 'authenticated cannot execute RPC');
@@ -61,6 +64,9 @@ select throws_ok($$select public.apply_commerce_registry_sync(jsonb_set((select 
 select throws_ok($$select public.apply_commerce_registry_sync(jsonb_set((select payload from registry_payloads where name='base'),'{context,rootExternalCategoryId}','"MISSING"'))$$,'22023','REGISTRY_INVALID_PAYLOAD','missing root is rejected');
 select throws_ok($$select public.apply_commerce_registry_sync(jsonb_set((select payload from registry_payloads where name='base'),'{rows,2,parentExternalCategoryId}','"MISSING"'))$$,'23514','REGISTRY_PARENT_MISSING','missing parent is rejected');
 select throws_ok($$select public.apply_commerce_registry_sync(jsonb_set((select payload from registry_payloads where name='base'),'{rows,2,pathNames,2}','"Wrong"'))$$,'23514','REGISTRY_PATH_INVALID','invalid path is rejected');
+select throws_ok($$select public.apply_commerce_registry_sync(jsonb_set(jsonb_set((select payload from registry_payloads where name='base'),'{rows,2,pathExternalIds}','["ROOT","MISSING","PARENT","CHILD"]'),'{rows,2,pathNames}','["Root","Missing","Parent","Child"]'))$$,'23514','REGISTRY_PATH_INVALID','unknown node inside path is rejected');
+select throws_ok($$select public.apply_commerce_registry_sync(jsonb_set(jsonb_set((select payload from registry_payloads where name='base'),'{rows,2,pathExternalIds}','["ROOT","PARENT","PARENT","CHILD"]'),'{rows,2,pathNames}','["Root","Parent","Parent","Child"]'))$$,'23514','REGISTRY_PATH_INVALID','duplicate path ID is rejected');
+select throws_ok($$select public.apply_commerce_registry_sync(jsonb_set((select payload from registry_payloads where name='base'),'{rows,2,pathExternalIds,0}','"OTHER"'))$$,'23514','REGISTRY_PATH_INVALID','wrong path root is rejected');
 select throws_ok($$select public.apply_commerce_registry_sync(jsonb_set((select payload from registry_payloads where name='base'),'{rows,2,isLeaf}','false'))$$,'23514','REGISTRY_INVALID_PAYLOAD','invalid leaf flag is rejected');
 select throws_ok($$select public.apply_commerce_registry_sync(jsonb_set((select payload from registry_payloads where name='base'),'{rows,2,scopeStatus}','"REVIEW"'))$$,'23514','REGISTRY_CLASSIFICATION_INVALID','invalid scope tier is rejected');
 select throws_ok($$select public.apply_commerce_registry_sync(jsonb_set((select payload from registry_payloads where name='base'),'{context,expectedAutomaticEligibleCount}','0'))$$,'22023','REGISTRY_COUNT_MISMATCH','automatic count mismatch is rejected');

@@ -24,6 +24,7 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset --local",
     "test:db": "supabase test db",
+    "test:registry-local-e2e": "tsx scripts/test-registry-sync-local-e2e.ts",
     "test:db:concurrency": "node scripts/test-oauth-initialize-concurrency.mjs"
   },
   "devDependencies": {
