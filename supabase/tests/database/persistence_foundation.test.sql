@@ -50,8 +50,8 @@ select is(
         'public.opportunity_candidates'::regclass
       )
   ),
-  15,
-  'all fifteen historical, identity and compatibility foreign keys exist'
+  16,
+  'all sixteen historical, canonical identity and compatibility foreign keys exist'
 );
 
 select is(
@@ -65,8 +65,8 @@ select is(
         'public.price_snapshots'::regclass, 'public.opportunity_candidates'::regclass
       )
   ),
-  4,
-  'scan, highlight, price and candidate natural identities are unique'
+  5,
+  'scan, legacy and canonical highlight, price and candidate natural identities are unique'
 );
 
 select ok(
