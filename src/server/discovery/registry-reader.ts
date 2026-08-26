@@ -142,9 +142,10 @@ export async function loadDiscoveryEligibleCategories(
     // A vertical may contain mappings for other marketplace/site contexts; they are outside this scoped join.
     if (!category) continue;
     const scope = text(row, "scope_status");
-    const tier = text(row, "priority_tier");
+    const tier = nullableText(row, "priority_tier");
     const manualOverride = bool(row, "manual_override");
     const decisionSource = text(row, "decision_source");
+    const classificationVersion = text(row, "classification_version");
     if (decisionSource !== "AUTO" && decisionSource !== "MANUAL") {
       fail("DISCOVERY_REGISTRY_RESPONSE_INVALID", "Origem de decisão inválida");
     }
@@ -159,7 +160,7 @@ export async function loadDiscoveryEligibleCategories(
       priorityTier: tier,
       manualOverride,
       decisionSource: decisionSource as "AUTO" | "MANUAL",
-      classificationVersion: text(row, "classification_version"),
+      classificationVersion,
       sourceVersion: nullableText(category, "source_version"),
       categoryConfigVersion: text(category, "config_version"),
       marketplaceConfigVersion,

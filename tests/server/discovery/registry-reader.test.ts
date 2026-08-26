@@ -55,6 +55,7 @@ describe("discovery registry reader", () => {
     const client = new Client(tables());
     const result = await loadDiscoveryEligibleCategories(input(client));
     expect(result).toHaveLength(2);
+    expect(result.map((categoryRow) => categoryRow.priorityTier)).toEqual(["A", "B"]);
     expect(result[0]).toMatchObject({ priorityTier: "A", marketplaceConfigVersion: "marketplace/v1", verticalConfigVersion: "vertical/v1" });
     expect(new Set(client.calls.map((call) => call.table))).toEqual(new Set(["marketplaces", "commerce_verticals", "marketplace_categories", "vertical_category_mappings"]));
   });
@@ -67,6 +68,28 @@ describe("discovery registry reader", () => {
       mapping(5, { scope_status: "EXCLUDED", priority_tier: "EXCLUDED" }), mapping(6),
     ];
     await expect(loadDiscoveryEligibleCategories(input(new Client(tables(categories, mappings))))).resolves.toHaveLength(1);
+  });
+
+  it.each([
+    { name: "ALLOWED + C", scope: "ALLOWED", tier: "C", mappingActive: true, categoryActive: true },
+    { name: "ALLOWED + NULL", scope: "ALLOWED", tier: null, mappingActive: true, categoryActive: true },
+    { name: "REVIEW + NULL", scope: "REVIEW", tier: null, mappingActive: true, categoryActive: true },
+    { name: "EXCLUDED + NULL", scope: "EXCLUDED", tier: null, mappingActive: true, categoryActive: true },
+    { name: "UNKNOWN + NULL", scope: "UNKNOWN", tier: null, mappingActive: true, categoryActive: true },
+    { name: "inactive mapping + NULL", scope: "REVIEW", tier: null, mappingActive: false, categoryActive: true },
+    { name: "inactive category + NULL", scope: "REVIEW", tier: null, mappingActive: true, categoryActive: false },
+  ])("accepts $name structurally and excludes it from automatic discovery", async ({ scope, tier, mappingActive, categoryActive }) => {
+    const data = tables(
+      [category(0, { active: categoryActive })],
+      [mapping(0, { scope_status: scope, priority_tier: tier, active: mappingActive })],
+    );
+    await expect(loadDiscoveryEligibleCategories(input(new Client(data)))).resolves.toEqual([]);
+  });
+
+  it.each([0, true, {}, []])("rejects structurally invalid priority_tier %#", async (tier) => {
+    const data = tables([category(0)], [mapping(0, { priority_tier: tier })]);
+    await expect(loadDiscoveryEligibleCategories(input(new Client(data))))
+      .rejects.toMatchObject({ code: "DISCOVERY_REGISTRY_RESPONSE_INVALID" });
   });
 
   it("accepts an effective manual ALLOWED A/B mapping", async () => {
