@@ -29,6 +29,7 @@
     "test:registry-cli-remote-read": "tsx scripts/test-registry-sync-cli-remote-read.ts",
     "commerce:registry:sync": "tsx scripts/commerce-registry-sync.ts",
     "commerce:registry:first-remote-apply": "tsx scripts/commerce-registry-first-remote-apply.ts",
+    "commerce:discovery:run": "tsx scripts/commerce-discovery-run.ts",
     "test:db:concurrency": "node scripts/test-oauth-initialize-concurrency.mjs"
   },
   "devDependencies": {
