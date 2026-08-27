@@ -30,6 +30,38 @@ describe("adapter RPC Mercado Livre", () => {
     expect(invoke).toHaveBeenCalledWith("claim_meli_refresh", { p_external_user_id: 296984475 });
   });
 
+  it("mapeia claim runtime operation-aware sem alterar o claim legado", async () => {
+    const invoke = vi.fn<RpcInvoker>().mockResolvedValue({ data: [claimedRow], error: null });
+    const adapter = new SupabaseMeliOAuthControlPlane(invoke);
+    await expect(adapter.claimRefreshForRuntimeOperation(296984475, "0b3d-b-runtime-smoke-v1"))
+      .resolves.toMatchObject({ outcome: "CLAIMED", refreshToken: "fake-refresh" });
+    expect(invoke).toHaveBeenCalledWith("claim_meli_refresh_for_runtime_operation", {
+      p_external_user_id: 296984475,
+      p_operation_id: "0b3d-b-runtime-smoke-v1",
+    });
+  });
+
+  it("aceita replay rejeitado sem credential ou lease", async () => {
+    const adapter = new SupabaseMeliOAuthControlPlane(async () => ({
+      data: [{
+        outcome: "OPERATION_ALREADY_USED",
+        external_user_id: 296984475,
+        lease_id: null,
+        expected_version: 3,
+        refresh_token: null,
+        lease_expires_at: null,
+      }],
+      error: null,
+    }));
+    await expect(adapter.claimRefreshForRuntimeOperation(296984475, "0b3d-b-runtime-smoke-v1"))
+      .resolves.toEqual({
+        outcome: "OPERATION_ALREADY_USED",
+        externalUserId: 296984475,
+        expectedVersion: 3,
+        leaseExpiresAt: null,
+      });
+  });
+
   it("rejeita token em outcome não CLAIMED", async () => {
     const adapter = new SupabaseMeliOAuthControlPlane(async () => ({
       data: [{ ...claimedRow, outcome: "LOCK_BUSY", lease_id: null }],
@@ -44,6 +76,16 @@ describe("adapter RPC Mercado Livre", () => {
     const transport = new SupabaseMeliOAuthControlPlane(async () => { throw new Error("sensitive transport"); });
     await expect(transport.claimRefresh(1)).rejects.toBeInstanceOf(ControlPlaneError);
     await expect(transport.claimRefresh(1)).rejects.toMatchObject({ transportAmbiguous: true, message: "CONTROL_PLANE_REQUEST_FAILED" });
+  });
+
+  it("sanitiza erro bruto do RPC runtime", async () => {
+    const adapter = new SupabaseMeliOAuthControlPlane(async () => ({
+      data: null,
+      error: { message: "raw database detail CANARY_SECRET" },
+    }));
+    const error = await adapter.claimRefreshForRuntimeOperation(1, "runtime-safe-v1").catch((caught) => caught);
+    expect(error).toMatchObject({ message: "CONTROL_PLANE_REQUEST_FAILED", transportAmbiguous: false });
+    expect(JSON.stringify(error)).not.toContain("CANARY_SECRET");
   });
 
   it("mapeia initialize, complete e fail sem retornar tokens", async () => {

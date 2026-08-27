@@ -22,6 +22,7 @@ function fakeControlPlane(overrides: Partial<MeliOAuthControlPlane> = {}): MeliO
   return {
     initializeConnection: vi.fn().mockResolvedValue({ outcome: "INITIALIZED", externalUserId: userId, tokenVersion: 1, status: "ACTIVE", reauthRequired: false }),
     claimRefresh: vi.fn().mockResolvedValue(claimed),
+    claimRefreshForRuntimeOperation: vi.fn().mockResolvedValue(claimed),
     completeRefresh: vi.fn().mockResolvedValue({ outcome: "COMPLETED", externalUserId: userId, tokenVersion: 5, status: "ACTIVE" }),
     failRefresh: vi.fn().mockResolvedValue({ outcome: "FAILURE_RECORDED", externalUserId: userId, tokenVersion: 4, status: "REAUTH_REQUIRED" }),
     ...overrides,
@@ -44,6 +45,78 @@ function service(controlPlane: MeliOAuthControlPlane, tokenProvider: MeliTokenPr
 }
 
 describe("serviço de rotação OAuth", () => {
+  it("passa operation id ao claim runtime específico", async () => {
+    const plane = fakeControlPlane();
+    await service(plane, successProvider()).rotateMeliAccessTokenForRuntimeOperation("0b3d-b-runtime-smoke-v1");
+    expect(plane.claimRefreshForRuntimeOperation).toHaveBeenCalledWith(userId, "0b3d-b-runtime-smoke-v1");
+    expect(plane.claimRefresh).not.toHaveBeenCalled();
+  });
+
+  it("rejeita duplicate sequencial antes do provider", async () => {
+    const plane = fakeControlPlane({
+      claimRefreshForRuntimeOperation: vi.fn().mockResolvedValue({
+        outcome: "OPERATION_ALREADY_USED",
+        externalUserId: userId,
+        expectedVersion: 5,
+        leaseExpiresAt: null,
+      }),
+    });
+    const provider = successProvider();
+    await expect(service(plane, provider).rotateMeliAccessTokenForRuntimeOperation("0b3d-b-runtime-smoke-v1"))
+      .resolves.toEqual({ outcome: "OPERATION_ALREADY_USED", externalUserId: userId });
+    expect(provider.refresh).not.toHaveBeenCalled();
+    expect(plane.completeRefresh).not.toHaveBeenCalled();
+    expect(plane.failRefresh).not.toHaveBeenCalled();
+  });
+
+  it("permite exatamente um claim em duplicate concorrente", async () => {
+    let used = false;
+    const plane = fakeControlPlane({
+      claimRefreshForRuntimeOperation: vi.fn(async () => {
+        if (used) return { outcome: "OPERATION_ALREADY_USED" as const, externalUserId: userId, expectedVersion: 4, leaseExpiresAt: null };
+        used = true;
+        return claimed;
+      }),
+    });
+    const provider = successProvider();
+    const rotation = service(plane, provider);
+    const results = await Promise.all([
+      rotation.rotateMeliAccessTokenForRuntimeOperation("0b3d-b-runtime-smoke-v1"),
+      rotation.rotateMeliAccessTokenForRuntimeOperation("0b3d-b-runtime-smoke-v1"),
+    ]);
+    expect(results.map((result) => result.outcome).sort()).toEqual(["OPERATION_ALREADY_USED", "ROTATED"]);
+    expect(provider.refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["SAFE_RETRY", "UPSTREAM_UNAVAILABLE"],
+    ["OUTCOME_UNKNOWN", "REFRESH_OUTCOME_UNKNOWN"],
+  ] as const)("mantém operation consumida após falha %s", async (disposition, errorCode) => {
+    let used = false;
+    const plane = fakeControlPlane({
+      claimRefreshForRuntimeOperation: vi.fn(async () => {
+        if (used) return { outcome: "OPERATION_ALREADY_USED" as const, externalUserId: userId, expectedVersion: 4, leaseExpiresAt: null };
+        used = true;
+        return claimed;
+      }),
+    });
+    const provider: MeliTokenProvider = {
+      refresh: vi.fn().mockRejectedValue(new MeliTokenProviderError(errorCode, disposition, "DEFINITIVE_RESPONSE")),
+    };
+    const rotation = service(plane, provider);
+    await rotation.rotateMeliAccessTokenForRuntimeOperation("0b3d-b-runtime-smoke-v1");
+    await expect(rotation.rotateMeliAccessTokenForRuntimeOperation("0b3d-b-runtime-smoke-v1"))
+      .resolves.toMatchObject({ outcome: "OPERATION_ALREADY_USED" });
+    expect(provider.refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserva o fluxo legado sem operation guard", async () => {
+    const plane = fakeControlPlane();
+    await service(plane, successProvider()).rotateMeliAccessToken();
+    expect(plane.claimRefresh).toHaveBeenCalledTimes(1);
+    expect(plane.claimRefreshForRuntimeOperation).not.toHaveBeenCalled();
+  });
+
   it("só libera access token depois de persistir o refresh novo", async () => {
     const order: string[] = [];
     const plane = fakeControlPlane({

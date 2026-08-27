@@ -23,6 +23,10 @@ export type RotationResult =
       outcome: Exclude<RotationOutcome, "ROTATED">;
       externalUserId: number;
       errorCode?: string;
+    }
+  | {
+      outcome: "OPERATION_ALREADY_USED";
+      externalUserId: number;
     };
 
 export interface MeliOAuthRotationServiceOptions {
@@ -45,6 +49,7 @@ function claimTerminalResult(claim: Exclude<ClaimResult, { outcome: "CLAIMED" }>
     case "LOCK_BUSY": return { outcome: "LOCK_BUSY", externalUserId: claim.externalUserId };
     case "DISABLED": return { outcome: "DISABLED", externalUserId: claim.externalUserId };
     case "OUTCOME_UNKNOWN": return { outcome: "OUTCOME_UNKNOWN", externalUserId: claim.externalUserId };
+    case "OPERATION_ALREADY_USED": return { outcome: "OPERATION_ALREADY_USED", externalUserId: claim.externalUserId };
     case "NOT_FOUND":
     case "SECRET_MISSING":
     case "REAUTH_REQUIRED":
@@ -78,13 +83,20 @@ export class MeliOAuthRotationService {
     leaseState?: "NOT_CLAIMED" | "CLAIMED" | "RELEASED" | "UNKNOWN";
     httpStatus?: number;
   } = {}): void {
+    const loggedOutcome: RotationOutcome = result.outcome === "OPERATION_ALREADY_USED"
+      ? "CONFIG_ERROR"
+      : result.outcome;
     const event = {
       operationId,
       externalUserId: result.externalUserId,
-      outcome: result.outcome,
+      outcome: loggedOutcome,
       durationMs: Math.max(0, this.now() - startedAt),
       ...details,
     };
+    if (result.outcome === "OPERATION_ALREADY_USED") {
+      emitRotationLog(this.options.logger, { ...event, sanitizedErrorCode: "OPERATION_ALREADY_USED" });
+      return;
+    }
     if ("errorCode" in result && result.errorCode) {
       emitRotationLog(this.options.logger, { ...event, sanitizedErrorCode: result.errorCode });
     } else {
@@ -114,12 +126,11 @@ export class MeliOAuthRotationService {
     return { outcome: "REAUTH_REQUIRED", externalUserId: context.externalUserId, errorCode: "USER_MISMATCH" };
   }
 
-  async rotateMeliAccessToken(): Promise<RotationResult> {
-    const operationId = this.operationId();
+  private async rotateWithClaim(operationId: string, claimRefresh: () => Promise<ClaimResult>): Promise<RotationResult> {
     const startedAt = this.now();
     let claim: ClaimResult;
     try {
-      claim = await this.options.controlPlane.claimRefresh(this.options.expectedUserId);
+      claim = await claimRefresh();
     } catch {
       const result: RotationResult = {
         outcome: "UPSTREAM_ERROR",
@@ -203,5 +214,33 @@ export class MeliOAuthRotationService {
     };
     this.log(operationId, startedAt, result, { leaseState: "UNKNOWN", tokenVersion: claim.expectedVersion });
     return result;
+  }
+
+  async rotateMeliAccessToken(): Promise<RotationResult> {
+    const operationId = this.operationId();
+    return this.rotateWithClaim(operationId, () => this.options.controlPlane.claimRefresh(this.options.expectedUserId));
+  }
+
+  async rotateMeliAccessTokenForRuntimeOperation(operationId: string): Promise<RotationResult> {
+    if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(operationId)) {
+      const result: RotationResult = {
+        outcome: "CONFIG_ERROR",
+        externalUserId: this.options.expectedUserId,
+        errorCode: "RUNTIME_OPERATION_ID_INVALID",
+      };
+      this.log("invalid-runtime-operation", this.now(), result, { leaseState: "NOT_CLAIMED" });
+      return result;
+    }
+    const runtimeClaim = this.options.controlPlane.claimRefreshForRuntimeOperation;
+    if (!runtimeClaim) {
+      return {
+        outcome: "CONFIG_ERROR",
+        externalUserId: this.options.expectedUserId,
+        errorCode: "RUNTIME_OPERATION_GUARD_UNAVAILABLE",
+      };
+    }
+    return this.rotateWithClaim(operationId, () => (
+      runtimeClaim.call(this.options.controlPlane, this.options.expectedUserId, operationId)
+    ));
   }
 }

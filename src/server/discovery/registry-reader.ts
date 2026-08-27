@@ -1,4 +1,5 @@
 import { DiscoveryError, type DiscoveryEligibleCategory } from "../../commerce/discovery/types.js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const DISCOVERY_REGISTRY_PAGE_SIZE = 1000;
 const MAX_PAGES = 100_000;
@@ -17,6 +18,14 @@ export interface DiscoveryRegistryReadQuery {
 
 export interface DiscoveryRegistryReadClient {
   from(table: string): DiscoveryRegistryReadQuery;
+}
+
+export function discoveryRegistryReadClientFromSupabase(client: SupabaseClient): DiscoveryRegistryReadClient {
+  return Object.freeze({
+    from(table: string): DiscoveryRegistryReadQuery {
+      return client.from(table) as unknown as DiscoveryRegistryReadQuery;
+    },
+  });
 }
 
 export interface LoadDiscoveryEligibleCategoriesInput {

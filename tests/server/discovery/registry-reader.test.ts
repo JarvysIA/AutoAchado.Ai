@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DISCOVERY_REGISTRY_PAGE_SIZE,
+  discoveryRegistryReadClientFromSupabase,
   loadDiscoveryEligibleCategories,
   type DiscoveryRegistryReadClient,
   type DiscoveryRegistryReadQuery,
@@ -51,6 +52,13 @@ function tables(categories: Row[] = [category(0), category(1)], mappings: Row[] 
 const input = (client: Client) => ({ client, marketplaceKey: "MERCADO_LIVRE", siteId: "MLB", verticalKey: "AUTOMOTIVE" });
 
 describe("discovery registry reader", () => {
+  it("adapta Supabase para a interface narrow sem expor o client ao core", () => {
+    const query = { select: () => query };
+    const supabase = { from: (table: string) => ({ ...query, table }) };
+    const adapter = discoveryRegistryReadClientFromSupabase(supabase as never);
+    expect(adapter.from("marketplace_categories")).toMatchObject({ table: "marketplace_categories" });
+  });
+
   it("derives A/B eligibility and normalized registry provenance", async () => {
     const client = new Client(tables());
     const result = await loadDiscoveryEligibleCategories(input(client));

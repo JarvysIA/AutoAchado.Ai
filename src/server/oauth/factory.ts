@@ -1,4 +1,5 @@
 import { getSupabaseServerClient } from "../supabase/client.js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AppConfig } from "../../config.js";
 import { MeliClient } from "../../meli/client.js";
 import type { UserDetail } from "../../meli/types.js";
@@ -9,16 +10,26 @@ import { InitialAuthorizationService } from "./initial-authorization.js";
 import { MeliOAuthRotationService } from "./rotation-service.js";
 import { MeliHttpTokenProvider } from "./token-provider.js";
 
-export function createMeliOAuthRotationService(): MeliOAuthRotationService {
+function buildMeliOAuthRotationService(client: SupabaseClient): MeliOAuthRotationService {
   const config = loadMeliRotationConfig();
   return new MeliOAuthRotationService({
-    controlPlane: createMeliOAuthControlPlane(getSupabaseServerClient()),
+    controlPlane: createMeliOAuthControlPlane(client),
     tokenProvider: new MeliHttpTokenProvider({
       clientId: config.clientId,
       clientSecret: config.clientSecret,
     }),
     expectedUserId: config.expectedUserId,
   });
+}
+
+export function createMeliOAuthRotationService(): MeliOAuthRotationService {
+  return buildMeliOAuthRotationService(getSupabaseServerClient());
+}
+
+export function createMeliOAuthRuntimeOperationRotationService(
+  client: SupabaseClient = getSupabaseServerClient(),
+): MeliOAuthRotationService {
+  return buildMeliOAuthRotationService(client);
 }
 
 export function createMeliInitialAuthorizationService(config: AppConfig): InitialAuthorizationService {

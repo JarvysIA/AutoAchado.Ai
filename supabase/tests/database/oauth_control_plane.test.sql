@@ -2,15 +2,34 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(89);
+select plan(108);
 
 -- Structure and least-privilege boundary.
 select ok(to_regnamespace('private') is not null, 'private schema exists');
 select ok(to_regclass('private.meli_oauth_connections') is not null, 'OAuth metadata table exists');
 select is(
   (select count(*)::integer from information_schema.columns where table_schema = 'private' and table_name = 'meli_oauth_connections'),
-  16,
+  17,
   'OAuth metadata has the expected columns'
+);
+select ok(
+  exists (
+    select 1 from information_schema.columns
+    where table_schema = 'private'
+      and table_name = 'meli_oauth_connections'
+      and column_name = 'consumed_runtime_operation_ids'
+      and data_type = 'ARRAY'
+      and is_nullable = 'NO'
+  ),
+  'runtime operation history is a required array on the canonical connection row'
+);
+select ok(
+  exists (
+    select 1 from pg_constraint
+    where conrelid = 'private.meli_oauth_connections'::regclass
+      and conname = 'meli_oauth_connections_runtime_operation_ids_check'
+  ),
+  'runtime operation history rejects null elements'
 );
 select ok(
   not exists (
@@ -71,17 +90,17 @@ select is(
     select count(*)::integer
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
-      and p.proname in ('initialize_meli_oauth_connection', 'claim_meli_refresh', 'complete_meli_refresh', 'fail_meli_refresh')
+      and p.proname in ('initialize_meli_oauth_connection', 'claim_meli_refresh', 'claim_meli_refresh_for_runtime_operation', 'complete_meli_refresh', 'fail_meli_refresh')
   ),
-  4,
-  'exactly four OAuth control-plane RPCs exist'
+  5,
+  'exactly five OAuth control-plane RPCs exist'
 );
 select ok(
   (
     select bool_and(p.prosecdef)
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
-      and p.proname in ('initialize_meli_oauth_connection', 'claim_meli_refresh', 'complete_meli_refresh', 'fail_meli_refresh')
+      and p.proname in ('initialize_meli_oauth_connection', 'claim_meli_refresh', 'claim_meli_refresh_for_runtime_operation', 'complete_meli_refresh', 'fail_meli_refresh')
   ),
   'all sensitive RPCs are SECURITY DEFINER'
 );
@@ -90,7 +109,7 @@ select ok(
     select bool_and(array_to_string(p.proconfig, ',') = 'search_path=""')
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
-      and p.proname in ('initialize_meli_oauth_connection', 'claim_meli_refresh', 'complete_meli_refresh', 'fail_meli_refresh')
+      and p.proname in ('initialize_meli_oauth_connection', 'claim_meli_refresh', 'claim_meli_refresh_for_runtime_operation', 'complete_meli_refresh', 'fail_meli_refresh')
   ),
   'all sensitive RPCs pin an empty search_path'
 );
@@ -99,7 +118,7 @@ select ok(
     select bool_and(pg_get_userbyid(p.proowner) = 'postgres')
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
-      and p.proname in ('initialize_meli_oauth_connection', 'claim_meli_refresh', 'complete_meli_refresh', 'fail_meli_refresh')
+      and p.proname in ('initialize_meli_oauth_connection', 'claim_meli_refresh', 'claim_meli_refresh_for_runtime_operation', 'complete_meli_refresh', 'fail_meli_refresh')
   ),
   'all sensitive RPCs are owned by postgres'
 );
@@ -107,7 +126,7 @@ select ok(
   not exists (
     select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
-      and p.proname in ('initialize_meli_oauth_connection', 'claim_meli_refresh', 'complete_meli_refresh', 'fail_meli_refresh')
+      and p.proname in ('initialize_meli_oauth_connection', 'claim_meli_refresh', 'claim_meli_refresh_for_runtime_operation', 'complete_meli_refresh', 'fail_meli_refresh')
       and has_function_privilege('public', p.oid, 'EXECUTE')
   ),
   'PUBLIC cannot execute OAuth RPCs'
@@ -116,7 +135,7 @@ select ok(
   not exists (
     select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
-      and p.proname in ('initialize_meli_oauth_connection', 'claim_meli_refresh', 'complete_meli_refresh', 'fail_meli_refresh')
+      and p.proname in ('initialize_meli_oauth_connection', 'claim_meli_refresh', 'claim_meli_refresh_for_runtime_operation', 'complete_meli_refresh', 'fail_meli_refresh')
       and has_function_privilege('anon', p.oid, 'EXECUTE')
   ),
   'anon cannot execute OAuth RPCs'
@@ -125,7 +144,7 @@ select ok(
   not exists (
     select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
-      and p.proname in ('initialize_meli_oauth_connection', 'claim_meli_refresh', 'complete_meli_refresh', 'fail_meli_refresh')
+      and p.proname in ('initialize_meli_oauth_connection', 'claim_meli_refresh', 'claim_meli_refresh_for_runtime_operation', 'complete_meli_refresh', 'fail_meli_refresh')
       and has_function_privilege('authenticated', p.oid, 'EXECUTE')
   ),
   'authenticated cannot execute OAuth RPCs'
@@ -135,9 +154,22 @@ select ok(
     select bool_and(has_function_privilege('service_role', p.oid, 'EXECUTE'))
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
-      and p.proname in ('initialize_meli_oauth_connection', 'claim_meli_refresh', 'complete_meli_refresh', 'fail_meli_refresh')
+      and p.proname in ('initialize_meli_oauth_connection', 'claim_meli_refresh', 'claim_meli_refresh_for_runtime_operation', 'complete_meli_refresh', 'fail_meli_refresh')
   ),
-  'service_role can execute all four specific RPCs'
+  'service_role can execute all five specific RPCs'
+);
+select ok(
+  to_regprocedure('public.claim_meli_refresh_for_runtime_operation(bigint,text)') is not null,
+  'runtime operation-aware claim has the expected signature'
+);
+select ok(
+  pg_get_functiondef('public.claim_meli_refresh_for_runtime_operation(bigint,text)'::regprocedure)
+    like '%for update%'
+  and pg_get_functiondef('public.claim_meli_refresh_for_runtime_operation(bigint,text)'::regprocedure)
+    like '%array_append(c.consumed_runtime_operation_ids, p_operation_id)%'
+  and pg_get_functiondef('public.claim_meli_refresh_for_runtime_operation(bigint,text)'::regprocedure)
+    like '%not (p_operation_id = any(c.consumed_runtime_operation_ids))%',
+  'runtime claim serializes and consumes the operation in the lease update'
 );
 select is(
   (
@@ -633,6 +665,147 @@ select throws_ok(
   '22023',
   'OAUTH_INVALID_OUTCOME_CLASS',
   'arbitrary outcome class is rejected'
+);
+
+-- Runtime operation IDs are durable, exact-once guards layered on the existing lease/CAS state machine.
+select throws_ok(
+  $$select * from public.claim_meli_refresh_for_runtime_operation(900000010, '')$$,
+  '22023',
+  'OAUTH_INVALID_RUNTIME_OPERATION_ID',
+  'empty runtime operation ID is rejected'
+);
+select throws_ok(
+  $$select * from public.claim_meli_refresh_for_runtime_operation(900000010, ' runtime-op-v1 ')$$,
+  '22023',
+  'OAUTH_INVALID_RUNTIME_OPERATION_ID',
+  'non-canonical runtime operation ID is rejected'
+);
+
+do $$ begin
+  perform * from public.initialize_meli_oauth_connection(
+    900000010,
+    pg_catalog.concat('TEST_', 'REFRESH_', 'RUNTIME_INITIAL_', 'R')
+  );
+end $$;
+create temporary table runtime_claim on commit drop as
+select * from public.claim_meli_refresh_for_runtime_operation(900000010, 'runtime-smoke-v1');
+select ok(
+  (
+    select outcome = 'CLAIMED'
+      and lease_id is not null
+      and expected_version = 1
+      and extensions.digest(refresh_token, 'sha256') =
+        extensions.digest(pg_catalog.concat('TEST_', 'REFRESH_', 'RUNTIME_INITIAL_', 'R'), 'sha256')
+    from runtime_claim
+  ),
+  'first runtime operation atomically claims the existing refresh credential'
+);
+select ok(
+  (
+    select consumed_runtime_operation_ids = array['runtime-smoke-v1']::text[]
+    from private.meli_oauth_connections
+    where external_user_id = 900000010
+  ),
+  'first runtime operation is durably consumed with lease acquisition'
+);
+select ok(
+  (
+    select outcome = 'OPERATION_ALREADY_USED' and refresh_token is null and lease_id is null
+    from public.claim_meli_refresh_for_runtime_operation(900000010, 'runtime-smoke-v1')
+  ),
+  'duplicate while the first lease is active is rejected without credential'
+);
+select is(
+  (
+    select r.outcome
+    from runtime_claim c
+    cross join lateral public.complete_meli_refresh(
+      900000010,
+      c.lease_id,
+      c.expected_version,
+      pg_catalog.concat('TEST_', 'REFRESH_', 'RUNTIME_COMPLETED_', 'R')
+    ) r
+  ),
+  'COMPLETED',
+  'runtime operation completes through the unchanged CAS completion RPC'
+);
+select ok(
+  (
+    select outcome = 'OPERATION_ALREADY_USED' and refresh_token is null and lease_id is null
+    from public.claim_meli_refresh_for_runtime_operation(900000010, 'runtime-smoke-v1')
+  ),
+  'completed operation remains consumed sequentially'
+);
+select is(
+  (select outcome from public.claim_meli_refresh_for_runtime_operation(900000010, 'runtime-smoke-v2')),
+  'CLAIMED',
+  'a distinct approved runtime operation can acquire a new lease'
+);
+select is(
+  (
+    select r.outcome
+    from private.meli_oauth_connections c
+    cross join lateral public.fail_meli_refresh(
+      900000010,
+      c.lease_id,
+      c.token_version,
+      'UPSTREAM_UNAVAILABLE',
+      'SAFE_RETRY'
+    ) r
+    where c.external_user_id = 900000010
+  ),
+  'FAILURE_RECORDED',
+  'runtime provider failure uses the unchanged fail RPC'
+);
+select ok(
+  (
+    select outcome = 'OPERATION_ALREADY_USED' and refresh_token is null and lease_id is null
+    from public.claim_meli_refresh_for_runtime_operation(900000010, 'runtime-smoke-v2')
+  ),
+  'failed runtime operation remains consumed'
+);
+select is(
+  (select outcome from public.claim_meli_refresh_for_runtime_operation(900000010, 'runtime-smoke-v3')),
+  'CLAIMED',
+  'OUTCOME_UNKNOWN setup consumes a distinct runtime operation'
+);
+select is(
+  (
+    select r.outcome
+    from private.meli_oauth_connections c
+    cross join lateral public.fail_meli_refresh(
+      900000010,
+      c.lease_id,
+      c.token_version,
+      'RESPONSE_LOST',
+      'OUTCOME_UNKNOWN'
+    ) r
+    where c.external_user_id = 900000010
+  ),
+  'FAILURE_RECORDED',
+  'OUTCOME_UNKNOWN is recorded through the unchanged fail RPC'
+);
+select ok(
+  (
+    select outcome = 'OPERATION_ALREADY_USED' and refresh_token is null and lease_id is null
+    from public.claim_meli_refresh_for_runtime_operation(900000010, 'runtime-smoke-v3')
+  ),
+  'OUTCOME_UNKNOWN runtime operation remains consumed'
+);
+select is(
+  (
+    select outcome from public.initialize_meli_oauth_connection(
+      900000010,
+      pg_catalog.concat('TEST_', 'REFRESH_', 'RUNTIME_REAUTHORIZED_', 'R')
+    )
+  ),
+  'REAUTHORIZED',
+  'human reauthorization remains available after runtime OUTCOME_UNKNOWN'
+);
+select is(
+  (select outcome from public.claim_meli_refresh(900000010)),
+  'CLAIMED',
+  'legacy human rotation claim remains compatible after runtime operations'
 );
 
 -- Vault and metadata participate in the same transaction/subtransaction.

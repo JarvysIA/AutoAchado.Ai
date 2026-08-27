@@ -10,7 +10,8 @@ export type ClaimOutcome =
   | "REAUTH_REQUIRED"
   | "OUTCOME_UNKNOWN"
   | "DISABLED"
-  | "SECRET_MISSING";
+  | "SECRET_MISSING"
+  | "OPERATION_ALREADY_USED";
 export type CompleteOutcome =
   | "COMPLETED"
   | "NOT_FOUND"
@@ -78,6 +79,7 @@ export interface FailResult {
 export interface MeliOAuthControlPlane {
   initializeConnection(externalUserId: number, refreshToken: string): Promise<InitializeResult>;
   claimRefresh(externalUserId: number): Promise<ClaimResult>;
+  claimRefreshForRuntimeOperation?(externalUserId: number, operationId: string): Promise<ClaimResult>;
   completeRefresh(input: {
     externalUserId: number;
     leaseId: string;
@@ -215,10 +217,10 @@ export class SupabaseMeliOAuthControlPlane implements MeliOAuthControlPlane {
     return result;
   }
 
-  async claimRefresh(externalUserId: number): Promise<ClaimResult> {
-    const row = await this.rpc("claim_meli_refresh", { p_external_user_id: externalUserId });
+  private parseClaimRow(row: Record<string, unknown>): ClaimResult {
     const outcome = enumValue(row, "outcome", [
       "CLAIMED", "LOCK_BUSY", "NOT_FOUND", "REAUTH_REQUIRED", "OUTCOME_UNKNOWN", "DISABLED", "SECRET_MISSING",
+      "OPERATION_ALREADY_USED",
     ] as const);
     const returnedUserId = integerValue(row, "external_user_id");
     const refreshToken = nullableString(row, "refresh_token");
@@ -238,6 +240,17 @@ export class SupabaseMeliOAuthControlPlane implements MeliOAuthControlPlane {
       throw new ControlPlaneError(CONTROL_PLANE_RESPONSE_INVALID, false);
     }
     return { outcome, externalUserId: returnedUserId, expectedVersion, leaseExpiresAt };
+  }
+
+  async claimRefresh(externalUserId: number): Promise<ClaimResult> {
+    return this.parseClaimRow(await this.rpc("claim_meli_refresh", { p_external_user_id: externalUserId }));
+  }
+
+  async claimRefreshForRuntimeOperation(externalUserId: number, operationId: string): Promise<ClaimResult> {
+    return this.parseClaimRow(await this.rpc("claim_meli_refresh_for_runtime_operation", {
+      p_external_user_id: externalUserId,
+      p_operation_id: operationId,
+    }));
   }
 
   async completeRefresh(input: {
