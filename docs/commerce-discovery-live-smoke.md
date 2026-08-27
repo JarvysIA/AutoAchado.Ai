@@ -1,6 +1,6 @@
 # Commerce discovery live smoke
 
-O Runtime-A prepara a composição permanente do smoke read-only do discovery sem expor uma rota HTTP e sem executar chamadas live durante build ou testes.
+O Runtime-A prepara a composição permanente do smoke read-only do discovery. O subgate B1 adiciona temporariamente o trigger HTTP protegido `/__internal/0b3d-b/live-smoke`, sem executar chamadas live durante build ou testes.
 
 ## Contrato fixo
 
@@ -12,7 +12,13 @@ O Runtime-A prepara a composição permanente do smoke read-only do discovery se
 - concorrência: 2, herdada de `AUTOMOTIVE_MLB_DISCOVERY_V1`;
 - persistência: `DRY_RUN`, desabilitada por construção.
 
-O módulo não aceita mode, persist, IDs de categorias ou configuração de sweep do chamador. Ele não é importado por `src/app.ts` e não é uma superfície HTTP. O Runtime-B futuro deverá criar o trigger administrativo separado, sem ampliar esses inputs.
+O módulo permanente não aceita mode, persist, IDs de categorias ou configuração de sweep do chamador. A rota B1 também não aceita input operacional: exige `POST`, query vazia, `Content-Type: application/json` e body exatamente `{}` com limite bruto de 32 bytes. A operation ID permanece fixada exclusivamente no serviço.
+
+## Trigger temporário B1
+
+A rota fica oculta com 404 salvo quando `VERCEL_ENV` e `VERCEL_TARGET_ENV` são `production`, e o `Host` normalizado coincide com o `VERCEL_URL` imutável. O domínio customizado público não satisfaz esse guard. O serviço é carregado por import dinâmico somente depois de todos os guards e o correlation ID é gerado no servidor.
+
+O wrapper `commerce-discovery-live-smoke-http/v1` limita a resposta a 64 KiB, usa somente campos allowlisted e nunca inclui request, headers, cookies, tokens, secrets ou erros brutos. A Function única `api/index.js` usa temporariamente `maxDuration: 240`; rota e duração serão removidas no B3, enquanto o hardening permanente abaixo será preservado.
 
 ## Operation guard OAuth
 
@@ -24,7 +30,7 @@ Uma repetição sequencial ou concorrente retorna `OPERATION_ALREADY_USED` sem r
 
 Antes e depois do discovery, a composição lê somente as contagens de `scan_runs` e `highlight_snapshots`. Qualquer delta resulta em `DISCOVERY_LIVE_PERSISTENCE_VIOLATION`; não há tentativa automática de correção.
 
-O resultado contém apenas contagens, outcomes sanitizados, métricas e amostras limitadas a dez IDs públicos por tipo. Tokens, headers, payloads OAuth, secrets Supabase e corpos brutos de API nunca fazem parte do contrato.
+O resultado contém apenas contagens, outcomes sanitizados, métricas e amostras limitadas a dez IDs públicos por tipo. `COMPLETED` exige zero categorias falhas, zero não tentadas e nenhum erro fatal. O contrato expõe `fatalErrorCode`, duração OAuth, contagem de candidatos com provenance em múltiplas categorias e métricas por categoria (tipos, requests, retries e duração). Tokens, headers, payloads OAuth, secrets Supabase e corpos brutos de API nunca fazem parte do contrato.
 
 ## Timeouts e chamadas
 
@@ -38,6 +44,6 @@ Budget futuro do Runtime-B:
 - scraping: zero;
 - writes de discovery: zero.
 
-## Limites deste gate
+## Limites do B1
 
-O Runtime-A apenas cria e testa a fundação. Ele não aplica a migration remotamente, não executa OAuth, não chama Mercado Livre, não habilita persistência e não cria rota, cron ou deployment manual. A aplicação remota da migration e o trigger controlado pertencem a gates posteriores.
+O B1 cria, testa e publica a superfície temporária por integração Git. Ele não executa um POST válido, não consome a operation ID, não chama OAuth ou Mercado Livre, não escreve discovery, não cria bypass de proteção e não faz deployment manual. A única execução live pertence ao B2 após revisão; a remoção do trigger temporário pertence ao B3.

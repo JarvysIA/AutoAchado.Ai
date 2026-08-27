@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { AUTOMOTIVE_MLB_DISCOVERY_V1, planDiscoveryRun } from "../../commerce/discovery/planner.js";
 import type {
+  DiscoveryErrorCode,
   DiscoveryEligibleCategory,
   DiscoveryRunPlan,
   DiscoveryRunMetrics,
@@ -71,11 +72,21 @@ export interface DiscoveryLiveSmokeResult {
   };
   readonly selected: { readonly total: 4; readonly tierA: 2; readonly tierB: 2 };
   readonly oauth: { readonly outcome: "ROTATED" };
+  readonly fatalErrorCode: DiscoveryErrorCode | null;
+  readonly multiCategoryProvenance: number;
   readonly categoryOutcomes: readonly {
     readonly externalCategoryId: string;
     readonly priorityTier: "A" | "B";
     readonly status: string;
     readonly errorCode: string | null;
+    readonly rawHighlights: number;
+    readonly productHighlights: number;
+    readonly itemHighlights: number;
+    readonly userProductHighlights: number;
+    readonly unsupportedHighlights: number;
+    readonly requestCount: number;
+    readonly retryCount: number;
+    readonly durationMs: number;
   }[];
   readonly metrics: DiscoveryRunMetrics;
   readonly persistenceProof: {
@@ -91,6 +102,7 @@ export interface DiscoveryLiveSmokeResult {
   readonly timings: {
     readonly registryReadMs: number;
     readonly planningMs: number;
+    readonly oauthMs: number;
     readonly totalMs: number;
   };
 }
@@ -150,7 +162,9 @@ export async function runDiscoveryLiveSmoke(
       throw new DiscoveryLiveSmokeError("DISCOVERY_LIVE_PLAN_MISMATCH");
     }
 
+    const oauthStartedAt = nowMs();
     const rotation = await dependencies.rotateAccessToken();
+    const oauthMs = elapsed(nowMs, oauthStartedAt);
     if (rotation.outcome === "OPERATION_ALREADY_USED") {
       throw new DiscoveryLiveSmokeError("DISCOVERY_LIVE_OPERATION_ALREADY_USED");
     }
@@ -173,19 +187,36 @@ export async function runDiscoveryLiveSmoke(
       });
     }
 
+    const strictCompletion = discovery.metrics.failedCategories === 0
+      && discovery.metrics.notAttemptedCategories === 0
+      && discovery.fatalErrorCode === null;
+    const multiCategoryProvenance = discovery.candidates.filter((candidate) => (
+      new Set(candidate.occurrences.map((occurrence) => occurrence.marketplaceCategoryId)).size > 1
+    )).length;
+
     return Object.freeze({
       contractVersion: COMMERCE_DISCOVERY_LIVE_SMOKE_CONTRACT,
-      status: discovery.fatalErrorCode === null ? "COMPLETED" : "COMPLETED_WITH_ERRORS",
+      status: strictCompletion ? "COMPLETED" : "COMPLETED_WITH_ERRORS",
       mode: "SMOKE",
       persistenceMode: "DRY_RUN",
       registry: Object.freeze({ eligible: eligibleCategories.length, tierA, tierB, digest: plan.registryDigest }),
       selected: Object.freeze({ total: 4, tierA: 2, tierB: 2 }),
       oauth: Object.freeze({ outcome: "ROTATED" }),
+      fatalErrorCode: discovery.fatalErrorCode,
+      multiCategoryProvenance,
       categoryOutcomes: Object.freeze(discovery.outcomes.map((outcome) => Object.freeze({
         externalCategoryId: outcome.category.externalCategoryId,
         priorityTier: outcome.category.priorityTier,
         status: outcome.status,
         errorCode: outcome.errorCode,
+        rawHighlights: outcome.rawHighlights,
+        productHighlights: outcome.occurrences.filter((entry) => entry.highlightType === "PRODUCT").length,
+        itemHighlights: outcome.occurrences.filter((entry) => entry.highlightType === "ITEM").length,
+        userProductHighlights: outcome.occurrences.filter((entry) => entry.highlightType === "USER_PRODUCT").length,
+        unsupportedHighlights: Math.max(0, outcome.rawHighlights - outcome.occurrences.length),
+        requestCount: outcome.requestCount,
+        retryCount: outcome.retryCount,
+        durationMs: outcome.durationMs,
       }))),
       metrics: discovery.metrics,
       persistenceProof: Object.freeze({ before, after, unchanged: true as const }),
@@ -194,7 +225,7 @@ export async function runDiscoveryLiveSmoke(
         itemIds: Object.freeze(discovery.occurrences.filter((entry) => entry.highlightType === "ITEM").slice(0, SAMPLE_LIMIT).map((entry) => entry.externalId)),
         userProductIds: Object.freeze(discovery.occurrences.filter((entry) => entry.highlightType === "USER_PRODUCT").slice(0, SAMPLE_LIMIT).map((entry) => entry.externalId)),
       }),
-      timings: Object.freeze({ registryReadMs, planningMs, totalMs: elapsed(nowMs, startedAt) }),
+      timings: Object.freeze({ registryReadMs, planningMs, oauthMs, totalMs: elapsed(nowMs, startedAt) }),
     });
   } catch (error) {
     throw sanitizedDependencyError(error);

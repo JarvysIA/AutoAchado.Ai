@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   MARKETPLACE_DISCOVERY_ADAPTER_CONTRACT,
   MELI_HIGHLIGHTS_CATEGORY_V1,
+  DiscoveryError,
   type DiscoveryEligibleCategory,
   type DiscoveryOccurrence,
   type MarketplaceDiscoveryAdapter,
@@ -65,10 +66,16 @@ function occurrence(
   });
 }
 
-function adapter(calls: string[]): MarketplaceDiscoveryAdapter {
+function adapter(calls: string[], failAt?: number): MarketplaceDiscoveryAdapter {
   return Object.freeze({
     async discoverCategory(categoryRow: DiscoveryEligibleCategory) {
       calls.push(categoryRow.externalCategoryId);
+      if (calls.length === failAt) {
+        throw new DiscoveryError("DISCOVERY_CATEGORY_FAILED", "sanitized category failure", {
+          requestCount: 1,
+          retryCount: 0,
+        });
+      }
       const suffix = Number(categoryRow.externalCategoryId.slice(3));
       return Object.freeze({
         contractVersion: MARKETPLACE_DISCOVERY_ADAPTER_CONTRACT,
@@ -97,6 +104,7 @@ function dependencies(options: {
   before?: readonly [number, number];
   after?: readonly [number, number];
   loadError?: Error;
+  adapterFailureAt?: number;
 } = {}) {
   const oauth = vi.fn().mockResolvedValue(options.rotationOutcome === "OPERATION_ALREADY_USED"
     ? { outcome: "OPERATION_ALREADY_USED", externalUserId: 1 }
@@ -112,7 +120,7 @@ function dependencies(options: {
       ? vi.fn().mockRejectedValue(options.loadError)
       : vi.fn().mockResolvedValue(options.categories ?? eligibleCategories()),
     rotateAccessToken: oauth,
-    createMarketplaceAdapter: vi.fn(() => adapter(calls)),
+    createMarketplaceAdapter: vi.fn(() => adapter(calls, options.adapterFailureAt)),
     verificationReader: {
       count: vi.fn(async (table: DiscoveryLiveSmokeCountTable) => values[table].shift() ?? 0),
     },
@@ -165,10 +173,22 @@ describe("permanent discovery live-smoke composition", () => {
       registry: { eligible: 144, tierA: 28, tierB: 116 },
       selected: { total: 4, tierA: 2, tierB: 2 },
       oauth: { outcome: "ROTATED" },
+      fatalErrorCode: null,
+      multiCategoryProvenance: 1,
       persistenceProof: { unchanged: true },
     });
     expect(context.calls).toHaveLength(4);
     expect(result.categoryOutcomes.map((entry) => entry.priorityTier)).toEqual(["A", "A", "B", "B"]);
+    expect(result.categoryOutcomes[0]).toMatchObject({
+      rawHighlights: 4,
+      productHighlights: 1,
+      itemHighlights: 1,
+      userProductHighlights: 1,
+      unsupportedHighlights: 1,
+      requestCount: 1,
+      retryCount: 0,
+      durationMs: 2,
+    });
     expect(result.metrics).toMatchObject({
       selectedCategories: 4,
       attemptedCategories: 4,
@@ -178,11 +198,21 @@ describe("permanent discovery live-smoke composition", () => {
       unsupportedHighlights: 4,
       uniqueCandidates: 1,
     });
+    expect(result.timings.oauthMs).toBeGreaterThanOrEqual(0);
     expect(result.samples.productIds.length).toBeLessThanOrEqual(10);
     expect(result.samples.itemIds.length).toBeLessThanOrEqual(10);
     expect(result.samples.userProductIds.length).toBeLessThanOrEqual(10);
     expect(JSON.stringify(result)).not.toContain("CANARY_ACCESS");
     expect(JSON.stringify(result)).not.toMatch(/accessToken|refreshToken|clientSecret/i);
+  });
+
+  it("exige zero categorias failed/not-attempted para COMPLETED", async () => {
+    const context = dependencies({ adapterFailureAt: 1 });
+    const result = await runDiscoveryLiveSmoke(context.deps);
+    expect(result.status).toBe("COMPLETED_WITH_ERRORS");
+    expect(result.fatalErrorCode).toBeNull();
+    expect(result.metrics.failedCategories).toBe(1);
+    expect(result.metrics.notAttemptedCategories).toBe(0);
   });
 
   it.each([
