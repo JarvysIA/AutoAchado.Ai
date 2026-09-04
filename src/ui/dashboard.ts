@@ -1,6 +1,6 @@
 export interface DashboardProps {
   authorized: boolean;
-  userId?: string;
+  userId?: string | undefined;
 }
 
 export function dashboardPage(props: DashboardProps): string {
