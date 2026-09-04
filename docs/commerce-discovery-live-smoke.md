@@ -14,6 +14,17 @@ O Runtime-A prepara a composição permanente do smoke read-only do discovery. O
 
 O módulo permanente não aceita mode, persist, IDs de categorias ou configuração de sweep do chamador. A rota B1 também não aceita input operacional: exige `POST`, query vazia, `Content-Type: application/json` e body exatamente `{}` com limite bruto de 32 bytes. A operation ID permanece fixada exclusivamente no serviço.
 
+O pré-vôo da rota B1 valida o request de forma estrita e sanitizada antes de qualquer processamento ou carga do serviço:
+- Query inesperada: HTTP 400 com `{"errorCode": "DISCOVERY_LIVE_QUERY_NOT_PERMITTED"}`;
+- Content-Type inválido: HTTP 415 com `{"errorCode": "DISCOVERY_LIVE_UNSUPPORTED_MEDIA_TYPE"}`;
+- Presença de body pré-processado pela runtime: HTTP 400 com `{"errorCode": "DISCOVERY_LIVE_PREPARSED_BODY_PRESENT"}`;
+- Falha na leitura do stream do body: HTTP 400 com `{"errorCode": "DISCOVERY_LIVE_BODY_READ_FAILED"}`;
+- Limite bruto excedido (> 32 bytes): HTTP 413 com `{"errorCode": "DISCOVERY_LIVE_BODY_TOO_LARGE"}`;
+- Body vazio (0 bytes): HTTP 400 com `{"errorCode": "DISCOVERY_LIVE_BODY_EMPTY"}`;
+- Falha de parse JSON: HTTP 400 com `{"errorCode": "DISCOVERY_LIVE_JSON_PARSE_FAILED"}`;
+- JSON não objeto: HTTP 400 com `{"errorCode": "DISCOVERY_LIVE_BODY_NOT_OBJECT"}`;
+- Objeto JSON com propriedades (não vazio): HTTP 400 com `{"errorCode": "DISCOVERY_LIVE_OBJECT_NOT_EMPTY"}`.
+
 ## Trigger temporário B1
 
 A rota fica oculta com 404 salvo quando `VERCEL_ENV` e `VERCEL_TARGET_ENV` são `production`, e o `Host` normalizado coincide com o `VERCEL_URL` imutável. O domínio customizado público não satisfaz esse guard. O serviço é carregado por import dinâmico somente depois de todos os guards e o correlation ID é gerado no servidor.

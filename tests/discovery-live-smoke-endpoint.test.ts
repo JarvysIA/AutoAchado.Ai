@@ -73,8 +73,14 @@ function liveResult(overrides: Record<string, unknown> = {}): Record<string, unk
   };
 }
 
-function request(method: string, url = ROUTE, body = "{}", headers: Record<string, string> = {}): IncomingMessage {
-  const stream = Readable.from(body.length > 0 ? [Buffer.from(body)] : []);
+function request(
+  method: string,
+  url = ROUTE,
+  body: string | Readable = "{}",
+  headers: Record<string, string> = {},
+  attachedBody?: unknown,
+): IncomingMessage {
+  const stream = typeof body === "string" ? Readable.from(body.length > 0 ? [Buffer.from(body)] : []) : body;
   return Object.assign(stream, {
     method,
     url,
@@ -83,13 +89,15 @@ function request(method: string, url = ROUTE, body = "{}", headers: Record<strin
       "content-type": "application/json",
       ...headers,
     },
+    ...(attachedBody !== undefined ? { body: attachedBody } : {}),
   }) as IncomingMessage;
 }
 
 async function invoke(options: {
   method?: string;
   url?: string;
-  body?: string;
+  body?: string | Readable;
+  attachedBody?: unknown;
   headers?: Record<string, string>;
   result?: unknown;
   error?: unknown;
@@ -120,6 +128,7 @@ async function invoke(options: {
     options.url ?? ROUTE,
     options.body ?? "{}",
     options.headers,
+    options.attachedBody,
   ), response, dependencies);
   return { captured, run, log };
 }
@@ -177,12 +186,14 @@ describe("temporary protected discovery live-smoke endpoint", () => {
   it("rejeita qualquer query após normalização do rewrite", async () => {
     const context = await invoke({ url: `${ROUTE}?mode=SMOKE` });
     expect(context.captured.status).toBe(400);
+    expect(JSON.parse(context.captured.body)).toEqual({ errorCode: "DISCOVERY_LIVE_QUERY_NOT_PERMITTED" });
     expect(context.run).not.toHaveBeenCalled();
   });
 
   it.each(["text/plain", "application/x-www-form-urlencoded", ""])("rejeita content-type %s", async (contentType) => {
     const context = await invoke({ headers: { "content-type": contentType } });
     expect(context.captured.status).toBe(415);
+    expect(JSON.parse(context.captured.body)).toEqual({ errorCode: "DISCOVERY_LIVE_UNSUPPORTED_MEDIA_TYPE" });
     expect(context.run).not.toHaveBeenCalled();
   });
 
@@ -190,11 +201,43 @@ describe("temporary protected discovery live-smoke endpoint", () => {
     expect((await invoke({ headers: { "content-type": "Application/JSON; charset=utf-8" } })).captured.status).toBe(200);
   });
 
-  it.each(["", "{", "[]", "null", "1", "true", "\"value\"", "{\"mode\":\"SMOKE\"}", "{\"persist\":false}", "{\"category\":\"MLB1\"}", "{\"operationId\":\"caller\"}"])(
-    "rejeita body sem contrato operacional: %s",
-    async (body) => {
+  it("rejeita request com body pré-processado", async () => {
+    const context = await invoke({ attachedBody: {} });
+    expect(context.captured.status).toBe(400);
+    expect(JSON.parse(context.captured.body)).toEqual({ errorCode: "DISCOVERY_LIVE_PREPARSED_BODY_PRESENT" });
+    expect(context.run).not.toHaveBeenCalled();
+  });
+
+  it("rejeita falha de leitura do stream do body", async () => {
+    const failingStream = new Readable({
+      read() {
+        this.destroy(new Error("stream read error"));
+      },
+    });
+    const context = await invoke({ body: failingStream });
+    expect(context.captured.status).toBe(400);
+    expect(JSON.parse(context.captured.body)).toEqual({ errorCode: "DISCOVERY_LIVE_BODY_READ_FAILED" });
+    expect(context.run).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["", "DISCOVERY_LIVE_BODY_EMPTY"],
+    ["{", "DISCOVERY_LIVE_JSON_PARSE_FAILED"],
+    ["[]", "DISCOVERY_LIVE_BODY_NOT_OBJECT"],
+    ["null", "DISCOVERY_LIVE_BODY_NOT_OBJECT"],
+    ["1", "DISCOVERY_LIVE_BODY_NOT_OBJECT"],
+    ["true", "DISCOVERY_LIVE_BODY_NOT_OBJECT"],
+    ["\"value\"", "DISCOVERY_LIVE_BODY_NOT_OBJECT"],
+    ["{\"mode\":\"SMOKE\"}", "DISCOVERY_LIVE_OBJECT_NOT_EMPTY"],
+    ["{\"persist\":false}", "DISCOVERY_LIVE_OBJECT_NOT_EMPTY"],
+    ["{\"category\":\"MLB1\"}", "DISCOVERY_LIVE_OBJECT_NOT_EMPTY"],
+    ["{\"operationId\":\"caller\"}", "DISCOVERY_LIVE_OBJECT_NOT_EMPTY"],
+  ] as const)(
+    "rejeita body sem contrato operacional %s com erro sanitizado %s",
+    async (body, errorCode) => {
       const context = await invoke({ body });
       expect(context.captured.status).toBe(400);
+      expect(JSON.parse(context.captured.body)).toEqual({ errorCode });
       expect(context.run).not.toHaveBeenCalled();
     },
   );
@@ -202,6 +245,7 @@ describe("temporary protected discovery live-smoke endpoint", () => {
   it("impõe limite bruto de 32 bytes", async () => {
     const context = await invoke({ body: `{\"x\":\"${"a".repeat(40)}\"}` });
     expect(context.captured.status).toBe(413);
+    expect(JSON.parse(context.captured.body)).toEqual({ errorCode: "DISCOVERY_LIVE_BODY_TOO_LARGE" });
     expect(context.run).not.toHaveBeenCalled();
   });
 

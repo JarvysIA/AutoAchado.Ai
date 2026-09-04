@@ -9,6 +9,6 @@ const server = createServer((request, response) => {
   });
 });
 
-server.listen(port, "127.0.0.1", () => {
-  process.stdout.write(`AutoAchado API Probe disponível em http://127.0.0.1:${port}\n`);
+server.listen(port, "0.0.0.0", () => {
+  process.stdout.write(`AutoAchado API Probe disponível em http://0.0.0.0:${port}\n`);
 });

@@ -253,34 +253,46 @@ export async function handleRequest(
       return;
     }
     if (url.searchParams.size !== 0) {
-      sendJson(response, 400, { errorCode: "DISCOVERY_LIVE_INVALID_REQUEST" });
+      sendJson(response, 400, { errorCode: "DISCOVERY_LIVE_QUERY_NOT_PERMITTED" });
       return;
     }
     if (mediaType(request.headers["content-type"]) !== "application/json") {
       sendJson(response, 415, { errorCode: "DISCOVERY_LIVE_UNSUPPORTED_MEDIA_TYPE" });
       return;
     }
+    if ((request as unknown as { body?: unknown }).body !== undefined) {
+      sendJson(response, 400, { errorCode: "DISCOVERY_LIVE_PREPARSED_BODY_PRESENT" });
+      return;
+    }
     let bounded;
     try {
       bounded = await readBoundedBody(request);
     } catch {
-      sendJson(response, 400, { errorCode: "DISCOVERY_LIVE_INVALID_REQUEST" });
+      sendJson(response, 400, { errorCode: "DISCOVERY_LIVE_BODY_READ_FAILED" });
       return;
     }
     if (bounded.tooLarge) {
       sendJson(response, 413, { errorCode: "DISCOVERY_LIVE_BODY_TOO_LARGE" });
       return;
     }
-    let parsed: unknown;
-    try {
-      if (bounded.body.length === 0) throw new Error("empty");
-      parsed = JSON.parse(bounded.body);
-    } catch {
-      sendJson(response, 400, { errorCode: "DISCOVERY_LIVE_INVALID_REQUEST" });
+    if (bounded.body.length === 0) {
+      sendJson(response, 400, { errorCode: "DISCOVERY_LIVE_BODY_EMPTY" });
       return;
     }
-    if (!record(parsed) || Object.keys(parsed as Record<string, unknown>).length !== 0) {
-      sendJson(response, 400, { errorCode: "DISCOVERY_LIVE_INVALID_REQUEST" });
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(bounded.body);
+    } catch {
+      sendJson(response, 400, { errorCode: "DISCOVERY_LIVE_JSON_PARSE_FAILED" });
+      return;
+    }
+    const recordValue = record(parsed);
+    if (!recordValue) {
+      sendJson(response, 400, { errorCode: "DISCOVERY_LIVE_BODY_NOT_OBJECT" });
+      return;
+    }
+    if (Object.keys(recordValue).length !== 0) {
+      sendJson(response, 400, { errorCode: "DISCOVERY_LIVE_OBJECT_NOT_EMPTY" });
       return;
     }
 

@@ -1,0 +1,8 @@
+{
+  "name": "AutoAchado.AI",
+  "description": "Probe de viabilidade da API oficial do Mercado Livre para o AutoAchado.AI",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
