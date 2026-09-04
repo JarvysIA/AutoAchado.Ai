@@ -16,6 +16,7 @@ import {
 import type { InitialAuthorizationOutcome, InitialAuthorizationService } from "./server/oauth/initial-authorization.js";
 import { createMeliInitialAuthorizationService } from "./server/oauth/factory.js";
 import { authorizationResultPage, errorPage, homePage } from "./ui/pages.js";
+import { dashboardPage } from "./ui/dashboard.js";
 
 type CallbackOutcome = InitialAuthorizationOutcome | "STATE_INVALID" | "PKCE_INVALID";
 
@@ -374,6 +375,26 @@ export async function handleRequest(
       sendHtml(response, 200, homePage(Boolean(session), session ? `user_id: ${session.userId}` : undefined));
     } catch {
       sendHtml(response, 200, homePage(false));
+    }
+    return;
+  }
+
+  if (method === "GET" && url.pathname === "/dashboard") {
+    try {
+      const config = dependencies.loadAppConfig();
+      const session = readAuthorizationSession(request.headers.cookie, config.sessionSecret);
+      const rawUserId = session ? String(session.userId) : (process.env.MELI_USER_ID || process.env.MELI_EXPECTED_USER_ID || "");
+      const isAuth = Boolean(session || rawUserId);
+      sendHtml(
+        response,
+        200,
+        dashboardPage({
+          authorized: isAuth,
+          userId: isAuth ? (rawUserId || "296984475") : undefined,
+        }),
+      );
+    } catch {
+      sendHtml(response, 200, dashboardPage({ authorized: false }));
     }
     return;
   }
