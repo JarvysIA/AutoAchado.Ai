@@ -1,13 +1,14 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
   "functions": {
     "api/index.js": {
-      "maxDuration": 240
+      "maxDuration": 60
     }
   },
   "rewrites": [
-    { "source": "/", "destination": "/api?route=" },
-    { "source": "/:path*", "destination": "/api?route=:path*" }
+    { "source": "/(.*)", "destination": "/api/index.js" }
   ]
 }
