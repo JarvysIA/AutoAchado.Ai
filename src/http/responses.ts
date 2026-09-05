@@ -4,7 +4,7 @@ export function sendHtml(response: ServerResponse, status: number, body: string,
   response.writeHead(status, {
     "Content-Type": "text/html; charset=utf-8",
     "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
-    "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self' https://auth.mercadolivre.com.br",
+    "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; img-src https://*.mlstatic.com; base-uri 'none'; frame-ancestors 'none'; form-action 'self' https://auth.mercadolivre.com.br",
     "Referrer-Policy": "no-referrer",
     "X-Content-Type-Options": "nosniff",
     ...headers,

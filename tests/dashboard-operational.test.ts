@@ -8,21 +8,21 @@ describe("operational dashboard browser script", () => {
     const node = () => ({ textContent: "", disabled: false, children: [] as any[], handlers: {} as any,
       append(child: any) { this.children.push(child); }, replaceChildren() { this.children = []; },
       addEventListener(event: string, handler: any) { this.handlers[event] = handler; } });
-    for (const id of ["count", "synced", "snapshots", "message", "sweep", "smoke", "refresh"]) elements.set(id, node());
+    for (const id of ["count", "synced", "snapshots", "message", "sweep", "smoke", "refresh", "more", "results-summary"]) elements.set(id, node());
     const calls: any[] = [];
-    const context = createContext({ document: { getElementById: (id: string) => elements.get(id),
+    const context = createContext({ URL, document: { getElementById: (id: string) => elements.get(id),
       createElement: node, querySelectorAll: () => [elements.get("sweep"), elements.get("smoke"), elements.get("refresh")] },
       setInterval: () => 0, fetch: async (path: string, options: any) => {
         calls.push({path, options});
         return { ok: true, json: async () => path.endsWith("latest-snapshots") ? {
           total: 345, syncedAt: "2026-09-05T00:00:00Z", snapshots: [{ product_id: "<script>alert(1)</script>", observed_at: "2026-09-05T00:00:00Z" }]
-        } : { status: "COMPLETED", persisted: 2 } };
+        } : path.includes("/preview?") ? { title: "<script>alert(1)</script>", url: "https://produto.mercadolivre.com.br/MLB-123-_JM", price: 123, currency: "BRL", status: "AVAILABLE" } : { status: "COMPLETED", persisted: 2 } };
       } });
     const html = dashboardPage({authorized: true, userId: "296984475"});
     new Script(html.match(/<script>([\s\S]*?)<\/script>/)![1]!).runInContext(context);
     await new Promise(resolve => setImmediate(resolve));
     expect(elements.get("count").textContent).toBe("345");
-    expect(elements.get("snapshots").children[0].children[0].children[0].textContent).toBe("<script>alert(1)</script>");
+    expect(elements.get("snapshots").children[0].children[1].children[0].textContent).toBe("<script>alert(1)</script>");
     await elements.get("sweep").handlers.click();
     await elements.get("smoke").handlers.click();
     expect(calls.filter(call => call.options.method === "POST").map(call => call.path)).toEqual(["/api/discovery/sweep", "/api/discovery/smoke"]);

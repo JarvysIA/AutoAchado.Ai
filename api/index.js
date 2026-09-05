@@ -136,15 +136,15 @@ function parseAuthorizationTokenResponse(value) {
   if (!isRecord(value)) {
     throw new AuthorizationCodeExchangeError("TOKEN_RESPONSE_INVALID", "TOKEN_RESPONSE_INVALID", 200);
   }
-  const accessToken = value.access_token;
+  const accessToken2 = value.access_token;
   const refreshToken = value.refresh_token;
   const tokenType = value.token_type;
   const expiresIn = value.expires_in;
   const userId = value.user_id;
-  if (typeof accessToken !== "string" || accessToken.length === 0 || typeof refreshToken !== "string" || refreshToken.length === 0 || typeof tokenType !== "string" || tokenType.toLowerCase() !== "bearer" || typeof expiresIn !== "number" || !Number.isSafeInteger(expiresIn) || expiresIn <= 0 || typeof userId !== "number" || !Number.isSafeInteger(userId) || userId <= 0) {
+  if (typeof accessToken2 !== "string" || accessToken2.length === 0 || typeof refreshToken !== "string" || refreshToken.length === 0 || typeof tokenType !== "string" || tokenType.toLowerCase() !== "bearer" || typeof expiresIn !== "number" || !Number.isSafeInteger(expiresIn) || expiresIn <= 0 || typeof userId !== "number" || !Number.isSafeInteger(userId) || userId <= 0) {
     throw new AuthorizationCodeExchangeError("TOKEN_RESPONSE_INVALID", "TOKEN_RESPONSE_INVALID", 200);
   }
-  return { accessToken, refreshToken, tokenType: "Bearer", expiresIn, userId };
+  return { accessToken: accessToken2, refreshToken, tokenType: "Bearer", expiresIn, userId };
 }
 async function safeJson(response) {
   try {
@@ -882,8 +882,8 @@ var require_FunctionsClient = __commonJS({
        * functions.setAuth(session.access_token)
        * ```
        */
-      setAuth(token) {
-        this.headers.Authorization = `Bearer ${token}`;
+      setAuth(token2) {
+        this.headers.Authorization = `Bearer ${token2}`;
       }
       /**
        * Invokes a function
@@ -6148,13 +6148,13 @@ var require_phoenix_cjs = __commonJS({
         }
         this.ajax("GET", headers, null, () => this.ontimeout(), (resp) => {
           if (resp) {
-            var { status, token, messages } = resp;
+            var { status, token: token2, messages } = resp;
             if (status === 410 && this.token !== null) {
               this.onerror(410);
               this.closeAndRetry(3410, "session_gone", false);
               return;
             }
-            this.token = token;
+            this.token = token2;
           } else {
             status = 0;
           }
@@ -8926,9 +8926,9 @@ var require_RealtimeClient = __commonJS({
        *
        * @category Realtime
        */
-      async setAuth(token = null) {
+      async setAuth(token2 = null) {
         const authGeneration = ++this._authGeneration;
-        const authPromise = this._performAuth(token, authGeneration);
+        const authPromise = this._performAuth(token2, authGeneration);
         if (authGeneration === this._authGeneration) {
           this._authPromise = authPromise;
         }
@@ -9016,11 +9016,11 @@ var require_RealtimeClient = __commonJS({
        * Perform the actual auth operation
        * @internal
        */
-      async _performAuth(token, authGeneration) {
+      async _performAuth(token2, authGeneration) {
         let tokenToSend;
         let isManualToken = false;
-        if (token) {
-          tokenToSend = token;
+        if (token2) {
+          tokenToSend = token2;
           isManualToken = true;
         } else if (this.accessToken) {
           try {
@@ -10347,12 +10347,12 @@ var init_dist3 = __esm({
       *   - `objects` table permissions: none
       * - Refer to the [Storage guide](/docs/guides/storage/security/access-control) on how access control works
       */
-      async uploadToSignedUrl(path, token, fileBody, fileOptions) {
+      async uploadToSignedUrl(path, token2, fileBody, fileOptions) {
         var _this3 = this;
         const cleanPath = _this3._removeEmptyFolders(path);
         const _path = _this3._getFinalPath(cleanPath);
         const url = new URL(_this3.url + `/object/upload/sign/${_path}`);
-        url.searchParams.set("token", token);
+        url.searchParams.set("token", token2);
         return _this3.handleOperation(async () => {
           let body;
           const options = _objectSpread22(_objectSpread22({}, DEFAULT_FILE_OPTIONS), fileOptions);
@@ -10426,12 +10426,12 @@ var init_dist3 = __esm({
           if (options === null || options === void 0 ? void 0 : options.upsert) headers["x-upsert"] = "true";
           const data = await post(_this4.fetch, `${_this4.url}/object/upload/sign/${_path}`, {}, { headers });
           const url = new URL(_this4.url + data.url);
-          const token = url.searchParams.get("token");
-          if (!token) throw new StorageError("No token returned by API");
+          const token2 = url.searchParams.get("token");
+          if (!token2) throw new StorageError("No token returned by API");
           return {
             signedUrl: url.toString(),
             path,
-            token
+            token: token2
           };
         });
       }
@@ -13128,8 +13128,8 @@ var require_helpers = __commonJS({
     };
     exports.Deferred = Deferred;
     Deferred.promiseConstructor = Promise;
-    function decodeJWT(token) {
-      const parts = token.split(".");
+    function decodeJWT(token2) {
+      const parts = token2.split(".");
       if (parts.length !== 3) {
         throw new errors_1.AuthInvalidJwtError("Invalid JWT structure");
       }
@@ -17298,12 +17298,12 @@ var require_GoTrueClient = __commonJS({
        */
       async signInWithIdToken(credentials) {
         try {
-          const { options, provider, token, access_token, nonce } = credentials;
+          const { options, provider, token: token2, access_token, nonce } = credentials;
           const res = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/token?grant_type=id_token`, {
             headers: this.headers,
             body: {
               provider,
-              id_token: token,
+              id_token: token2,
               access_token,
               nonce,
               gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken }
@@ -18907,9 +18907,9 @@ var require_GoTrueClient = __commonJS({
           if (sessionError && !(0, errors_1.isAuthSessionMissingError)(sessionError)) {
             return this._returnResult({ error: sessionError });
           }
-          const accessToken = (_a = data.session) === null || _a === void 0 ? void 0 : _a.access_token;
-          if (accessToken) {
-            const { error } = await this.admin.signOut(accessToken, scope);
+          const accessToken2 = (_a = data.session) === null || _a === void 0 ? void 0 : _a.access_token;
+          if (accessToken2) {
+            const { error } = await this.admin.signOut(accessToken2, scope);
             if (error) {
               if (!((0, errors_1.isAuthApiError)(error) && (error.status === 404 || error.status === 401 || error.status === 403) || (0, errors_1.isAuthSessionMissingError)(error))) {
                 if (scope !== "others") {
@@ -19378,13 +19378,13 @@ var require_GoTrueClient = __commonJS({
             const { error: sessionError, data: { session } } = result;
             if (sessionError)
               throw sessionError;
-            const { options, provider, token, access_token, nonce } = credentials;
+            const { options, provider, token: token2, access_token, nonce } = credentials;
             const res = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/token?grant_type=id_token`, {
               headers: this.headers,
               jwt: (_a = session === null || session === void 0 ? void 0 : session.access_token) !== null && _a !== void 0 ? _a : void 0,
               body: {
                 provider,
-                id_token: token,
+                id_token: token2,
                 access_token,
                 nonce,
                 link_identity: true,
@@ -20584,15 +20584,15 @@ var require_GoTrueClient = __commonJS({
        */
       async getClaims(jwt, options = {}) {
         try {
-          let token = jwt;
-          if (!token) {
+          let token2 = jwt;
+          if (!token2) {
             const { data, error } = await this.getSession();
             if (error || !data.session) {
               return this._returnResult({ data: null, error });
             }
-            token = data.session.access_token;
+            token2 = data.session.access_token;
           }
-          const { header, payload, signature, raw: { header: rawHeader, payload: rawPayload } } = (0, helpers_1.decodeJWT)(token);
+          const { header, payload, signature, raw: { header: rawHeader, payload: rawPayload } } = (0, helpers_1.decodeJWT)(token2);
           if (!(options === null || options === void 0 ? void 0 : options.allowExpired)) {
             try {
               (0, helpers_1.validateExp)(payload.exp);
@@ -20602,7 +20602,7 @@ var require_GoTrueClient = __commonJS({
           }
           const signingKey = !header.alg || header.alg.startsWith("HS") || !header.kid || !("crypto" in globalThis && "subtle" in globalThis.crypto) ? null : await this.fetchJwk(header.kid, (options === null || options === void 0 ? void 0 : options.keys) ? { keys: options.keys } : options === null || options === void 0 ? void 0 : options.jwks);
           if (!signingKey) {
-            const { error } = await this.getUser(token);
+            const { error } = await this.getUser(token2);
             if (error) {
               throw error;
             }
@@ -21558,7 +21558,7 @@ var init_dist4 = __esm({
           accessToken: this._getAccessToken.bind(this),
           fetch: this.fetch
         }, settings.realtime));
-        if (this.accessToken) Promise.resolve(this.accessToken()).then((token) => this.realtime.setAuth(token)).catch((e) => console.warn("Failed to set initial Realtime auth token:", e));
+        if (this.accessToken) Promise.resolve(this.accessToken()).then((token2) => this.realtime.setAuth(token2)).catch((e) => console.warn("Failed to set initial Realtime auth token:", e));
         this.rest = new PostgrestClient(new URL("rest/v1", baseUrl).href, {
           headers: this.headers,
           schema: settings.db.schema,
@@ -21736,10 +21736,10 @@ var init_dist4 = __esm({
           this._handleTokenChanged(event, "CLIENT", session === null || session === void 0 ? void 0 : session.access_token);
         });
       }
-      _handleTokenChanged(event, source, token) {
-        if ((event === "TOKEN_REFRESHED" || event === "SIGNED_IN" || event === "INITIAL_SESSION") && this.changedAccessToken !== token) {
-          this.changedAccessToken = token;
-          this.realtime.setAuth(token);
+      _handleTokenChanged(event, source, token2) {
+        if ((event === "TOKEN_REFRESHED" || event === "SIGNED_IN" || event === "INITIAL_SESSION") && this.changedAccessToken !== token2) {
+          this.changedAccessToken = token2;
+          this.realtime.setAuth(token2);
         } else if (event === "SIGNED_OUT") {
           this.realtime.setAuth();
           if (source == "STORAGE") this.auth.signOut();
@@ -22207,32 +22207,32 @@ var init_initial_authorization = __esm({
       }
       dependencies;
       async authorize(code, verifier) {
-        let token;
+        let token2;
         try {
-          token = await this.dependencies.exchangeCode(code, verifier);
+          token2 = await this.dependencies.exchangeCode(code, verifier);
         } catch (error) {
           if (error instanceof AuthorizationCodeExchangeError) {
             return { outcome: error.outcome, sanitizedErrorCode: error.sanitizedCode };
           }
           return { outcome: "OUTCOME_UNKNOWN", sanitizedErrorCode: "AUTHORIZATION_CODE_OUTCOME_UNKNOWN" };
         }
-        if (token.userId !== this.dependencies.expectedUserId) {
+        if (token2.userId !== this.dependencies.expectedUserId) {
           return { outcome: "USER_MISMATCH", sanitizedErrorCode: "TOKEN_USER_MISMATCH" };
         }
         let user;
         try {
-          user = await this.dependencies.getCurrentUser(token.accessToken);
+          user = await this.dependencies.getCurrentUser(token2.accessToken);
         } catch {
           return { outcome: "USER_VALIDATION_FAILED", sanitizedErrorCode: "USERS_ME_FAILED" };
         }
         if (!Number.isSafeInteger(user.id) || user.id <= 0) {
           return { outcome: "USER_VALIDATION_FAILED", sanitizedErrorCode: "USERS_ME_RESPONSE_INVALID" };
         }
-        if (user.id !== token.userId || user.id !== this.dependencies.expectedUserId) {
+        if (user.id !== token2.userId || user.id !== this.dependencies.expectedUserId) {
           return { outcome: "USER_MISMATCH", sanitizedErrorCode: "USERS_ME_USER_MISMATCH" };
         }
         try {
-          const initialized = await this.dependencies.controlPlane.initializeConnection(user.id, token.refreshToken);
+          const initialized = await this.dependencies.controlPlane.initializeConnection(user.id, token2.refreshToken);
           const common = { externalUserId: user.id, tokenVersion: initialized.tokenVersion };
           switch (initialized.outcome) {
             case "INITIALIZED":
@@ -22279,15 +22279,15 @@ function parseSuccessPayload(value) {
   if (!isRecord3(value)) {
     throw new MeliTokenProviderError("RESPONSE_INVALID", "OUTCOME_UNKNOWN", "DEFINITIVE_RESPONSE", 200);
   }
-  const accessToken = value.access_token;
+  const accessToken2 = value.access_token;
   const refreshToken = value.refresh_token;
   const tokenType = value.token_type;
   const expiresIn = value.expires_in;
   const userId = value.user_id;
-  if (typeof accessToken !== "string" || accessToken.length === 0 || typeof refreshToken !== "string" || refreshToken.length === 0 || typeof tokenType !== "string" || tokenType.toLowerCase() !== "bearer" || typeof expiresIn !== "number" || !Number.isSafeInteger(expiresIn) || expiresIn <= 0 || typeof userId !== "number" || !Number.isSafeInteger(userId) || userId <= 0) {
+  if (typeof accessToken2 !== "string" || accessToken2.length === 0 || typeof refreshToken !== "string" || refreshToken.length === 0 || typeof tokenType !== "string" || tokenType.toLowerCase() !== "bearer" || typeof expiresIn !== "number" || !Number.isSafeInteger(expiresIn) || expiresIn <= 0 || typeof userId !== "number" || !Number.isSafeInteger(userId) || userId <= 0) {
     throw new MeliTokenProviderError("RESPONSE_INVALID", "OUTCOME_UNKNOWN", "DEFINITIVE_RESPONSE", 200);
   }
-  return { accessToken, refreshToken, expiresIn, userId };
+  return { accessToken: accessToken2, refreshToken, expiresIn, userId };
 }
 async function safeJson2(response) {
   try {
@@ -22588,8 +22588,8 @@ function createMeliInitialAuthorizationService(config) {
     expectedUserId: rotationConfig.expectedUserId,
     controlPlane: createMeliOAuthControlPlane(getSupabaseServerClient()),
     exchangeCode: (code, verifier) => exchangeAuthorizationCode(config, code, verifier),
-    getCurrentUser: async (accessToken) => {
-      const response = await new MeliClient({ accessToken }).get("/users/me");
+    getCurrentUser: async (accessToken2) => {
+      const response = await new MeliClient({ accessToken: accessToken2 }).get("/users/me");
       if (response.status !== 200 || !response.data) throw new Error("USERS_ME_FAILED");
       return response.data;
     }
@@ -23386,8 +23386,8 @@ async function runConfiguredDiscoveryLiveSmoke() {
       verticalKey: AUTOMOTIVE_MLB_DISCOVERY_V1.verticalKey
     }),
     rotateAccessToken: () => rotationService.rotateMeliAccessTokenForRuntimeOperation(DISCOVERY_LIVE_SMOKE_OPERATION_ID),
-    createMarketplaceAdapter: (accessToken) => createMeliHighlightsDiscoveryAdapter({
-      client: new MeliClient({ accessToken, timeoutMs: 1e4 }),
+    createMarketplaceAdapter: (accessToken2) => createMeliHighlightsDiscoveryAdapter({
+      client: new MeliClient({ accessToken: accessToken2, timeoutMs: 1e4 }),
       nowIso: () => (/* @__PURE__ */ new Date()).toISOString()
     }),
     verificationReader: discoveryLiveSmokeVerificationReaderFromSupabase(client)
@@ -23744,16 +23744,149 @@ var init_operational = __esm({
   }
 });
 
+// src/server/discovery/product-preview.ts
+var product_preview_exports = {};
+__export(product_preview_exports, {
+  configuredProductPreview: () => configuredProductPreview,
+  resolveProductPreview: () => resolveProductPreview,
+  safePreviewUrl: () => safePreviewUrl
+});
+import { randomUUID as randomUUID3 } from "node:crypto";
+function safePreviewUrl(value, image = false) {
+  if (typeof value !== "string") return null;
+  try {
+    const url = new URL(value);
+    const root = image ? "mlstatic.com" : "mercadolivre.com.br";
+    if (!["https:", "http:"].includes(url.protocol) || url.username || url.password || url.port || !(url.hostname === root || url.hostname.endsWith("." + root))) return null;
+    url.protocol = "https:";
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+function picture(data) {
+  const pictures = Array.isArray(data.pictures) ? data.pictures : [];
+  for (const value of [data.secure_thumbnail, ...pictures.flatMap((p) => [p?.secure_url, p?.url]), data.thumbnail]) {
+    const url = safePreviewUrl(value, true);
+    if (url) return url;
+  }
+  return null;
+}
+async function resolveProductPreview(id, type, read) {
+  const preview = { title: id, description: null, image: null, url: null, price: null, currency: "BRL", status: "UNRESOLVED" };
+  if (!(type === "USER_PRODUCT" ? /^MLBU\d+$/.test(id) : ["PRODUCT", "ITEM"].includes(type) && /^MLB\d+$/.test(id))) return preview;
+  try {
+    let itemId = type === "ITEM" ? id : null;
+    let sellerId = null;
+    if (type !== "ITEM") {
+      const data = await read(type === "PRODUCT" ? `/products/${id}` : `/user-products/${id}`);
+      if (data.id !== id) return preview;
+      preview.title = shortText(data.name) ?? id;
+      preview.image = picture(data);
+      const attributes = Array.isArray(data.attributes) ? data.attributes : [];
+      preview.description = attributes.slice(0, 4).map((a) => [shortText(a?.name, 50), shortText(a?.value_name, 80)].filter(Boolean).join(": ")).filter(Boolean).join(" · ").slice(0, 400) || null;
+      if (type === "PRODUCT") {
+        preview.url = safePreviewUrl(data.permalink);
+        preview.status = preview.url ? "CATALOG" : "UNRESOLVED";
+        itemId = data.buy_box_winner?.item_id ?? null;
+        if (!itemId) {
+          const offers = await read(`/products/${id}/items?limit=1`);
+          itemId = offers.results?.[0]?.item_id ?? null;
+        }
+      } else {
+        sellerId = /^\d+$/.test(String(data.user_id)) ? String(data.user_id) : null;
+        if (sellerId) {
+          const items = await read(`/users/${sellerId}/items/search?user_product_id=${id}&limit=1`);
+          itemId = items.results?.[0] ?? null;
+        }
+      }
+    }
+    if (typeof itemId !== "string" || !/^MLB\d+$/.test(itemId)) return preview;
+    const item = await read(`/items/${itemId}`);
+    if (item.id !== itemId || type === "USER_PRODUCT" && (item.user_product_id !== id || String(item.seller_id) !== sellerId) || type === "PRODUCT" && item.catalog_product_id !== id) return preview;
+    preview.title = shortText(item.title) ?? preview.title;
+    preview.image = picture(item) ?? preview.image;
+    if (item.status !== "active") {
+      if (!preview.url) preview.status = "UNAVAILABLE";
+      return preview;
+    }
+    const url = safePreviewUrl(item.permalink);
+    if (url) {
+      preview.url = url;
+      preview.status = "AVAILABLE";
+    }
+    preview.price = typeof item.price === "number" && Number.isFinite(item.price) && item.price >= 0 ? item.price : null;
+    preview.currency = typeof item.currency_id === "string" && /^[A-Z]{3}$/.test(item.currency_id) ? item.currency_id : "BRL";
+    try {
+      const description = await read(`/items/${itemId}/description`);
+      preview.description = shortText(description.plain_text, 400) ?? preview.description;
+    } catch {
+    }
+  } catch {
+  }
+  return preview;
+}
+async function accessToken(client) {
+  if (token && token.expires > Date.now()) return token.value;
+  if (pendingToken) return pendingToken;
+  pendingToken = (async () => {
+    const result = await createMeliOAuthRuntimeOperationRotationService(client).rotateMeliAccessTokenForRuntimeOperation("preview-" + randomUUID3());
+    if (result.outcome !== "ROTATED") throw new Error("PREVIEW_AUTH_UNAVAILABLE");
+    token = { value: result.accessToken, expires: Date.now() + Math.max(0, result.expiresIn - 60) * 1e3 };
+    return token.value;
+  })();
+  try {
+    return await pendingToken;
+  } finally {
+    pendingToken = void 0;
+  }
+}
+async function configuredProductPreview(client, id, type) {
+  const key = type + ":" + id;
+  const cached = previews.get(key);
+  if (cached && cached.expires > Date.now()) return cached.value;
+  const value = (async () => {
+    const bearer = await accessToken(client);
+    const signal = AbortSignal.timeout(2e4);
+    return resolveProductPreview(id, type, async (path) => {
+      const response = await fetch("https://api.mercadolibre.com" + path, {
+        headers: { Authorization: "Bearer " + bearer, Accept: "application/json" },
+        signal
+      });
+      if (response.status === 401) token = void 0;
+      if (!response.ok) throw new Error("PREVIEW_FETCH_FAILED");
+      return await response.json();
+    });
+  })();
+  if (previews.size >= 500) previews.delete(previews.keys().next().value);
+  previews.set(key, { expires: Date.now() + 12e4, value });
+  try {
+    return await value;
+  } catch (error) {
+    previews.delete(key);
+    throw error;
+  }
+}
+var shortText, token, pendingToken, previews;
+var init_product_preview = __esm({
+  "src/server/discovery/product-preview.ts"() {
+    "use strict";
+    init_factory();
+    shortText = (value, max = 240) => typeof value === "string" ? value.slice(0, max) : null;
+    previews = /* @__PURE__ */ new Map();
+  }
+});
+
 // src/app.ts
 init_config();
-import { randomUUID as randomUUID3 } from "node:crypto";
+import { randomUUID as randomUUID4 } from "node:crypto";
 
 // src/http/responses.ts
 function sendHtml(response, status, body, headers = {}) {
   response.writeHead(status, {
     "Content-Type": "text/html; charset=utf-8",
     "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
-    "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self' https://auth.mercadolivre.com.br",
+    "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; img-src https://*.mlstatic.com; base-uri 'none'; frame-ancestors 'none'; form-action 'self' https://auth.mercadolivre.com.br",
     "Referrer-Policy": "no-referrer",
     "X-Content-Type-Options": "nosniff",
     ...headers
@@ -23943,7 +24076,7 @@ function dashboardPage(props) {
 <title>AutoAchado.AI — Dashboard Operacional</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#090d16;color:#e2e8f0;font:15px system-ui,sans-serif}header{padding:24px max(24px,calc((100% - 1200px)/2));background:#111827;border-bottom:1px solid #25324a;display:flex;gap:20px;align-items:center;justify-content:space-between}h1{margin:0;font-size:24px}h2{font-size:19px;margin-top:0}p,small{color:#9bacc4}main{max-width:1250px;margin:auto;padding:28px 24px}.stats,.matrix{display:grid;gap:16px;grid-template-columns:repeat(4,minmax(0,1fr))}.matrix{grid-template-columns:repeat(2,minmax(0,1fr));padding:0;list-style:none}.card,.panel,.matrix li{border:1px solid #25324a;border-radius:12px;background:#131d31;padding:20px}.card strong{display:block;font-size:24px;margin:12px 0}.panel{margin-top:24px}.matrix li{background:#0e1728;padding:14px}.matrix span{display:block;color:#9bacc4;margin-top:6px}.badge{color:#6ee7b7}.controls{display:flex;flex-wrap:wrap;gap:12px}button,a{color:#93c5fd}button{border:1px solid #3b82f6;background:#1d4ed8;color:white;border-radius:8px;padding:12px 16px;font:inherit;cursor:pointer}button:disabled{opacity:.5;cursor:wait}button:focus-visible,a:focus-visible{outline:3px solid #fcd34d;outline-offset:3px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;text-align:left}th,td{padding:14px 10px;border-bottom:1px solid #25324a}th{color:#9bacc4;font-size:12px;text-transform:uppercase}#message{min-height:24px}@media(max-width:850px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:520px){.stats,.matrix{grid-template-columns:1fr}header{align-items:flex-start;flex-direction:column}.card strong{font-size:22px}}
-</style></head><body><header><div><h1>AutoAchado.AI</h1><p>Dashboard Operacional · Robô de mineração · MLB / Brasil · 0B3D-C</p></div><div class="badge">${connected ? "● Mercado Livre conectado" : "⚠ Mercado Livre não conectado"}<br><small>ID: 296984475</small> · <a href="/auth/start">Conectar conta</a></div></header>
+.results{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px}.product-card{background:#0e1728;border:1px solid #25324a;border-radius:12px;overflow:hidden;display:flex;flex-direction:column}.product-photo{height:200px;background:#fff;display:flex;align-items:center;justify-content:center;color:#64748b}.product-photo img{height:100%;width:100%;object-fit:contain}.product-body{padding:16px;display:flex;flex-direction:column;gap:10px;flex:1}.product-body h3{font-size:16px;margin:0;line-height:1.4}.product-body p{margin:0;font-size:13px;line-height:1.5;overflow-wrap:anywhere}.product-price{font-size:23px;color:#6ee7b7}.product-link{display:block;background:#1d4ed8;color:white;padding:12px;border-radius:8px;text-align:center;text-decoration:none;margin-top:auto}.product-meta{font-size:11px;color:#9bacc4;overflow-wrap:anywhere}#more{margin-top:20px}#more[hidden]{display:none}</style></head><body><header><div><h1>AutoAchado.AI</h1><p>Dashboard Operacional · Robô de mineração · MLB / Brasil · 0B3D-C</p></div><div class="badge">${connected ? "● Mercado Livre conectado" : "⚠ Mercado Livre não conectado"}<br><small>ID: 296984475</small> · <a href="/auth/start">Conectar conta</a></div></header>
 <main><section class="stats" aria-label="Indicadores">
 <div class="card">Status do Robô<strong>Operacional ✅</strong><small>Automotivo V1</small></div>
 <div class="card">Verticais Planejadas<strong>10 Verticais</strong><small>Automotivo V1 Ativa com 144 categorias: 28 Tier A + 116 Tier B</small></div>
@@ -23951,7 +24084,7 @@ function dashboardPage(props) {
 <div class="card">Última Sincronização<strong id="synced">—</strong><small>Atualização automática a cada 30 segundos</small></div></section>
 <section class="panel"><h2>Matriz de Expansão (10 Verticais Estratégicas)</h2><ol class="matrix">${verticals.map(([name, id], i) => `<li>${i + 1}. ${name}<span>${id} · ${i === 0 ? "ATIVO (144 Cats)" : "PLANEJADO"}</span></li>`).join("")}</ol></section>
 <section class="panel"><h2>Painel de Controle</h2><div class="controls"><button id="sweep">🚀 Executar Varredura Persistida (0B3D-C)</button><button id="smoke">⚡ Teste Smoke (2 cats)</button><button id="refresh">🔄 Atualizar Dados</button></div><p id="message" role="status" aria-live="polite"></p></section>
-<section class="panel"><h2>Oportunidades reais mineradas</h2><p>100 snapshots mais recentes. A contagem inclui todas as ocorrências persistidas; um produto pode aparecer em mais de uma coleta.</p><div class="table-wrap"><table><thead><tr><th>Produto / anúncio</th><th>Categoria</th><th>Tipo</th><th>Tier</th><th>Posição</th><th>Coletado em</th></tr></thead><tbody id="snapshots"><tr><td colspan="6">Carregando snapshots…</td></tr></tbody></table></div></section></main>
+<section class="panel"><h2>Produtos encontrados</h2><p>Prévia dos destaques minerados: foto, descrição e preço informado pelo Mercado Livre. Preço e disponibilidade podem mudar; os destaques ainda não representam descontos validados.</p><p id="results-summary"></p><div id="snapshots" class="results" aria-label="Produtos minerados"></div><button id="more" hidden>Mostrar mais produtos</button></section></main>
 <script>
 const el = id => document.getElementById(id);
 let busy = false;
@@ -23962,29 +24095,98 @@ async function request(path, method = 'GET') {
   if (!response.ok) throw new Error(response.status === 401 ? 'Conecte a conta Mercado Livre 296984475 para acessar os dados.' : 'Falha na operação. Verifique a configuração do servidor e tente novamente.');
   return data;
 }
+let snapshots = [], visible = 0, revision = 0, signature = '';
+const previewCache = new Map();
+function textNode(tag, text, className) {
+  const node = document.createElement(tag); node.textContent = text;
+  if (className) node.className = className;
+  return node;
+}
+function safeUrl(value, image) {
+  try {
+    const url = new URL(value);
+    const domain = image ? 'mlstatic.com' : 'mercadolivre.com.br';
+    return url.protocol === 'https:' && !url.username && !url.password && !url.port &&
+      (url.hostname === domain || url.hostname.endsWith('.' + domain)) ? url.href : null;
+  } catch { return null; }
+}
+function fillCard(card, snapshot, preview) {
+  card.replaceChildren();
+  const photo = textNode('div', 'Imagem indisponível', 'product-photo');
+  const imageUrl = safeUrl(preview.image, true);
+  if (imageUrl) {
+    const img = document.createElement('img'); img.src = imageUrl; img.alt = preview.title || snapshot.product_id;
+    img.loading = 'lazy'; img.referrerPolicy = 'no-referrer';
+    img.addEventListener('error', () => { photo.replaceChildren(textNode('span', 'Imagem indisponível')); });
+    photo.replaceChildren(img);
+  }
+  const body = textNode('div', '', 'product-body');
+  body.append(textNode('h3', preview.title || snapshot.product_id));
+  body.append(textNode('p', preview.description || 'Descrição não disponibilizada pela API.'));
+  let price = 'Preço não disponível';
+  if (typeof preview.price === 'number' && Number.isFinite(preview.price)) {
+    try { price = new Intl.NumberFormat('pt-BR', {style:'currency',currency:preview.currency || 'BRL'}).format(preview.price); } catch { /* Keep fallback. */ }
+  }
+  body.append(textNode('strong', price, 'product-price'));
+  body.append(textNode('span', snapshot.product_id + ' · ' + snapshot.type + ' · Tier ' + (snapshot.priority_tier || '—') + ' · Posição ' + (snapshot.position || '—'), 'product-meta'));
+  body.append(textNode('span', 'Coletado em ' + date(snapshot.observed_at), 'product-meta'));
+  const href = safeUrl(preview.url, false);
+  if (href) {
+    const link = textNode('a', preview.status === 'CATALOG' ? 'Ver produto no catálogo ↗' : 'Abrir anúncio no Mercado Livre ↗', 'product-link');
+    link.href = href; link.target = '_blank'; link.rel = 'noopener noreferrer'; body.append(link);
+  } else {
+    body.append(textNode('p', preview.status === 'UNAVAILABLE' ? 'Anúncio indisponível no momento.' : 'Link não resolvido: dados indisponíveis ou acesso restrito pelo Mercado Livre.'));
+  }
+  card.append(photo); card.append(body);
+}
+async function showMore() {
+  const currentRevision = revision;
+  const batch = snapshots.slice(visible, visible + 12);
+  visible += batch.length;
+  el('more').hidden = visible >= snapshots.length;
+  const pending = batch.map(snapshot => {
+    const card = textNode('article', 'Carregando prévia de ' + snapshot.product_id + '…', 'product-card');
+    el('snapshots').append(card); return {snapshot, card};
+  });
+  async function worker() {
+    while (pending.length && currentRevision === revision) {
+      const {snapshot, card} = pending.shift();
+      const key = snapshot.type + ':' + snapshot.product_id;
+      try {
+        let entry = previewCache.get(key);
+        if (!entry || entry.expires < Date.now()) {
+          entry = {expires: Date.now() + 120000, value: request('/api/discovery/preview?id=' + encodeURIComponent(snapshot.product_id) + '&type=' + encodeURIComponent(snapshot.type))};
+          previewCache.set(key, entry);
+        }
+        const preview = await entry.value;
+        if (currentRevision === revision) fillCard(card, snapshot, preview);
+      } catch {
+        previewCache.delete(key);
+        if (currentRevision === revision) fillCard(card, snapshot, { title: snapshot.product_id });
+      }
+    }
+  }
+  await Promise.all([worker(), worker()]);
+}
 async function refresh() {
   const data = await request('/api/discovery/latest-snapshots');
   el('count').textContent = data.total.toLocaleString('pt-BR');
   el('synced').textContent = date(data.syncedAt);
-  el('snapshots').replaceChildren();
-  for (const snapshot of data.snapshots) {
-    const row = document.createElement('tr');
-    const cell = document.createElement('td');
-    const link = document.createElement('a');
-    link.textContent = snapshot.product_id;
-    link.href = 'https://produto.mercadolivre.com.br/' + encodeURIComponent(snapshot.product_id);
-    link.target = '_blank'; link.rel = 'noopener noreferrer'; cell.append(link); row.append(cell);
-    for (const value of [snapshot.marketplace_category_id, snapshot.type, snapshot.priority_tier, snapshot.position, date(snapshot.observed_at)]) {
-      const td = document.createElement('td'); td.textContent = value == null ? '—' : String(value); row.append(td);
-    }
-    el('snapshots').append(row);
-  }
-  if (!data.snapshots.length) { const row = document.createElement('tr'); const td = document.createElement('td'); td.colSpan = 6; td.textContent = 'Nenhuma oportunidade persistida ainda.'; row.append(td); el('snapshots').append(row); }
+  const nextSignature = JSON.stringify(data.snapshots);
+  if (signature === nextSignature) return;
+  signature = nextSignature; revision++;
+  snapshots = data.snapshots.filter((entry, index, rows) => rows.findIndex(row => row.type === entry.type && row.product_id === entry.product_id) === index);
+  visible = 0; el('snapshots').replaceChildren();
+  el('results-summary').textContent = snapshots.length + ' produtos distintos nos ' + data.snapshots.length + ' snapshots recentes.';
+  if (!snapshots.length) el('snapshots').append(textNode('p', 'Nenhum produto persistido ainda.'));
+  await showMore();
 }
+el('more').addEventListener('click', () => showMore());
 async function act(action) {
   if (busy) return;
   busy = true;
   document.querySelectorAll('button').forEach(button => button.disabled = true);
+  if (action === 'refresh') signature = '';
   el('message').textContent = action === 'refresh' ? 'Atualizando dados…' : 'Mineração em andamento. Aguarde…';
   try {
     let result;
@@ -23995,7 +24197,7 @@ async function act(action) {
   finally { busy = false; document.querySelectorAll('button').forEach(button => button.disabled = false); }
 }
 for (const action of ['sweep','smoke','refresh']) el(action).addEventListener('click', () => act(action));
-act('refresh'); setInterval(() => act('refresh'), 30000);
+act('refresh'); setInterval(() => { if (!busy) refresh().catch(() => { el('message').textContent = 'Falha ao sincronizar. Use Atualizar Dados para tentar novamente.'; }); }, 30000);
 </script></body></html>`;
 }
 
@@ -24004,7 +24206,7 @@ var DEFAULT_DEPENDENCIES = {
   loadAppConfig: loadConfig,
   createInitialAuthorizationService: createMeliInitialAuthorizationService,
   runConfiguredDiscoveryLiveSmoke: async () => (await Promise.resolve().then(() => (init_live_smoke(), live_smoke_exports))).runConfiguredDiscoveryLiveSmoke(),
-  createCorrelationId: randomUUID3,
+  createCorrelationId: randomUUID4,
   logDiscoveryLiveEvent: (event) => console.info(JSON.stringify(event))
 };
 var DISCOVERY_LIVE_ROUTE = "/__internal/0b3d-b/live-smoke";
@@ -24199,7 +24401,7 @@ async function handleRequest(request, response, overrides = {}) {
   const dependencies = { ...DEFAULT_DEPENDENCIES, ...overrides };
   const url = requestUrl(request);
   const method = request.method ?? "GET";
-  if (["/api/discovery/latest-snapshots", "/api/discovery/smoke", "/api/discovery/sweep"].includes(url.pathname)) {
+  if (["/api/discovery/preview", "/api/discovery/latest-snapshots", "/api/discovery/smoke", "/api/discovery/sweep"].includes(url.pathname)) {
     try {
       const config = dependencies.loadAppConfig();
       const session = readAuthorizationSession(request.headers.cookie, config.sessionSecret);
@@ -24207,7 +24409,8 @@ async function handleRequest(request, response, overrides = {}) {
         sendJson(response, 401, { errorCode: "AUTHORIZATION_REQUIRED" });
         return;
       }
-      const reading = url.pathname.endsWith("latest-snapshots");
+      const previewing = url.pathname.endsWith("/preview");
+      const reading = previewing || url.pathname.endsWith("latest-snapshots");
       if (method !== (reading ? "GET" : "POST")) {
         sendJson(response, 405, { errorCode: "METHOD_NOT_ALLOWED" });
         return;
@@ -24217,6 +24420,17 @@ async function handleRequest(request, response, overrides = {}) {
         return;
       }
       const operational = await Promise.resolve().then(() => (init_operational(), operational_exports));
+      if (previewing) {
+        const id = url.searchParams.get("id") ?? "";
+        const type = url.searchParams.get("type") ?? "";
+        if (!(type === "USER_PRODUCT" ? /^MLBU\d{1,20}$/.test(id) : ["ITEM", "PRODUCT"].includes(type) && /^MLB\d{1,20}$/.test(id))) {
+          sendJson(response, 400, { errorCode: "INVALID_PREVIEW_ID" });
+          return;
+        }
+        const { configuredProductPreview: configuredProductPreview2 } = await Promise.resolve().then(() => (init_product_preview(), product_preview_exports));
+        sendJson(response, 200, await configuredProductPreview2(operational.createOperationalDiscoveryAdapter().client, id, type));
+        return;
+      }
       const result = reading ? await operational.createOperationalDiscoveryAdapter().latestSnapshots() : await operational.runConfiguredDiscoveryLiveSmoke(url.pathname.endsWith("sweep") ? "FULL_SWEEP" : "SMOKE");
       sendJson(response, 200, result);
     } catch {

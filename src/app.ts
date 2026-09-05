@@ -239,7 +239,7 @@ export async function handleRequest(
   const url = requestUrl(request);
   const method = request.method ?? "GET";
 
-  if (["/api/discovery/latest-snapshots", "/api/discovery/smoke", "/api/discovery/sweep"].includes(url.pathname)) {
+  if (["/api/discovery/preview", "/api/discovery/latest-snapshots", "/api/discovery/smoke", "/api/discovery/sweep"].includes(url.pathname)) {
     try {
       const config = dependencies.loadAppConfig();
       const session = readAuthorizationSession(request.headers.cookie, config.sessionSecret);
@@ -247,7 +247,8 @@ export async function handleRequest(
         sendJson(response, 401, { errorCode: "AUTHORIZATION_REQUIRED" });
         return;
       }
-      const reading = url.pathname.endsWith("latest-snapshots");
+      const previewing = url.pathname.endsWith("/preview");
+      const reading = previewing || url.pathname.endsWith("latest-snapshots");
       if (method !== (reading ? "GET" : "POST")) {
         sendJson(response, 405, { errorCode: "METHOD_NOT_ALLOWED" });
         return;
@@ -257,6 +258,17 @@ export async function handleRequest(
         return;
       }
       const operational = await import("./server/discovery/operational.js");
+      if (previewing) {
+        const id = url.searchParams.get("id") ?? "";
+        const type = url.searchParams.get("type") ?? "";
+        if (!(type === "USER_PRODUCT" ? /^MLBU\d{1,20}$/.test(id) : ["ITEM", "PRODUCT"].includes(type) && /^MLB\d{1,20}$/.test(id))) {
+          sendJson(response, 400, { errorCode: "INVALID_PREVIEW_ID" });
+          return;
+        }
+        const { configuredProductPreview } = await import("./server/discovery/product-preview.js");
+        sendJson(response, 200, await configuredProductPreview(operational.createOperationalDiscoveryAdapter().client, id, type));
+        return;
+      }
       const result = reading ? await operational.createOperationalDiscoveryAdapter().latestSnapshots()
         : await operational.runConfiguredDiscoveryLiveSmoke(url.pathname.endsWith("sweep") ? "FULL_SWEEP" : "SMOKE");
       sendJson(response, 200, result);
