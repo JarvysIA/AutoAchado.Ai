@@ -36,6 +36,7 @@ function picture(data: RecordValue): string | null {
   return null;
 }
 export function publicProductUrl(id: string, type: string): string | null {
+  if (type === "ITEM" && /^MLB\d+$/.test(id)) return `https://produto.mercadolivre.com.br/MLB-${id.slice(3)}-_JM`;
   if (type === "PRODUCT" && /^MLB\d+$/.test(id)) return `https://www.mercadolivre.com.br/p/${id}`;
   if (type === "USER_PRODUCT" && /^MLBU\d+$/.test(id)) return `https://www.mercadolivre.com.br/up/${id}`;
   return null;
@@ -49,7 +50,7 @@ export async function resolveProductPreview(id: string, type: string, read: Prev
   const preview: ProductPreview = { title: id, description: null, image: null, url: null, price: null, currency: "BRL", status: "UNRESOLVED" };
   if (!(type === "USER_PRODUCT" ? /^MLBU\d+$/.test(id) : ["PRODUCT", "ITEM"].includes(type) && /^MLB\d+$/.test(id))) return preview;
   preview.url = publicProductUrl(id, type);
-  if (preview.url) preview.status = "CATALOG";
+  if (preview.url && type !== "ITEM") preview.status = "CATALOG";
   try {
     let itemId = type === "ITEM" ? id : null;
     let sellerId: string | null = null;
@@ -99,7 +100,7 @@ export async function resolveProductPreview(id: string, type: string, read: Prev
     preview.image = picture(item) ?? preview.image;
     if (item.status !== "active") {
       preview.price = null; delete preview.priceSource; delete preview.priceCheckedAt;
-      if (!preview.url) preview.status = "UNAVAILABLE";
+      if (type === "ITEM" || !preview.url) preview.status = "UNAVAILABLE";
       return preview;
     }
     const url = safePreviewUrl(item.permalink);

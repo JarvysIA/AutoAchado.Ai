@@ -23774,6 +23774,7 @@ function picture(data) {
   return null;
 }
 function publicProductUrl(id, type) {
+  if (type === "ITEM" && /^MLB\d+$/.test(id)) return `https://produto.mercadolivre.com.br/MLB-${id.slice(3)}-_JM`;
   if (type === "PRODUCT" && /^MLB\d+$/.test(id)) return `https://www.mercadolivre.com.br/p/${id}`;
   if (type === "USER_PRODUCT" && /^MLBU\d+$/.test(id)) return `https://www.mercadolivre.com.br/up/${id}`;
   return null;
@@ -23789,7 +23790,7 @@ async function resolveProductPreview(id, type, read) {
   const preview = { title: id, description: null, image: null, url: null, price: null, currency: "BRL", status: "UNRESOLVED" };
   if (!(type === "USER_PRODUCT" ? /^MLBU\d+$/.test(id) : ["PRODUCT", "ITEM"].includes(type) && /^MLB\d+$/.test(id))) return preview;
   preview.url = publicProductUrl(id, type);
-  if (preview.url) preview.status = "CATALOG";
+  if (preview.url && type !== "ITEM") preview.status = "CATALOG";
   try {
     let itemId = type === "ITEM" ? id : null;
     let sellerId = null;
@@ -23847,7 +23848,7 @@ async function resolveProductPreview(id, type, read) {
       preview.price = null;
       delete preview.priceSource;
       delete preview.priceCheckedAt;
-      if (!preview.url) preview.status = "UNAVAILABLE";
+      if (type === "ITEM" || !preview.url) preview.status = "UNAVAILABLE";
       return preview;
     }
     const url = safePreviewUrl(item.permalink);
@@ -24186,7 +24187,9 @@ function fillCard(card, snapshot, preview) {
   const publicUrl = snapshot.type === 'PRODUCT' && /^MLB[0-9]+$/.test(snapshot.product_id)
     ? 'https://www.mercadolivre.com.br/p/' + snapshot.product_id
     : snapshot.type === 'USER_PRODUCT' && /^MLBU[0-9]+$/.test(snapshot.product_id)
-      ? 'https://www.mercadolivre.com.br/up/' + snapshot.product_id : null;
+      ? 'https://www.mercadolivre.com.br/up/' + snapshot.product_id
+      : snapshot.type === 'ITEM' && /^MLB[0-9]+$/.test(snapshot.product_id)
+        ? 'https://produto.mercadolivre.com.br/MLB-' + snapshot.product_id.slice(3) + '-_JM' : null;
   const href = safeUrl(preview.url, false) || publicUrl;
   if (href) {
     const link = textNode('a', (preview.status === 'CATALOG' || !preview.url) ? 'Abrir produto e ofertas ↗' : 'Abrir anúncio no Mercado Livre ↗', 'product-link');

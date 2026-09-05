@@ -26,10 +26,10 @@ describe("preview resolution", () => {
   });
   it("does not invent links for restricted MLBU or paused items", async () => {
     expect((await resolveProductPreview("MLBU789","USER_PRODUCT",reader({}))).url).toBe("https://www.mercadolivre.com.br/up/MLBU789");
-    expect(await resolveProductPreview("MLB123","ITEM",reader({"/items/MLB123":{...item,status:"paused"}}))).toMatchObject({url:null,price:null,status:"UNAVAILABLE"});
+    expect(await resolveProductPreview("MLB123","ITEM",reader({"/items/MLB123":{...item,status:"paused"}}))).toMatchObject({url:"https://produto.mercadolivre.com.br/MLB-123-_JM",price:null,status:"UNAVAILABLE"});
   });
   it("rejects mismatched identities and malicious URLs", async () => {
-    expect((await resolveProductPreview("MLB123","ITEM",reader({"/items/MLB123":{...item,id:"MLB999"}}))).url).toBeNull();
+    expect((await resolveProductPreview("MLB123","ITEM",reader({"/items/MLB123":{...item,id:"MLB999"}}))).url).toBe("https://produto.mercadolivre.com.br/MLB-123-_JM");
     for (const url of ["javascript:alert(1)","https://mercadolivre.com.br.evil.test/","https://evil.test/", "https://user@www.mercadolivre.com.br/"]) expect(safePreviewUrl(url)).toBeNull();
     expect(safePreviewUrl("https://http2.mlstatic.com/a.jpg",true)).toBeTruthy();
   });
@@ -51,4 +51,8 @@ describe("catalog price fallbacks", () => {
   it("keeps links even when product metadata is restricted", async () => {
     expect((await resolveProductPreview("MLB456", "PRODUCT", reader({}))).url).toBe("https://www.mercadolivre.com.br/p/MLB456");
   });
+});
+it("retains an ITEM link when both detail and price are forbidden", async () => {
+  const result = await resolveProductPreview("MLB5425836866", "ITEM", reader({}));
+  expect(result).toMatchObject({url:"https://produto.mercadolivre.com.br/MLB-5425836866-_JM",price:null,image:null,status:"UNRESOLVED"});
 });

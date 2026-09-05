@@ -75,7 +75,9 @@ function fillCard(card, snapshot, preview) {
   const publicUrl = snapshot.type === 'PRODUCT' && /^MLB[0-9]+$/.test(snapshot.product_id)
     ? 'https://www.mercadolivre.com.br/p/' + snapshot.product_id
     : snapshot.type === 'USER_PRODUCT' && /^MLBU[0-9]+$/.test(snapshot.product_id)
-      ? 'https://www.mercadolivre.com.br/up/' + snapshot.product_id : null;
+      ? 'https://www.mercadolivre.com.br/up/' + snapshot.product_id
+      : snapshot.type === 'ITEM' && /^MLB[0-9]+$/.test(snapshot.product_id)
+        ? 'https://produto.mercadolivre.com.br/MLB-' + snapshot.product_id.slice(3) + '-_JM' : null;
   const href = safeUrl(preview.url, false) || publicUrl;
   if (href) {
     const link = textNode('a', (preview.status === 'CATALOG' || !preview.url) ? 'Abrir produto e ofertas ↗' : 'Abrir anúncio no Mercado Livre ↗', 'product-link');
