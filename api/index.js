@@ -23895,15 +23895,20 @@ async function configuredProductPreview(client, id, type) {
   const value = (async () => {
     const bearer = await accessToken(client);
     const signal = AbortSignal.timeout(2e4);
-    return resolveProductPreview(id, type, async (path) => {
+    const result = await resolveProductPreview(id, type, async (path) => {
       const response = await fetch("https://api.mercadolibre.com" + path, {
         headers: { Authorization: "Bearer " + bearer, Accept: "application/json" },
         signal
       });
       if (response.status === 401) token = void 0;
-      if (!response.ok) throw new Error("PREVIEW_FETCH_FAILED");
+      if (!response.ok) {
+        console.warn(JSON.stringify({ event: "PREVIEW_UPSTREAM_FAILED", id, type, path, status: response.status }));
+        throw new Error("PREVIEW_FETCH_FAILED");
+      }
       return await response.json();
     });
+    console.info(JSON.stringify({ event: "PREVIEW_RESOLVED", id, type, hasTitle: result.title !== id, hasImage: Boolean(result.image), hasPrice: result.price !== null }));
+    return result;
   })();
   if (previews.size >= 500) previews.delete(previews.keys().next().value);
   previews.set(key, { expires: Date.now() + 12e4, value });
