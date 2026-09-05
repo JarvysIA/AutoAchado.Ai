@@ -16,6 +16,7 @@ import {
 import type { InitialAuthorizationOutcome, InitialAuthorizationService } from "./server/oauth/initial-authorization.js";
 import { createMeliInitialAuthorizationService } from "./server/oauth/factory.js";
 import { authorizationResultPage, errorPage, homePage } from "./ui/pages.js";
+import { dashboardPage } from "./ui/dashboard.js";
 
 type CallbackOutcome = InitialAuthorizationOutcome | "STATE_INVALID" | "PKCE_INVALID";
 
@@ -238,6 +239,32 @@ export async function handleRequest(
   const url = requestUrl(request);
   const method = request.method ?? "GET";
 
+  if (["/api/discovery/latest-snapshots", "/api/discovery/smoke", "/api/discovery/sweep"].includes(url.pathname)) {
+    try {
+      const config = dependencies.loadAppConfig();
+      const session = readAuthorizationSession(request.headers.cookie, config.sessionSecret);
+      if (!session || session.userId !== 296984475) {
+        sendJson(response, 401, { errorCode: "AUTHORIZATION_REQUIRED" });
+        return;
+      }
+      const reading = url.pathname.endsWith("latest-snapshots");
+      if (method !== (reading ? "GET" : "POST")) {
+        sendJson(response, 405, { errorCode: "METHOD_NOT_ALLOWED" });
+        return;
+      }
+      if (!reading && request.headers.origin !== new URL(config.redirectUri).origin) {
+        sendJson(response, 403, { errorCode: "ORIGIN_NOT_ALLOWED" });
+        return;
+      }
+      const operational = await import("./server/discovery/operational.js");
+      const result = reading ? await operational.createOperationalDiscoveryAdapter().latestSnapshots()
+        : await operational.runConfiguredDiscoveryLiveSmoke(url.pathname.endsWith("sweep") ? "FULL_SWEEP" : "SMOKE");
+      sendJson(response, 200, result);
+    } catch {
+      sendJson(response, 503, { errorCode: "DISCOVERY_OPERATION_FAILED" });
+    }
+    return;
+  }
   if (url.pathname === DISCOVERY_LIVE_ROUTE) {
     if (process.env.VERCEL_ENV !== "production" || process.env.VERCEL_TARGET_ENV !== "production") {
       concealedNotFound(response);
@@ -374,6 +401,26 @@ export async function handleRequest(
       sendHtml(response, 200, homePage(Boolean(session), session ? `user_id: ${session.userId}` : undefined));
     } catch {
       sendHtml(response, 200, homePage(false));
+    }
+    return;
+  }
+
+  if (method === "GET" && url.pathname === "/dashboard") {
+    try {
+      const config = dependencies.loadAppConfig();
+      const session = readAuthorizationSession(request.headers.cookie, config.sessionSecret);
+      const rawUserId = session ? String(session.userId) : "";
+      const isAuth = Boolean(session);
+      sendHtml(
+        response,
+        200,
+        dashboardPage({
+          authorized: isAuth,
+          userId: isAuth ? (rawUserId || "296984475") : undefined,
+        }),
+      );
+    } catch {
+      sendHtml(response, 200, dashboardPage({ authorized: false }));
     }
     return;
   }

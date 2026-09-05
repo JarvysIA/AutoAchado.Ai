@@ -12,6 +12,7 @@
     "start": "tsx src/server.ts",
     "lint": "tsc -p tsconfig.json --noEmit",
     "build": "npm run typecheck && npm run bundle:vercel && npm run verify:vercel-output",
+    "vercel-build": "npm run bundle:vercel",
     "bundle:vercel": "esbuild src/vercel-handler.ts --bundle --platform=node --format=esm --target=node20 --outfile=api/index.js --legal-comments=none --charset=utf8",
     "verify:vercel-output": "node scripts/verify-vercel-output.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",

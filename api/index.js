@@ -220,18 +220,18 @@ var init_client = __esm({
   }
 });
 
-// node_modules/@supabase/supabase-js/dist/tracingRegistry.mjs
+// node_modules/.pnpm-clean/@supabase+supabase-js@2.112.3/node_modules/@supabase/supabase-js/dist/tracingRegistry.mjs
 function getTraceContextExtractor() {
   return globalThis[EXTRACTOR_KEY];
 }
 var EXTRACTOR_KEY;
 var init_tracingRegistry = __esm({
-  "node_modules/@supabase/supabase-js/dist/tracingRegistry.mjs"() {
+  "node_modules/.pnpm-clean/@supabase+supabase-js@2.112.3/node_modules/@supabase/supabase-js/dist/tracingRegistry.mjs"() {
     EXTRACTOR_KEY = /* @__PURE__ */ Symbol.for("@supabase/supabase-js.traceContextExtractor");
   }
 });
 
-// node_modules/tslib/tslib.es6.mjs
+// node_modules/.pnpm-clean/tslib@2.8.1/node_modules/tslib/tslib.es6.mjs
 var tslib_es6_exports = {};
 __export(tslib_es6_exports, {
   __addDisposableResource: () => __addDisposableResource,
@@ -635,7 +635,7 @@ function __addDisposableResource(env, value, async) {
   return value;
 }
 function __disposeResources(env) {
-  function fail2(e) {
+  function fail3(e) {
     env.error = env.hasError ? new _SuppressedError(e, env.error, "An error was suppressed during disposal.") : e;
     env.hasError = true;
   }
@@ -647,12 +647,12 @@ function __disposeResources(env) {
         if (r.dispose) {
           var result = r.dispose.call(r.value);
           if (r.async) return s |= 2, Promise.resolve(result).then(next, function(e) {
-            fail2(e);
+            fail3(e);
             return next();
           });
         } else s |= 1;
       } catch (e) {
-        fail2(e);
+        fail3(e);
       }
     }
     if (s === 1) return env.hasError ? Promise.reject(env.error) : Promise.resolve();
@@ -670,7 +670,7 @@ function __rewriteRelativeImportExtension(path, preserveJsx) {
 }
 var extendStatics, __assign, __createBinding, __setModuleDefault, ownKeys, _SuppressedError, tslib_es6_default;
 var init_tslib_es6 = __esm({
-  "node_modules/tslib/tslib.es6.mjs"() {
+  "node_modules/.pnpm-clean/tslib@2.8.1/node_modules/tslib/tslib.es6.mjs"() {
     extendStatics = function(d, b) {
       extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
         d2.__proto__ = b2;
@@ -756,9 +756,9 @@ var init_tslib_es6 = __esm({
   }
 });
 
-// node_modules/@supabase/functions-js/dist/main/helper.js
+// node_modules/.pnpm-clean/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/helper.js
 var require_helper = __commonJS({
-  "node_modules/@supabase/functions-js/dist/main/helper.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/helper.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.resolveFetch = void 0;
@@ -772,9 +772,9 @@ var require_helper = __commonJS({
   }
 });
 
-// node_modules/@supabase/functions-js/dist/main/types.js
+// node_modules/.pnpm-clean/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/types.js
 var require_types = __commonJS({
-  "node_modules/@supabase/functions-js/dist/main/types.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/types.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.FunctionRegion = exports.FunctionsHttpError = exports.FunctionsRelayError = exports.FunctionsFetchError = exports.FunctionsError = void 0;
@@ -832,9 +832,9 @@ var require_types = __commonJS({
   }
 });
 
-// node_modules/@supabase/functions-js/dist/main/FunctionsClient.js
+// node_modules/.pnpm-clean/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/FunctionsClient.js
 var require_FunctionsClient = __commonJS({
-  "node_modules/@supabase/functions-js/dist/main/FunctionsClient.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/FunctionsClient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.FunctionsClient = void 0;
@@ -1118,9 +1118,9 @@ var require_FunctionsClient = __commonJS({
   }
 });
 
-// node_modules/@supabase/functions-js/dist/main/index.js
+// node_modules/.pnpm-clean/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/index.js
 var require_main = __commonJS({
-  "node_modules/@supabase/functions-js/dist/main/index.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.FunctionRegion = exports.FunctionsRelayError = exports.FunctionsHttpError = exports.FunctionsFetchError = exports.FunctionsError = exports.FunctionsClient = void 0;
@@ -1147,7 +1147,7 @@ var require_main = __commonJS({
   }
 });
 
-// node_modules/@supabase/postgrest-js/dist/index.mjs
+// node_modules/.pnpm-clean/@supabase+postgrest-js@2.112.3/node_modules/@supabase/postgrest-js/dist/index.mjs
 function _typeof(o) {
   "@babel/helpers - typeof";
   return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o$1) {
@@ -1224,7 +1224,7 @@ function shouldRetry(method, status, attemptCount, retryEnabled) {
 }
 var DEFAULT_MAX_RETRIES, getRetryDelay, RETRYABLE_STATUS_CODES, RETRYABLE_METHODS, PostgrestError, PostgrestBuilder, PostgrestTransformBuilder, PostgrestReservedCharsRegexp, PostgrestFilterBuilder, PostgrestQueryBuilder, PostgrestClient;
 var init_dist = __esm({
-  "node_modules/@supabase/postgrest-js/dist/index.mjs"() {
+  "node_modules/.pnpm-clean/@supabase+postgrest-js@2.112.3/node_modules/@supabase/postgrest-js/dist/index.mjs"() {
     DEFAULT_MAX_RETRIES = 3;
     getRetryDelay = (attemptIndex) => Math.min(1e3 * 2 ** attemptIndex, 3e4);
     RETRYABLE_STATUS_CODES = [520, 503];
@@ -4934,9 +4934,9 @@ ${cause.stack}`;
   }
 });
 
-// node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.js
+// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.js
 var require_websocket_factory = __commonJS({
-  "node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.WebSocketFactory = void 0;
@@ -5045,9 +5045,9 @@ Suggested solution: ${env.workaround}`;
   }
 });
 
-// node_modules/@supabase/realtime-js/dist/main/lib/version.js
+// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/version.js
 var require_version = __commonJS({
-  "node_modules/@supabase/realtime-js/dist/main/lib/version.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/version.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.version = void 0;
@@ -5055,9 +5055,9 @@ var require_version = __commonJS({
   }
 });
 
-// node_modules/@supabase/realtime-js/dist/main/lib/constants.js
+// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/constants.js
 var require_constants = __commonJS({
-  "node_modules/@supabase/realtime-js/dist/main/lib/constants.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/constants.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CONNECTION_STATE = exports.TRANSPORTS = exports.CHANNEL_EVENTS = exports.CHANNEL_STATES = exports.SOCKET_STATES = exports.MAX_PUSH_BUFFER_SIZE = exports.WS_CLOSE_NORMAL = exports.DEFAULT_TIMEOUT = exports.VERSION = exports.DEFAULT_VSN = exports.VSN_2_0_0 = exports.VSN_1_0_0 = exports.DEFAULT_VERSION = void 0;
@@ -5103,9 +5103,9 @@ var require_constants = __commonJS({
   }
 });
 
-// node_modules/@supabase/realtime-js/dist/main/lib/serializer.js
+// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/serializer.js
 var require_serializer = __commonJS({
-  "node_modules/@supabase/realtime-js/dist/main/lib/serializer.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/serializer.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var Serializer = class {
@@ -5257,9 +5257,9 @@ var require_serializer = __commonJS({
   }
 });
 
-// node_modules/@supabase/realtime-js/dist/main/lib/transformers.js
+// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/transformers.js
 var require_transformers = __commonJS({
-  "node_modules/@supabase/realtime-js/dist/main/lib/transformers.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/transformers.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.httpEndpointURL = exports.toTimestampString = exports.toArray = exports.toJson = exports.toNumber = exports.toBoolean = exports.convertCell = exports.convertColumn = exports.convertChangeData = exports.PostgresTypes = void 0;
@@ -5290,22 +5290,22 @@ var require_transformers = __commonJS({
       PostgresTypes2["tsrange"] = "tsrange";
       PostgresTypes2["tstzrange"] = "tstzrange";
     })(PostgresTypes || (exports.PostgresTypes = PostgresTypes = {}));
-    var convertChangeData = (columns, record3, options = {}) => {
+    var convertChangeData = (columns, record4, options = {}) => {
       var _a;
       const skipTypes = (_a = options.skipTypes) !== null && _a !== void 0 ? _a : [];
-      if (!record3) {
+      if (!record4) {
         return {};
       }
-      return Object.keys(record3).reduce((acc, rec_key) => {
-        acc[rec_key] = (0, exports.convertColumn)(rec_key, columns, record3, skipTypes);
+      return Object.keys(record4).reduce((acc, rec_key) => {
+        acc[rec_key] = (0, exports.convertColumn)(rec_key, columns, record4, skipTypes);
         return acc;
       }, {});
     };
     exports.convertChangeData = convertChangeData;
-    var convertColumn = (columnName, columns, record3, skipTypes) => {
+    var convertColumn = (columnName, columns, record4, skipTypes) => {
       const column = columns.find((x) => x.name === columnName);
       const colType = column === null || column === void 0 ? void 0 : column.type;
-      const value = record3[columnName];
+      const value = record4[columnName];
       if (colType && !skipTypes.includes(colType)) {
         return (0, exports.convertCell)(colType, value);
       }
@@ -5436,9 +5436,9 @@ var require_transformers = __commonJS({
   }
 });
 
-// node_modules/@supabase/phoenix/priv/static/phoenix.cjs.js
+// node_modules/.pnpm-clean/@supabase+phoenix@0.4.5/node_modules/@supabase/phoenix/priv/static/phoenix.cjs.js
 var require_phoenix_cjs = __commonJS({
-  "node_modules/@supabase/phoenix/priv/static/phoenix.cjs.js"(exports, module) {
+  "node_modules/.pnpm-clean/@supabase+phoenix@0.4.5/node_modules/@supabase/phoenix/priv/static/phoenix.cjs.js"(exports, module) {
     "use strict";
     var __defProp2 = Object.defineProperty;
     var __getOwnPropDesc2 = Object.getOwnPropertyDescriptor;
@@ -7288,9 +7288,9 @@ var require_phoenix_cjs = __commonJS({
   }
 });
 
-// node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.js
+// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.js
 var require_presenceAdapter = __commonJS({
-  "node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var phoenix_1 = require_phoenix_cjs();
@@ -7388,9 +7388,9 @@ var require_presenceAdapter = __commonJS({
   }
 });
 
-// node_modules/@supabase/realtime-js/dist/main/RealtimePresence.js
+// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimePresence.js
 var require_RealtimePresence = __commonJS({
-  "node_modules/@supabase/realtime-js/dist/main/RealtimePresence.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimePresence.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.REALTIME_PRESENCE_LISTEN_EVENTS = void 0;
@@ -7432,9 +7432,9 @@ var require_RealtimePresence = __commonJS({
   }
 });
 
-// node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.js
+// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.js
 var require_normalizeChannelError = __commonJS({
-  "node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.normalizeChannelError = normalizeChannelError;
@@ -7458,9 +7458,9 @@ var require_normalizeChannelError = __commonJS({
   }
 });
 
-// node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.js
+// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.js
 var require_channelAdapter = __commonJS({
-  "node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var constants_1 = require_constants();
@@ -7565,9 +7565,9 @@ var require_channelAdapter = __commonJS({
   }
 });
 
-// node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.js
+// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.js
 var require_RealtimePostgresFilterBuilder = __commonJS({
-  "node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.postgresChangesFilter = exports.RealtimePostgresFilterBuilder = void 0;
@@ -7689,9 +7689,9 @@ var require_RealtimePostgresFilterBuilder = __commonJS({
   }
 });
 
-// node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.js
+// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.js
 var require_RealtimeChannel = __commonJS({
-  "node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.REALTIME_CHANNEL_STATES = exports.REALTIME_SUBSCRIBE_STATES = exports.REALTIME_LISTEN_TYPES = exports.REALTIME_POSTGRES_CHANGES_LISTEN_EVENT = exports.postgresChangesFilter = exports.RealtimePostgresFilterBuilder = void 0;
@@ -8443,9 +8443,9 @@ var require_RealtimeChannel = __commonJS({
   }
 });
 
-// node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.js
+// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.js
 var require_socketAdapter = __commonJS({
-  "node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var phoenix_1 = require_phoenix_cjs();
@@ -8561,9 +8561,9 @@ var require_socketAdapter = __commonJS({
   }
 });
 
-// node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
 var require_RealtimeClient = __commonJS({
-  "node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var tslib_1 = (init_tslib_es6(), __toCommonJS(tslib_es6_exports));
@@ -9229,9 +9229,9 @@ var require_RealtimeClient = __commonJS({
   }
 });
 
-// node_modules/@supabase/realtime-js/dist/main/index.js
+// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/index.js
 var require_main2 = __commonJS({
-  "node_modules/@supabase/realtime-js/dist/main/index.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.WebSocketFactory = exports.REALTIME_CHANNEL_STATES = exports.REALTIME_SUBSCRIBE_STATES = exports.REALTIME_PRESENCE_LISTEN_EVENTS = exports.REALTIME_POSTGRES_CHANGES_LISTEN_EVENT = exports.REALTIME_LISTEN_TYPES = exports.postgresChangesFilter = exports.RealtimePostgresFilterBuilder = exports.RealtimeClient = exports.RealtimeChannel = exports.RealtimePresence = void 0;
@@ -9268,7 +9268,7 @@ var require_main2 = __commonJS({
   }
 });
 
-// node_modules/iceberg-js/dist/index.mjs
+// node_modules/.pnpm-clean/iceberg-js@0.8.1/node_modules/iceberg-js/dist/index.mjs
 function buildUrl(baseUrl, path, query) {
   const url = new URL(path, baseUrl);
   if (query) {
@@ -9316,9 +9316,9 @@ function createFetchClient(options) {
         },
         body: body ? JSON.stringify(body) : void 0
       });
-      const text2 = await res.text();
+      const text3 = await res.text();
       const isJson = (res.headers.get("content-type") || "").includes("application/json");
-      const data = isJson && text2 ? JSON.parse(text2) : text2;
+      const data = isJson && text3 ? JSON.parse(text3) : text3;
       if (!res.ok) {
         const errBody = isJson ? data : void 0;
         const errorDetail = errBody?.error;
@@ -9344,7 +9344,7 @@ function namespaceToPath2(namespace) {
 }
 var IcebergError, NamespaceOperations, TableOperations, IcebergRestCatalog;
 var init_dist2 = __esm({
-  "node_modules/iceberg-js/dist/index.mjs"() {
+  "node_modules/.pnpm-clean/iceberg-js@0.8.1/node_modules/iceberg-js/dist/index.mjs"() {
     IcebergError = class extends Error {
       constructor(message, opts) {
         super(message);
@@ -9806,7 +9806,7 @@ var init_dist2 = __esm({
   }
 });
 
-// node_modules/@supabase/storage-js/dist/index.mjs
+// node_modules/.pnpm-clean/@supabase+storage-js@2.112.3/node_modules/@supabase/storage-js/dist/index.mjs
 function _typeof2(o) {
   "@babel/helpers - typeof";
   return _typeof2 = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o$1) {
@@ -9908,7 +9908,7 @@ function createFetchApi(namespace = "storage") {
 }
 var StorageError, StorageApiError, StorageUnknownError, resolveFetch, isPlainObject, recursiveToCamel, isValidBucketName, encodeStoragePath, _getErrorMessage, handleError, _getRequestParams, defaultApi, get, post, put, head, remove, vectorsApi, BaseApiClient, _Symbol$toStringTag$1, StreamDownloadBuilder, _Symbol$toStringTag, BlobDownloadBuilder, DEFAULT_SEARCH_OPTIONS, DEFAULT_FILE_OPTIONS, StorageFileApi, version, DEFAULT_HEADERS, StorageBucketApi, StorageAnalyticsClient, VectorIndexApi, VectorDataApi, VectorBucketApi, StorageVectorsClient, VectorBucketScope, VectorIndexScope, StorageClient;
 var init_dist3 = __esm({
-  "node_modules/@supabase/storage-js/dist/index.mjs"() {
+  "node_modules/.pnpm-clean/@supabase+storage-js@2.112.3/node_modules/@supabase/storage-js/dist/index.mjs"() {
     init_dist2();
     StorageError = class extends Error {
       constructor(message, namespace = "storage", status, statusCode) {
@@ -12603,9 +12603,9 @@ var init_dist3 = __esm({
   }
 });
 
-// node_modules/@supabase/auth-js/dist/main/lib/version.js
+// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/version.js
 var require_version2 = __commonJS({
-  "node_modules/@supabase/auth-js/dist/main/lib/version.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/version.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.version = void 0;
@@ -12613,9 +12613,9 @@ var require_version2 = __commonJS({
   }
 });
 
-// node_modules/@supabase/auth-js/dist/main/lib/constants.js
+// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/constants.js
 var require_constants2 = __commonJS({
-  "node_modules/@supabase/auth-js/dist/main/lib/constants.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/constants.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.JWKS_TTL = exports.PKCE_MAX_CONCURRENT_FLOWS = exports.PKCE_FLOW_ID_PARAM = exports.BASE64URL_REGEX = exports.API_VERSIONS = exports.API_VERSION_HEADER_NAME = exports.NETWORK_FAILURE = exports.DEFAULT_HEADERS = exports.AUDIENCE = exports.STORAGE_KEY = exports.GOTRUE_URL = exports.REFRESH_FAILURE_COOLDOWN_MS = exports.EXPIRY_MARGIN_MS = exports.AUTO_REFRESH_TICK_THRESHOLD = exports.AUTO_REFRESH_TICK_DURATION_MS = void 0;
@@ -12647,9 +12647,9 @@ var require_constants2 = __commonJS({
   }
 });
 
-// node_modules/@supabase/auth-js/dist/main/lib/errors.js
+// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/errors.js
 var require_errors = __commonJS({
-  "node_modules/@supabase/auth-js/dist/main/lib/errors.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/errors.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.AuthInvalidJwtError = exports.AuthWeakPasswordError = exports.AuthRefreshDiscardedError = exports.AuthRetryableFetchError = exports.AuthPKCECodeVerifierMissingError = exports.AuthPKCEGrantCodeExchangeError = exports.AuthImplicitGrantRedirectError = exports.AuthInvalidCredentialsError = exports.AuthInvalidTokenResponseError = exports.AuthSessionMissingError = exports.CustomAuthError = exports.AuthUnknownError = exports.AuthApiError = exports.AuthError = void 0;
@@ -12805,9 +12805,9 @@ var require_errors = __commonJS({
   }
 });
 
-// node_modules/@supabase/auth-js/dist/main/lib/base64url.js
+// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/base64url.js
 var require_base64url = __commonJS({
-  "node_modules/@supabase/auth-js/dist/main/lib/base64url.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/base64url.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.byteToBase64URL = byteToBase64URL;
@@ -12995,9 +12995,9 @@ var require_base64url = __commonJS({
   }
 });
 
-// node_modules/@supabase/auth-js/dist/main/lib/helpers.js
+// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/helpers.js
 var require_helpers = __commonJS({
-  "node_modules/@supabase/auth-js/dist/main/lib/helpers.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/helpers.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.pkceVerifierSlotKey = exports.Deferred = exports.removeItemAsync = exports.getItemAsync = exports.setItemAsync = exports.looksLikeFetchResponse = exports.resolveFetch = exports.supportsLocalStorage = exports.isBrowser = void 0;
@@ -13411,9 +13411,9 @@ var require_helpers = __commonJS({
   }
 });
 
-// node_modules/@supabase/auth-js/dist/main/lib/fetch.js
+// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/fetch.js
 var require_fetch = __commonJS({
-  "node_modules/@supabase/auth-js/dist/main/lib/fetch.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/fetch.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.handleError = handleError2;
@@ -13598,9 +13598,9 @@ var require_fetch = __commonJS({
   }
 });
 
-// node_modules/@supabase/auth-js/dist/main/lib/types.js
+// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/types.js
 var require_types2 = __commonJS({
-  "node_modules/@supabase/auth-js/dist/main/lib/types.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/types.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SIGN_OUT_SCOPES = void 0;
@@ -13608,9 +13608,9 @@ var require_types2 = __commonJS({
   }
 });
 
-// node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.js
+// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.js
 var require_GoTrueAdminApi = __commonJS({
-  "node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var tslib_1 = (init_tslib_es6(), __toCommonJS(tslib_es6_exports));
@@ -14694,9 +14694,9 @@ var require_GoTrueAdminApi = __commonJS({
   }
 });
 
-// node_modules/@supabase/auth-js/dist/main/lib/local-storage.js
+// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/local-storage.js
 var require_local_storage = __commonJS({
-  "node_modules/@supabase/auth-js/dist/main/lib/local-storage.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/local-storage.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.memoryLocalStorageAdapter = memoryLocalStorageAdapter;
@@ -14716,9 +14716,9 @@ var require_local_storage = __commonJS({
   }
 });
 
-// node_modules/@supabase/auth-js/dist/main/lib/locks.js
+// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/locks.js
 var require_locks = __commonJS({
-  "node_modules/@supabase/auth-js/dist/main/lib/locks.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/locks.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ProcessLockAcquireTimeoutError = exports.NavigatorLockAcquireTimeoutError = exports.LockAcquireTimeoutError = exports.internals = void 0;
@@ -14894,9 +14894,9 @@ var require_locks = __commonJS({
   }
 });
 
-// node_modules/@supabase/auth-js/dist/main/lib/polyfills.js
+// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/polyfills.js
 var require_polyfills = __commonJS({
-  "node_modules/@supabase/auth-js/dist/main/lib/polyfills.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/polyfills.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.polyfillGlobalThis = polyfillGlobalThis;
@@ -14921,9 +14921,9 @@ var require_polyfills = __commonJS({
   }
 });
 
-// node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.js
+// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.js
 var require_ethereum = __commonJS({
-  "node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getAddress = getAddress;
@@ -14999,9 +14999,9 @@ ${suffix}`;
   }
 });
 
-// node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.js
+// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.js
 var require_webauthn_errors = __commonJS({
-  "node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.WebAuthnUnknownError = exports.WebAuthnError = void 0;
@@ -15190,9 +15190,9 @@ var require_webauthn_errors = __commonJS({
   }
 });
 
-// node_modules/@supabase/auth-js/dist/main/lib/webauthn.js
+// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/webauthn.js
 var require_webauthn = __commonJS({
-  "node_modules/@supabase/auth-js/dist/main/lib/webauthn.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/webauthn.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.WebAuthnApi = exports.DEFAULT_REQUEST_OPTIONS = exports.DEFAULT_CREATION_OPTIONS = exports.webAuthnAbortService = exports.WebAuthnAbortService = exports.identifyAuthenticationError = exports.identifyRegistrationError = exports.isWebAuthnError = exports.WebAuthnError = void 0;
@@ -15749,9 +15749,9 @@ var require_webauthn = __commonJS({
   }
 });
 
-// node_modules/@supabase/auth-js/dist/main/GoTrueClient.js
+// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/GoTrueClient.js
 var require_GoTrueClient = __commonJS({
-  "node_modules/@supabase/auth-js/dist/main/GoTrueClient.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/GoTrueClient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var tslib_1 = (init_tslib_es6(), __toCommonJS(tslib_es6_exports));
@@ -20958,9 +20958,9 @@ var require_GoTrueClient = __commonJS({
   }
 });
 
-// node_modules/@supabase/auth-js/dist/main/AuthAdminApi.js
+// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/AuthAdminApi.js
 var require_AuthAdminApi = __commonJS({
-  "node_modules/@supabase/auth-js/dist/main/AuthAdminApi.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/AuthAdminApi.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var tslib_1 = (init_tslib_es6(), __toCommonJS(tslib_es6_exports));
@@ -20970,9 +20970,9 @@ var require_AuthAdminApi = __commonJS({
   }
 });
 
-// node_modules/@supabase/auth-js/dist/main/AuthClient.js
+// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/AuthClient.js
 var require_AuthClient = __commonJS({
-  "node_modules/@supabase/auth-js/dist/main/AuthClient.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/AuthClient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var tslib_1 = (init_tslib_es6(), __toCommonJS(tslib_es6_exports));
@@ -20982,9 +20982,9 @@ var require_AuthClient = __commonJS({
   }
 });
 
-// node_modules/@supabase/auth-js/dist/main/index.js
+// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/index.js
 var require_main3 = __commonJS({
-  "node_modules/@supabase/auth-js/dist/main/index.js"(exports) {
+  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.processLock = exports.lockInternals = exports.NavigatorLockAcquireTimeoutError = exports.navigatorLock = exports.AuthClient = exports.AuthAdminApi = exports.GoTrueClient = exports.GoTrueAdminApi = void 0;
@@ -21015,7 +21015,7 @@ var require_main3 = __commonJS({
   }
 });
 
-// node_modules/@supabase/supabase-js/dist/index.mjs
+// node_modules/.pnpm-clean/@supabase+supabase-js@2.112.3/node_modules/@supabase/supabase-js/dist/index.mjs
 var dist_exports = {};
 __export(dist_exports, {
   FunctionRegion: () => import_functions_js.FunctionRegion,
@@ -21215,7 +21215,7 @@ function shouldShowDeprecationWarning() {
 }
 var import_functions_js, import_realtime_js, import_auth_js, version2, JS_ENV, JS_RUNTIME_VERSION, _Deno$version, _process$version, _runtimeMeta, DEFAULT_HEADERS2, DEFAULT_GLOBAL_OPTIONS, DEFAULT_DB_OPTIONS, DEFAULT_AUTH_OPTIONS, DEFAULT_REALTIME_OPTIONS, DEFAULT_TRACE_PROPAGATION_OPTIONS, resolveFetch2, resolveHeadersConstructor, isNewApiKey, TEMP_KEY_PREFIX, warnedKeySubtypes, checkApiKeyFormat, fetchWithAuth, warnedMissingTracingRuntime, warnedNonW3CPropagator, SupabaseAuthClient, SupabaseClient, createClient;
 var init_dist4 = __esm({
-  "node_modules/@supabase/supabase-js/dist/index.mjs"() {
+  "node_modules/.pnpm-clean/@supabase+supabase-js@2.112.3/node_modules/@supabase/supabase-js/dist/index.mjs"() {
     init_tracingRegistry();
     import_functions_js = __toESM(require_main(), 1);
     init_dist();
@@ -21943,11 +21943,11 @@ var init_client3 = __esm({
               await response.body?.cancel();
               return { status: response.status, data: null, headers: selectedHeaders, durationMs, approximateBytes: 0 };
             }
-            const text2 = await response.text();
+            const text3 = await response.text();
             let data = null;
-            if (text2) {
+            if (text3) {
               try {
-                data = JSON.parse(text2);
+                data = JSON.parse(text3);
               } catch {
                 data = { unparseable_response: true };
               }
@@ -21960,7 +21960,7 @@ var init_client3 = __esm({
               data,
               headers: selectedHeaders,
               durationMs,
-              approximateBytes: Buffer.byteLength(text2)
+              approximateBytes: Buffer.byteLength(text3)
             };
           } catch (error) {
             if (error instanceof MeliApiError) throw error;
@@ -23425,16 +23425,335 @@ var init_live_smoke = __esm({
   }
 });
 
+// src/server/discovery/persistence-repository.ts
+function fail2(code, message) {
+  throw new DiscoveryPersistenceError(code, message);
+}
+function record2(value, code) {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) fail2(code, "Resposta de persistence inválida");
+  return value;
+}
+function text2(row, key, code) {
+  const value = row[key];
+  if (typeof value !== "string" || value.length === 0) fail2(code, "Campo de persistence inválido");
+  return value;
+}
+function timestamp(value, code) {
+  if (!ISO_TIMESTAMP.test(value) || !Number.isFinite(Date.parse(value))) fail2(code, "Timestamp de persistence inválido");
+}
+function validatePlan(plan) {
+  if (plan.contractVersion !== COMMERCE_DISCOVERY_RUN_CONTRACT || plan.config.configVersion !== "automotive-mlb-discovery/v1" || plan.config.adapterVersion !== "meli-highlights-discovery/v1" || plan.config.marketplaceKey !== "MERCADO_LIVRE" || plan.config.siteId !== "MLB" || plan.config.verticalKey !== "AUTOMOTIVE" || plan.mode !== "SMOKE" && plan.mode !== "FULL_SWEEP" || !SHA256.test(plan.registryDigest)) {
+    fail2("DISCOVERY_PERSISTENCE_INVALID_RUN", "Contrato de discovery run inválido");
+  }
+}
+function parseRun(value) {
+  const row = record2(value, "DISCOVERY_PERSISTENCE_READ_FAILED");
+  const runId = text2(row, "run_id", "DISCOVERY_PERSISTENCE_READ_FAILED");
+  const mode = text2(row, "run_mode", "DISCOVERY_PERSISTENCE_READ_FAILED");
+  const status = text2(row, "status", "DISCOVERY_PERSISTENCE_READ_FAILED");
+  const digest2 = text2(row, "registry_digest", "DISCOVERY_PERSISTENCE_READ_FAILED");
+  if (!UUID2.test(runId) || mode !== "SMOKE" && mode !== "FULL_SWEEP" || !["PENDING", "RUNNING", "PARTIAL", "COMPLETED", "FAILED"].includes(status) || !SHA256.test(digest2) || typeof row.request_count !== "number" || typeof row.rate_limited !== "boolean") {
+    fail2("DISCOVERY_PERSISTENCE_READ_FAILED", "Discovery run persistido inválido");
+  }
+  return Object.freeze({
+    runId,
+    scheduledBucket: text2(row, "scheduled_bucket", "DISCOVERY_PERSISTENCE_READ_FAILED"),
+    shardKey: text2(row, "shard_key", "DISCOVERY_PERSISTENCE_READ_FAILED"),
+    status,
+    mode,
+    registryDigest: digest2,
+    startedAt: row.started_at === null ? null : text2(row, "started_at", "DISCOVERY_PERSISTENCE_READ_FAILED"),
+    finishedAt: row.finished_at === null ? null : text2(row, "finished_at", "DISCOVERY_PERSISTENCE_READ_FAILED"),
+    requestCount: row.request_count,
+    rateLimited: row.rate_limited
+  });
+}
+function validateOccurrence(value) {
+  const validId = value.highlightType === "USER_PRODUCT" ? /^MLBU[0-9]+$/.test(value.externalId) : /^MLB[0-9]+$/.test(value.externalId);
+  if (!UUID2.test(value.marketplaceCategoryId) || value.marketplaceKey !== "MERCADO_LIVRE" || value.siteId !== "MLB" || value.verticalKey !== "AUTOMOTIVE" || !/^MLB[0-9]+$/.test(value.externalCategoryId) || !["PRODUCT", "ITEM", "USER_PRODUCT"].includes(value.highlightType) || !validId || value.position !== null && (!Number.isInteger(value.position) || value.position < 1 || value.position > 20) || value.sourceContract !== MELI_HIGHLIGHTS_CATEGORY_V1) {
+    fail2("DISCOVERY_PERSISTENCE_INVALID_OCCURRENCE", "Occurrence de discovery inválida");
+  }
+  timestamp(value.observedAt, "DISCOVERY_PERSISTENCE_INVALID_OCCURRENCE");
+}
+function occurrenceKey2(value) {
+  return `${value.marketplaceCategoryId}:${value.highlightType}:${value.externalId}`;
+}
+function discoveryPersistenceClientFromSupabase(client) {
+  const runColumns = "run_id,scheduled_bucket,job_type,shard_key,status,config_version,contract_version,adapter_version,marketplace_key,site_id,vertical_key,run_mode,registry_digest,started_at,finished_at,request_count,error_counts,rate_limited";
+  const occurrenceColumns = "run_id,marketplace_category_id,product_id,observed_at,observed_bucket,position,type,source_contract,priority_tier";
+  const persistenceClient = {
+    async createRun(row) {
+      const result = await client.from("scan_runs").upsert(row, {
+        onConflict: "job_type,scheduled_bucket,shard_key",
+        ignoreDuplicates: true
+      });
+      return { data: result.data, error: result.error };
+    },
+    async findRunByIdentity(jobType, scheduledBucket, shardKey) {
+      const result = await client.from("scan_runs").select(runColumns).eq("job_type", jobType).eq("scheduled_bucket", scheduledBucket).eq("shard_key", shardKey).maybeSingle();
+      return { data: result.data, error: result.error };
+    },
+    async findCategories(ids) {
+      const result = await client.from("marketplace_categories").select("marketplace_category_id,marketplace_key,site_id,external_category_id").in("marketplace_category_id", [...ids]);
+      return { data: result.data, error: result.error };
+    },
+    async upsertOccurrences(rows) {
+      const result = await client.from("highlight_snapshots").upsert([...rows], {
+        onConflict: "run_id,marketplace_category_id,type,product_id",
+        ignoreDuplicates: true
+      });
+      return { data: result.data, error: result.error };
+    },
+    async updateRun(runId, values) {
+      const result = await client.from("scan_runs").update(values).eq("run_id", runId).select(runColumns).maybeSingle();
+      return { data: result.data, error: result.error };
+    },
+    async findRun(runId) {
+      const result = await client.from("scan_runs").select(runColumns).eq("run_id", runId).maybeSingle();
+      return { data: result.data, error: result.error };
+    },
+    async findOccurrences(runId) {
+      const result = await client.from("highlight_snapshots").select(occurrenceColumns).eq("run_id", runId).order("marketplace_category_id", { ascending: true }).order("type", { ascending: true }).order("product_id", { ascending: true });
+      return { data: result.data, error: result.error };
+    }
+  };
+  return Object.freeze(persistenceClient);
+}
+function createDiscoveryPersistenceRepository(client) {
+  const repository = {
+    async beginDiscoveryRun(input) {
+      validatePlan(input.plan);
+      timestamp(input.scheduledBucket, "DISCOVERY_PERSISTENCE_INVALID_RUN");
+      timestamp(input.startedAt, "DISCOVERY_PERSISTENCE_INVALID_RUN");
+      if (input.shardKey.trim().length === 0) fail2("DISCOVERY_PERSISTENCE_INVALID_RUN", "Shard de discovery inválido");
+      const created = await client.createRun({
+        scheduled_bucket: input.scheduledBucket,
+        job_type: DISCOVERY_PERSISTENCE_JOB_TYPE,
+        shard_key: input.shardKey,
+        status: "RUNNING",
+        config_version: input.plan.config.configVersion,
+        contract_version: input.plan.contractVersion,
+        adapter_version: input.plan.config.adapterVersion,
+        marketplace_key: input.plan.config.marketplaceKey,
+        site_id: input.plan.config.siteId,
+        vertical_key: input.plan.config.verticalKey,
+        run_mode: input.plan.mode,
+        registry_digest: input.plan.registryDigest,
+        started_at: input.startedAt
+      });
+      if (created.error !== null) fail2("DISCOVERY_PERSISTENCE_WRITE_FAILED", "Falha sanitizada ao iniciar discovery run");
+      const found = await client.findRunByIdentity(DISCOVERY_PERSISTENCE_JOB_TYPE, input.scheduledBucket, input.shardKey);
+      if (found.error !== null) fail2("DISCOVERY_PERSISTENCE_READ_FAILED", "Falha sanitizada ao verificar discovery run");
+      if (found.data === null) fail2("DISCOVERY_PERSISTENCE_RUN_NOT_FOUND", "Discovery run não encontrado");
+      const run = parseRun(found.data);
+      if (run.mode !== input.plan.mode || run.registryDigest !== input.plan.registryDigest) {
+        fail2("DISCOVERY_PERSISTENCE_INVALID_RUN", "Replay conflita com a identidade do discovery run");
+      }
+      return run;
+    },
+    async persistDiscoveryOccurrences(runId, occurrences) {
+      if (!UUID2.test(runId)) fail2("DISCOVERY_PERSISTENCE_INVALID_RUN", "Run ID inválido");
+      const unique = /* @__PURE__ */ new Map();
+      for (const occurrence of occurrences) {
+        validateOccurrence(occurrence);
+        const key = occurrenceKey2(occurrence);
+        if (!unique.has(key)) unique.set(key, occurrence);
+      }
+      if (unique.size === 0) return 0;
+      const values = [...unique.values()];
+      const categoryIds = [...new Set(values.map((value) => value.marketplaceCategoryId))];
+      const categoriesResult = await client.findCategories(categoryIds);
+      if (categoriesResult.error !== null || !Array.isArray(categoriesResult.data)) {
+        fail2("DISCOVERY_PERSISTENCE_READ_FAILED", "Falha sanitizada ao validar categorias canônicas");
+      }
+      const categories = /* @__PURE__ */ new Map();
+      for (const value of categoriesResult.data) {
+        const row = record2(value, "DISCOVERY_PERSISTENCE_READ_FAILED");
+        const id = text2(row, "marketplace_category_id", "DISCOVERY_PERSISTENCE_READ_FAILED");
+        categories.set(id, row);
+      }
+      for (const occurrence of values) {
+        const category = categories.get(occurrence.marketplaceCategoryId);
+        if (!category || category.marketplace_key !== occurrence.marketplaceKey || category.site_id !== occurrence.siteId || category.external_category_id !== occurrence.externalCategoryId) {
+          fail2("DISCOVERY_PERSISTENCE_INVALID_CATEGORY", "Categoria canônica da occurrence inválida");
+        }
+      }
+      for (let offset = 0; offset < values.length; offset += DISCOVERY_OCCURRENCE_BATCH_SIZE) {
+        const rows = values.slice(offset, offset + DISCOVERY_OCCURRENCE_BATCH_SIZE).map((occurrence) => ({
+          run_id: runId,
+          category_id: null,
+          marketplace_category_id: occurrence.marketplaceCategoryId,
+          product_id: occurrence.externalId,
+          observed_at: occurrence.observedAt,
+          observed_bucket: occurrence.observedAt,
+          position: occurrence.position,
+          type: occurrence.highlightType,
+          source_contract: occurrence.sourceContract,
+          priority_tier: occurrence.priorityTier
+        }));
+        const result = await client.upsertOccurrences(rows);
+        if (result.error !== null) fail2("DISCOVERY_PERSISTENCE_WRITE_FAILED", "Falha sanitizada ao persistir occurrences");
+      }
+      return values.length;
+    },
+    async completeDiscoveryRun(input) {
+      if (!UUID2.test(input.runId) || !["COMPLETED", "PARTIAL", "FAILED"].includes(input.status)) {
+        fail2("DISCOVERY_PERSISTENCE_INVALID_RUN", "Finalização de discovery run inválida");
+      }
+      timestamp(input.finishedAt, "DISCOVERY_PERSISTENCE_INVALID_RUN");
+      if (input.result.contractVersion !== COMMERCE_DISCOVERY_RUN_CONTRACT) {
+        fail2("DISCOVERY_PERSISTENCE_INVALID_RUN", "Resultado de discovery incompatível");
+      }
+      const current = await client.findRun(input.runId);
+      if (current.error !== null) fail2("DISCOVERY_PERSISTENCE_READ_FAILED", "Falha sanitizada ao validar discovery run");
+      if (current.data === null) fail2("DISCOVERY_PERSISTENCE_RUN_NOT_FOUND", "Discovery run não encontrado");
+      const currentRun = parseRun(current.data);
+      if (currentRun.registryDigest !== input.result.registryDigest || currentRun.mode !== input.result.mode) {
+        fail2("DISCOVERY_PERSISTENCE_INVALID_RUN", "Resultado diverge do discovery run persistido");
+      }
+      const result = await client.updateRun(input.runId, {
+        status: input.status,
+        finished_at: input.finishedAt,
+        request_count: input.result.metrics.apiRequests,
+        error_counts: {
+          failedCategories: input.result.metrics.failedCategories,
+          notAttemptedCategories: input.result.metrics.notAttemptedCategories,
+          unsupportedHighlights: input.result.metrics.unsupportedHighlights,
+          fatalErrorCode: input.result.fatalErrorCode
+        },
+        rate_limited: input.result.metrics.rateLimited,
+        cursor: {
+          selectedCategories: input.result.metrics.selectedCategories,
+          attemptedCategories: input.result.metrics.attemptedCategories,
+          uniqueCandidates: input.result.metrics.uniqueCandidates
+        }
+      });
+      if (result.error !== null) fail2("DISCOVERY_PERSISTENCE_WRITE_FAILED", "Falha sanitizada ao finalizar discovery run");
+      if (result.data === null) fail2("DISCOVERY_PERSISTENCE_RUN_NOT_FOUND", "Discovery run não encontrado");
+      return parseRun(result.data);
+    },
+    async readDiscoveryRunForVerification(runId) {
+      if (!UUID2.test(runId)) fail2("DISCOVERY_PERSISTENCE_INVALID_RUN", "Run ID inválido");
+      const [runResult, occurrenceResult] = await Promise.all([client.findRun(runId), client.findOccurrences(runId)]);
+      if (runResult.error !== null || occurrenceResult.error !== null) {
+        fail2("DISCOVERY_PERSISTENCE_READ_FAILED", "Falha sanitizada ao verificar discovery persistence");
+      }
+      if (runResult.data === null) fail2("DISCOVERY_PERSISTENCE_RUN_NOT_FOUND", "Discovery run não encontrado");
+      if (!Array.isArray(occurrenceResult.data)) fail2("DISCOVERY_PERSISTENCE_READ_FAILED", "Occurrences persistidas inválidas");
+      return Object.freeze({
+        run: parseRun(runResult.data),
+        occurrences: Object.freeze(occurrenceResult.data.map((value) => Object.freeze(
+          record2(value, "DISCOVERY_PERSISTENCE_READ_FAILED")
+        )))
+      });
+    }
+  };
+  return Object.freeze(repository);
+}
+var DISCOVERY_PERSISTENCE_JOB_TYPE, DISCOVERY_OCCURRENCE_BATCH_SIZE, UUID2, SHA256, ISO_TIMESTAMP, DiscoveryPersistenceError;
+var init_persistence_repository = __esm({
+  "src/server/discovery/persistence-repository.ts"() {
+    "use strict";
+    init_types();
+    DISCOVERY_PERSISTENCE_JOB_TYPE = "COMMERCE_DISCOVERY";
+    DISCOVERY_OCCURRENCE_BATCH_SIZE = 500;
+    UUID2 = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    SHA256 = /^[0-9a-f]{64}$/;
+    ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
+    DiscoveryPersistenceError = class extends Error {
+      constructor(code, message) {
+        super(message);
+        this.code = code;
+        this.name = "DiscoveryPersistenceError";
+      }
+      code;
+    };
+  }
+});
+
+// src/server/discovery/operational.ts
+var operational_exports = {};
+__export(operational_exports, {
+  LiveSmokeDiscoveryAdapter: () => LiveSmokeDiscoveryAdapter,
+  LiveSmokeDiscoveryRunner: () => LiveSmokeDiscoveryRunner,
+  createOperationalDiscoveryAdapter: () => createOperationalDiscoveryAdapter,
+  runConfiguredDiscoveryLiveSmoke: () => runConfiguredDiscoveryLiveSmoke2
+});
+import { randomUUID as randomUUID2 } from "node:crypto";
+function createOperationalDiscoveryAdapter() {
+  const config = process.env.SUPABASE_SERVICE_ROLE_KEY ? { url: process.env.SUPABASE_URL ?? "", secretKey: process.env.SUPABASE_SERVICE_ROLE_KEY } : loadSupabaseServerConfig();
+  return new LiveSmokeDiscoveryAdapter(createSupabaseServerClient(config, { timeoutMs: 1e4 }));
+}
+async function runConfiguredDiscoveryLiveSmoke2(mode = "SMOKE") {
+  return new LiveSmokeDiscoveryRunner(createOperationalDiscoveryAdapter()).run(mode);
+}
+var LiveSmokeDiscoveryAdapter, LiveSmokeDiscoveryRunner;
+var init_operational = __esm({
+  "src/server/discovery/operational.ts"() {
+    "use strict";
+    init_planner();
+    init_client2();
+    init_config2();
+    init_factory();
+    init_client3();
+    init_highlights_discovery_adapter();
+    init_registry_reader();
+    init_persistence_repository();
+    init_orchestrator();
+    LiveSmokeDiscoveryAdapter = class {
+      constructor(client) {
+        this.client = client;
+      }
+      client;
+      async latestSnapshots() {
+        const { data, count, error } = await this.client.schema("public").from("highlight_snapshots").select("product_id,marketplace_category_id,position,type,priority_tier,observed_at", { count: "exact" }).order("observed_at", { ascending: false }).order("product_id").limit(100);
+        if (error) throw new Error("SNAPSHOTS_READ_FAILED");
+        return { snapshots: data ?? [], total: count ?? 0, syncedAt: (/* @__PURE__ */ new Date()).toISOString() };
+      }
+    };
+    LiveSmokeDiscoveryRunner = class {
+      constructor(adapter) {
+        this.adapter = adapter;
+      }
+      adapter;
+      async run(mode) {
+        const client = this.adapter.client;
+        const config = { ...AUTOMOTIVE_MLB_DISCOVERY_V1, smokeCategoriesPerTier: 1 };
+        const categories = await loadDiscoveryEligibleCategories({
+          client: discoveryRegistryReadClientFromSupabase(client),
+          marketplaceKey: config.marketplaceKey,
+          siteId: config.siteId,
+          verticalKey: config.verticalKey
+        });
+        const plan = planDiscoveryRun(categories, mode, config);
+        const rotation = await createMeliOAuthRuntimeOperationRotationService(client).rotateMeliAccessTokenForRuntimeOperation("dashboard-" + randomUUID2());
+        if (rotation.outcome !== "ROTATED") throw new Error("DISCOVERY_OAUTH_UNAVAILABLE");
+        const repository = createDiscoveryPersistenceRepository(discoveryPersistenceClientFromSupabase(client));
+        const now = (/* @__PURE__ */ new Date()).toISOString();
+        const run = await repository.beginDiscoveryRun({ plan, scheduledBucket: now, startedAt: now, shardKey: "dashboard-" + randomUUID2() });
+        const result = await runDiscoveryOrchestrator({ plan, adapter: createMeliHighlightsDiscoveryAdapter({
+          client: new MeliClient({ accessToken: rotation.accessToken, timeoutMs: 1e4 }),
+          nowIso: () => (/* @__PURE__ */ new Date()).toISOString()
+        }) });
+        const persisted = await repository.persistDiscoveryOccurrences(run.runId, result.occurrences);
+        const status = result.fatalErrorCode ? "FAILED" : result.metrics.failedCategories > 0 ? "PARTIAL" : "COMPLETED";
+        await repository.completeDiscoveryRun({ runId: run.runId, result, status, finishedAt: (/* @__PURE__ */ new Date()).toISOString() });
+        return { runId: run.runId, status, persisted, selectedCategories: plan.selectedCategories.length };
+      }
+    };
+  }
+});
+
 // src/app.ts
 init_config();
-import { randomUUID as randomUUID2 } from "node:crypto";
+import { randomUUID as randomUUID3 } from "node:crypto";
 
 // src/http/responses.ts
 function sendHtml(response, status, body, headers = {}) {
   response.writeHead(status, {
     "Content-Type": "text/html; charset=utf-8",
-    "Cache-Control": "no-store",
-    "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'self' https://auth.mercadolivre.com.br",
+    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+    "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self' https://auth.mercadolivre.com.br",
     "Referrer-Policy": "no-referrer",
     "X-Content-Type-Options": "nosniff",
     ...headers
@@ -23444,7 +23763,7 @@ function sendHtml(response, status, body, headers = {}) {
 function redirect(response, location2, cookies = []) {
   response.writeHead(302, {
     Location: location2,
-    "Cache-Control": "no-store",
+    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
     ...cookies.length > 0 ? { "Set-Cookie": cookies } : {}
   });
   response.end();
@@ -23559,8 +23878,8 @@ function readAuthorizationSession(cookieHeader, secret) {
   if (!value) return null;
   const session = unseal(value, secret);
   if (!session || typeof session !== "object" || Array.isArray(session)) return null;
-  const record3 = session;
-  if (record3.authorized !== true || typeof record3.userId !== "number" || !Number.isSafeInteger(record3.userId) || record3.userId <= 0 || typeof record3.authorizedAt !== "number" || !Number.isFinite(record3.authorizedAt) || record3.authorizedAt <= 0) return null;
+  const record4 = session;
+  if (record4.authorized !== true || typeof record4.userId !== "number" || !Number.isSafeInteger(record4.userId) || record4.userId <= 0 || typeof record4.authorizedAt !== "number" || !Number.isFinite(record4.authorizedAt) || record4.authorizedAt <= 0) return null;
   return session;
 }
 function clearAuthorizationCookie() {
@@ -23603,12 +23922,89 @@ function errorPage(title, message) {
   return layout(`<h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p><p><a href="/">Voltar</a></p>`);
 }
 
+// src/ui/dashboard.ts
+function dashboardPage(props) {
+  const connected = props.authorized && props.userId === "296984475";
+  const verticals = [
+    ["Automotivo", "MLB5672"],
+    ["Casa, utilidades e organização", "MLB1574"],
+    ["Eletrodomésticos", "MLB5726"],
+    ["Moda", "MLB1430"],
+    ["Beleza e cuidado pessoal", "MLB1246"],
+    ["Eletrônicos, celulares e acessórios", "MLB1051"],
+    ["Infantil — bebês e brinquedos", "MLB1132"],
+    ["Games", "MLB1144"],
+    ["Esportes e fitness", "MLB1276"],
+    ["Pet", "MLB1071"]
+  ];
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="AutoAchado.AI — Dashboard Operacional, mineração automotiva e snapshots persistidos no Supabase.">
+<title>AutoAchado.AI — Dashboard Operacional</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#090d16;color:#e2e8f0;font:15px system-ui,sans-serif}header{padding:24px max(24px,calc((100% - 1200px)/2));background:#111827;border-bottom:1px solid #25324a;display:flex;gap:20px;align-items:center;justify-content:space-between}h1{margin:0;font-size:24px}h2{font-size:19px;margin-top:0}p,small{color:#9bacc4}main{max-width:1250px;margin:auto;padding:28px 24px}.stats,.matrix{display:grid;gap:16px;grid-template-columns:repeat(4,minmax(0,1fr))}.matrix{grid-template-columns:repeat(2,minmax(0,1fr));padding:0;list-style:none}.card,.panel,.matrix li{border:1px solid #25324a;border-radius:12px;background:#131d31;padding:20px}.card strong{display:block;font-size:24px;margin:12px 0}.panel{margin-top:24px}.matrix li{background:#0e1728;padding:14px}.matrix span{display:block;color:#9bacc4;margin-top:6px}.badge{color:#6ee7b7}.controls{display:flex;flex-wrap:wrap;gap:12px}button,a{color:#93c5fd}button{border:1px solid #3b82f6;background:#1d4ed8;color:white;border-radius:8px;padding:12px 16px;font:inherit;cursor:pointer}button:disabled{opacity:.5;cursor:wait}button:focus-visible,a:focus-visible{outline:3px solid #fcd34d;outline-offset:3px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;text-align:left}th,td{padding:14px 10px;border-bottom:1px solid #25324a}th{color:#9bacc4;font-size:12px;text-transform:uppercase}#message{min-height:24px}@media(max-width:850px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:520px){.stats,.matrix{grid-template-columns:1fr}header{align-items:flex-start;flex-direction:column}.card strong{font-size:22px}}
+</style></head><body><header><div><h1>AutoAchado.AI</h1><p>Dashboard Operacional · Robô de mineração · MLB / Brasil · 0B3D-C</p></div><div class="badge">${connected ? "● Mercado Livre conectado" : "⚠ Mercado Livre não conectado"}<br><small>ID: 296984475</small> · <a href="/auth/start">Conectar conta</a></div></header>
+<main><section class="stats" aria-label="Indicadores">
+<div class="card">Status do Robô<strong>Operacional ✅</strong><small>Automotivo V1</small></div>
+<div class="card">Verticais Planejadas<strong>10 Verticais</strong><small>Automotivo V1 Ativa com 144 categorias: 28 Tier A + 116 Tier B</small></div>
+<div class="card">Oportunidades no Banco<strong id="count">—</strong><small>Registros em public.highlight_snapshots</small></div>
+<div class="card">Última Sincronização<strong id="synced">—</strong><small>Atualização automática a cada 30 segundos</small></div></section>
+<section class="panel"><h2>Matriz de Expansão (10 Verticais Estratégicas)</h2><ol class="matrix">${verticals.map(([name, id], i) => `<li>${i + 1}. ${name}<span>${id} · ${i === 0 ? "ATIVO (144 Cats)" : "PLANEJADO"}</span></li>`).join("")}</ol></section>
+<section class="panel"><h2>Painel de Controle</h2><div class="controls"><button id="sweep">🚀 Executar Varredura Persistida (0B3D-C)</button><button id="smoke">⚡ Teste Smoke (2 cats)</button><button id="refresh">🔄 Atualizar Dados</button></div><p id="message" role="status" aria-live="polite"></p></section>
+<section class="panel"><h2>Oportunidades reais mineradas</h2><p>100 snapshots mais recentes. A contagem inclui todas as ocorrências persistidas; um produto pode aparecer em mais de uma coleta.</p><div class="table-wrap"><table><thead><tr><th>Produto / anúncio</th><th>Categoria</th><th>Tipo</th><th>Tier</th><th>Posição</th><th>Coletado em</th></tr></thead><tbody id="snapshots"><tr><td colspan="6">Carregando snapshots…</td></tr></tbody></table></div></section></main>
+<script>
+const el = id => document.getElementById(id);
+let busy = false;
+const date = value => new Date(value).toLocaleString('pt-BR');
+async function request(path, method = 'GET') {
+  const response = await fetch(path, { method, cache: 'no-store', credentials: 'same-origin' });
+  const data = await response.json();
+  if (!response.ok) throw new Error(response.status === 401 ? 'Conecte a conta Mercado Livre 296984475 para acessar os dados.' : 'Falha na operação. Verifique a configuração do servidor e tente novamente.');
+  return data;
+}
+async function refresh() {
+  const data = await request('/api/discovery/latest-snapshots');
+  el('count').textContent = data.total.toLocaleString('pt-BR');
+  el('synced').textContent = date(data.syncedAt);
+  el('snapshots').replaceChildren();
+  for (const snapshot of data.snapshots) {
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    const link = document.createElement('a');
+    link.textContent = snapshot.product_id;
+    link.href = 'https://produto.mercadolivre.com.br/' + encodeURIComponent(snapshot.product_id);
+    link.target = '_blank'; link.rel = 'noopener noreferrer'; cell.append(link); row.append(cell);
+    for (const value of [snapshot.marketplace_category_id, snapshot.type, snapshot.priority_tier, snapshot.position, date(snapshot.observed_at)]) {
+      const td = document.createElement('td'); td.textContent = value == null ? '—' : String(value); row.append(td);
+    }
+    el('snapshots').append(row);
+  }
+  if (!data.snapshots.length) { const row = document.createElement('tr'); const td = document.createElement('td'); td.colSpan = 6; td.textContent = 'Nenhuma oportunidade persistida ainda.'; row.append(td); el('snapshots').append(row); }
+}
+async function act(action) {
+  if (busy) return;
+  busy = true;
+  document.querySelectorAll('button').forEach(button => button.disabled = true);
+  el('message').textContent = action === 'refresh' ? 'Atualizando dados…' : 'Mineração em andamento. Aguarde…';
+  try {
+    let result;
+    if (action !== 'refresh') result = await request('/api/discovery/' + action, 'POST');
+    await refresh();
+    el('message').textContent = result ? 'Execução: ' + result.status + ' · ' + result.persisted + ' snapshots persistidos.' : 'Dados sincronizados.';
+  } catch (error) { el('message').textContent = error.message; }
+  finally { busy = false; document.querySelectorAll('button').forEach(button => button.disabled = false); }
+}
+for (const action of ['sweep','smoke','refresh']) el(action).addEventListener('click', () => act(action));
+act('refresh'); setInterval(() => act('refresh'), 30000);
+</script></body></html>`;
+}
+
 // src/app.ts
 var DEFAULT_DEPENDENCIES = {
   loadAppConfig: loadConfig,
   createInitialAuthorizationService: createMeliInitialAuthorizationService,
   runConfiguredDiscoveryLiveSmoke: async () => (await Promise.resolve().then(() => (init_live_smoke(), live_smoke_exports))).runConfiguredDiscoveryLiveSmoke(),
-  createCorrelationId: randomUUID2,
+  createCorrelationId: randomUUID3,
   logDiscoveryLiveEvent: (event) => console.info(JSON.stringify(event))
 };
 var DISCOVERY_LIVE_ROUTE = "/__internal/0b3d-b/live-smoke";
@@ -23652,11 +24048,11 @@ async function readBoundedBody(request) {
   }
   return { body: Buffer.concat(chunks).toString("utf8"), tooLarge: false };
 }
-function record2(value) {
+function record3(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value : null;
 }
 function safeRecord(value, keys) {
-  const source = record2(value);
+  const source = record3(value);
   if (!source) return null;
   const output = {};
   for (const key of keys) {
@@ -23699,15 +24095,15 @@ function safeIds(value) {
   return Object.freeze(value.slice(0, 10));
 }
 function sanitizeLiveSmokeResult(value) {
-  const source = record2(value);
+  const source = record3(value);
   if (!source) return null;
   const registry = safeRecord(source.registry, ["eligible", "tierA", "tierB", "digest"]);
   const selected = safeRecord(source.selected, ["total", "tierA", "tierB"]);
   const oauth = safeRecord(source.oauth, ["outcome"]);
   const metrics = safeRecord(source.metrics, METRIC_KEYS);
   const timings = safeRecord(source.timings, ["registryReadMs", "planningMs", "oauthMs", "totalMs"]);
-  const proof = record2(source.persistenceProof);
-  const samples = record2(source.samples);
+  const proof = record3(source.persistenceProof);
+  const samples = record3(source.samples);
   if (!registry || !selected || !oauth || !metrics || !timings || !proof || !samples || !Array.isArray(source.categoryOutcomes)) {
     return null;
   }
@@ -23763,7 +24159,7 @@ function liveSmokeHttpOutcome(result) {
   return { status: 207, gateStatus: "PARTIAL_0B3D_B_LIVE_SMOKE_CATEGORY_FAILURE" };
 }
 function safeErrorCode(error) {
-  const value = record2(error)?.code;
+  const value = record3(error)?.code;
   return typeof value === "string" ? value : "DISCOVERY_LIVE_UNEXPECTED";
 }
 function liveSmokeErrorOutcome(code) {
@@ -23803,6 +24199,31 @@ async function handleRequest(request, response, overrides = {}) {
   const dependencies = { ...DEFAULT_DEPENDENCIES, ...overrides };
   const url = requestUrl(request);
   const method = request.method ?? "GET";
+  if (["/api/discovery/latest-snapshots", "/api/discovery/smoke", "/api/discovery/sweep"].includes(url.pathname)) {
+    try {
+      const config = dependencies.loadAppConfig();
+      const session = readAuthorizationSession(request.headers.cookie, config.sessionSecret);
+      if (!session || session.userId !== 296984475) {
+        sendJson(response, 401, { errorCode: "AUTHORIZATION_REQUIRED" });
+        return;
+      }
+      const reading = url.pathname.endsWith("latest-snapshots");
+      if (method !== (reading ? "GET" : "POST")) {
+        sendJson(response, 405, { errorCode: "METHOD_NOT_ALLOWED" });
+        return;
+      }
+      if (!reading && request.headers.origin !== new URL(config.redirectUri).origin) {
+        sendJson(response, 403, { errorCode: "ORIGIN_NOT_ALLOWED" });
+        return;
+      }
+      const operational = await Promise.resolve().then(() => (init_operational(), operational_exports));
+      const result = reading ? await operational.createOperationalDiscoveryAdapter().latestSnapshots() : await operational.runConfiguredDiscoveryLiveSmoke(url.pathname.endsWith("sweep") ? "FULL_SWEEP" : "SMOKE");
+      sendJson(response, 200, result);
+    } catch {
+      sendJson(response, 503, { errorCode: "DISCOVERY_OPERATION_FAILED" });
+    }
+    return;
+  }
   if (url.pathname === DISCOVERY_LIVE_ROUTE) {
     if (process.env.VERCEL_ENV !== "production" || process.env.VERCEL_TARGET_ENV !== "production") {
       concealedNotFound(response);
@@ -23851,7 +24272,7 @@ async function handleRequest(request, response, overrides = {}) {
       sendJson(response, 400, { errorCode: "DISCOVERY_LIVE_JSON_PARSE_FAILED" });
       return;
     }
-    const recordValue = record2(parsed);
+    const recordValue = record3(parsed);
     if (!recordValue) {
       sendJson(response, 400, { errorCode: "DISCOVERY_LIVE_BODY_NOT_OBJECT" });
       return;
@@ -23940,6 +24361,25 @@ async function handleRequest(request, response, overrides = {}) {
     }
     return;
   }
+  if (method === "GET" && url.pathname === "/dashboard") {
+    try {
+      const config = dependencies.loadAppConfig();
+      const session = readAuthorizationSession(request.headers.cookie, config.sessionSecret);
+      const rawUserId = session ? String(session.userId) : "";
+      const isAuth = Boolean(session);
+      sendHtml(
+        response,
+        200,
+        dashboardPage({
+          authorized: isAuth,
+          userId: isAuth ? rawUserId || "296984475" : void 0
+        })
+      );
+    } catch {
+      sendHtml(response, 200, dashboardPage({ authorized: false }));
+    }
+    return;
+  }
   if (method === "GET" && url.pathname === "/auth/start") {
     try {
       const config = dependencies.loadAppConfig();
@@ -24019,9 +24459,11 @@ async function handleRequest(request, response, overrides = {}) {
 }
 
 // src/vercel-handler.ts
+init_operational();
 async function handler(request, response) {
   await handleRequest(request, response);
 }
 export {
-  handler as default
+  handler as default,
+  runConfiguredDiscoveryLiveSmoke2 as runConfiguredDiscoveryLiveSmoke
 };
