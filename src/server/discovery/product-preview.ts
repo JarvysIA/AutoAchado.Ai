@@ -9,6 +9,8 @@ export interface ProductPreview {
   url: string | null;
   price: number | null;
   currency: string;
+  priceSource?: "CATALOG_OFFER" | "ITEM" | "SALE_PRICE";
+  priceCheckedAt?: string;
   status: "AVAILABLE" | "CATALOG" | "UNRESOLVED" | "UNAVAILABLE";
 }
 type RecordValue = Record<string, any>;
@@ -33,9 +35,21 @@ function picture(data: RecordValue): string | null {
   }
   return null;
 }
+export function publicProductUrl(id: string, type: string): string | null {
+  if (type === "PRODUCT" && /^MLB\d+$/.test(id)) return `https://www.mercadolivre.com.br/p/${id}`;
+  if (type === "USER_PRODUCT" && /^MLBU\d+$/.test(id)) return `https://www.mercadolivre.com.br/up/${id}`;
+  return null;
+}
+function setPrice(preview: ProductPreview, amount: unknown, currency: unknown, source: NonNullable<ProductPreview["priceSource"]>) {
+  if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0 || typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency)) return;
+  preview.price = amount; preview.currency = currency; preview.priceSource = source;
+  preview.priceCheckedAt = new Date().toISOString();
+}
 export async function resolveProductPreview(id: string, type: string, read: PreviewReader): Promise<ProductPreview> {
   const preview: ProductPreview = { title: id, description: null, image: null, url: null, price: null, currency: "BRL", status: "UNRESOLVED" };
   if (!(type === "USER_PRODUCT" ? /^MLBU\d+$/.test(id) : ["PRODUCT", "ITEM"].includes(type) && /^MLB\d+$/.test(id))) return preview;
+  preview.url = publicProductUrl(id, type);
+  if (preview.url) preview.status = "CATALOG";
   try {
     let itemId = type === "ITEM" ? id : null;
     let sellerId: string | null = null;
@@ -47,12 +61,19 @@ export async function resolveProductPreview(id: string, type: string, read: Prev
       const attributes = Array.isArray(data.attributes) ? data.attributes : [];
       preview.description = attributes.slice(0, 4).map(a => [shortText(a?.name, 50), shortText(a?.value_name, 80)].filter(Boolean).join(": ")).filter(Boolean).join(" · ").slice(0, 400) || null;
       if (type === "PRODUCT") {
-        preview.url = safePreviewUrl(data.permalink);
+        preview.url = safePreviewUrl(data.permalink) ?? preview.url;
         preview.status = preview.url ? "CATALOG" : "UNRESOLVED";
         itemId = data.buy_box_winner?.item_id ?? null;
+        if (typeof itemId === "string" && /^MLB\d+$/.test(itemId) && data.status !== "inactive") {
+          setPrice(preview, data.buy_box_winner?.price, data.buy_box_winner?.currency_id, "CATALOG_OFFER");
+        }
         if (!itemId) {
           const offers = await read(`/products/${id}/items?limit=1`);
-          itemId = offers.results?.[0]?.item_id ?? null;
+          const offer = offers.results?.[0];
+          itemId = offer?.item_id ?? null;
+          if (typeof itemId === "string" && /^MLB\d+$/.test(itemId) && (!offer.product_id || offer.product_id === id)) {
+            setPrice(preview, offer.price, offer.currency_id, "CATALOG_OFFER");
+          }
         }
       } else {
         sellerId = /^\d+$/.test(String(data.user_id)) ? String(data.user_id) : null;
@@ -63,18 +84,30 @@ export async function resolveProductPreview(id: string, type: string, read: Prev
       }
     }
     if (typeof itemId !== "string" || !/^MLB\d+$/.test(itemId)) return preview;
-    const item = await read(`/items/${itemId}`);
+    let item;
+    try { item = await read(`/items/${itemId}`); }
+    catch {
+      try {
+        const sale = await read(`/items/${itemId}/sale_price`);
+        setPrice(preview, sale.amount, sale.currency_id, "SALE_PRICE");
+      } catch { /* Keep the catalog offer price if item access is restricted. */ }
+      return preview;
+    }
     if (item.id !== itemId || (type === "USER_PRODUCT" && (item.user_product_id !== id || String(item.seller_id) !== sellerId))
-      || (type === "PRODUCT" && item.catalog_product_id !== id)) return preview;
+      || (type === "PRODUCT" && item.catalog_product_id !== id)) { preview.price = null; delete preview.priceSource; delete preview.priceCheckedAt; return preview; }
     preview.title = shortText(item.title) ?? preview.title;
     preview.image = picture(item) ?? preview.image;
     if (item.status !== "active") {
+      preview.price = null; delete preview.priceSource; delete preview.priceCheckedAt;
       if (!preview.url) preview.status = "UNAVAILABLE";
       return preview;
     }
     const url = safePreviewUrl(item.permalink);
     if (url) { preview.url = url; preview.status = "AVAILABLE"; }
-    preview.price = typeof item.price === "number" && Number.isFinite(item.price) && item.price >= 0 ? item.price : null;
+    setPrice(preview, item.price, item.currency_id, "ITEM");
+    if (preview.price === null) {
+      try { const sale = await read(`/items/${itemId}/sale_price`); setPrice(preview, sale.amount, sale.currency_id, "SALE_PRICE"); } catch { /* Price unavailable. */ }
+    }
     preview.currency = typeof item.currency_id === "string" && /^[A-Z]{3}$/.test(item.currency_id) ? item.currency_id : "BRL";
     try {
       const description = await read(`/items/${itemId}/description`);

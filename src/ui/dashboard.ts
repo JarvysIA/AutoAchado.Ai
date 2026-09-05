@@ -64,16 +64,21 @@ function fillCard(card, snapshot, preview) {
   const body = textNode('div', '', 'product-body');
   body.append(textNode('h3', preview.title || snapshot.product_id));
   body.append(textNode('p', preview.description || 'Descrição não disponibilizada pela API.'));
-  let price = 'Preço não disponível';
+  let price = 'Consultar preço no Mercado Livre';
   if (typeof preview.price === 'number' && Number.isFinite(preview.price)) {
     try { price = new Intl.NumberFormat('pt-BR', {style:'currency',currency:preview.currency || 'BRL'}).format(preview.price); } catch { /* Keep fallback. */ }
   }
   body.append(textNode('strong', price, 'product-price'));
+  if (preview.priceSource) body.append(textNode('span', (preview.priceSource === 'CATALOG_OFFER' ? 'Preço da oferta de catálogo' : 'Preço informado pelo anúncio') + (preview.priceCheckedAt ? ' · Consultado em ' + date(preview.priceCheckedAt) : ''), 'product-meta'));
   body.append(textNode('span', snapshot.product_id + ' · ' + snapshot.type + ' · Tier ' + (snapshot.priority_tier || '—') + ' · Posição ' + (snapshot.position || '—'), 'product-meta'));
   body.append(textNode('span', 'Coletado em ' + date(snapshot.observed_at), 'product-meta'));
-  const href = safeUrl(preview.url, false);
+  const publicUrl = snapshot.type === 'PRODUCT' && /^MLB[0-9]+$/.test(snapshot.product_id)
+    ? 'https://www.mercadolivre.com.br/p/' + snapshot.product_id
+    : snapshot.type === 'USER_PRODUCT' && /^MLBU[0-9]+$/.test(snapshot.product_id)
+      ? 'https://www.mercadolivre.com.br/up/' + snapshot.product_id : null;
+  const href = safeUrl(preview.url, false) || publicUrl;
   if (href) {
-    const link = textNode('a', preview.status === 'CATALOG' ? 'Ver produto no catálogo ↗' : 'Abrir anúncio no Mercado Livre ↗', 'product-link');
+    const link = textNode('a', (preview.status === 'CATALOG' || !preview.url) ? 'Abrir produto e ofertas ↗' : 'Abrir anúncio no Mercado Livre ↗', 'product-link');
     link.href = href; link.target = '_blank'; link.rel = 'noopener noreferrer'; body.append(link);
   } else {
     body.append(textNode('p', preview.status === 'UNAVAILABLE' ? 'Anúncio indisponível no momento.' : 'Link não resolvido: dados indisponíveis ou acesso restrito pelo Mercado Livre.'));

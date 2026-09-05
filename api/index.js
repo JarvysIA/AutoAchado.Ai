@@ -23748,6 +23748,7 @@ var init_operational = __esm({
 var product_preview_exports = {};
 __export(product_preview_exports, {
   configuredProductPreview: () => configuredProductPreview,
+  publicProductUrl: () => publicProductUrl,
   resolveProductPreview: () => resolveProductPreview,
   safePreviewUrl: () => safePreviewUrl
 });
@@ -23772,9 +23773,23 @@ function picture(data) {
   }
   return null;
 }
+function publicProductUrl(id, type) {
+  if (type === "PRODUCT" && /^MLB\d+$/.test(id)) return `https://www.mercadolivre.com.br/p/${id}`;
+  if (type === "USER_PRODUCT" && /^MLBU\d+$/.test(id)) return `https://www.mercadolivre.com.br/up/${id}`;
+  return null;
+}
+function setPrice(preview, amount, currency, source) {
+  if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0 || typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency)) return;
+  preview.price = amount;
+  preview.currency = currency;
+  preview.priceSource = source;
+  preview.priceCheckedAt = (/* @__PURE__ */ new Date()).toISOString();
+}
 async function resolveProductPreview(id, type, read) {
   const preview = { title: id, description: null, image: null, url: null, price: null, currency: "BRL", status: "UNRESOLVED" };
   if (!(type === "USER_PRODUCT" ? /^MLBU\d+$/.test(id) : ["PRODUCT", "ITEM"].includes(type) && /^MLB\d+$/.test(id))) return preview;
+  preview.url = publicProductUrl(id, type);
+  if (preview.url) preview.status = "CATALOG";
   try {
     let itemId = type === "ITEM" ? id : null;
     let sellerId = null;
@@ -23786,12 +23801,19 @@ async function resolveProductPreview(id, type, read) {
       const attributes = Array.isArray(data.attributes) ? data.attributes : [];
       preview.description = attributes.slice(0, 4).map((a) => [shortText(a?.name, 50), shortText(a?.value_name, 80)].filter(Boolean).join(": ")).filter(Boolean).join(" · ").slice(0, 400) || null;
       if (type === "PRODUCT") {
-        preview.url = safePreviewUrl(data.permalink);
+        preview.url = safePreviewUrl(data.permalink) ?? preview.url;
         preview.status = preview.url ? "CATALOG" : "UNRESOLVED";
         itemId = data.buy_box_winner?.item_id ?? null;
+        if (typeof itemId === "string" && /^MLB\d+$/.test(itemId) && data.status !== "inactive") {
+          setPrice(preview, data.buy_box_winner?.price, data.buy_box_winner?.currency_id, "CATALOG_OFFER");
+        }
         if (!itemId) {
           const offers = await read(`/products/${id}/items?limit=1`);
-          itemId = offers.results?.[0]?.item_id ?? null;
+          const offer = offers.results?.[0];
+          itemId = offer?.item_id ?? null;
+          if (typeof itemId === "string" && /^MLB\d+$/.test(itemId) && (!offer.product_id || offer.product_id === id)) {
+            setPrice(preview, offer.price, offer.currency_id, "CATALOG_OFFER");
+          }
         }
       } else {
         sellerId = /^\d+$/.test(String(data.user_id)) ? String(data.user_id) : null;
@@ -23802,11 +23824,29 @@ async function resolveProductPreview(id, type, read) {
       }
     }
     if (typeof itemId !== "string" || !/^MLB\d+$/.test(itemId)) return preview;
-    const item = await read(`/items/${itemId}`);
-    if (item.id !== itemId || type === "USER_PRODUCT" && (item.user_product_id !== id || String(item.seller_id) !== sellerId) || type === "PRODUCT" && item.catalog_product_id !== id) return preview;
+    let item;
+    try {
+      item = await read(`/items/${itemId}`);
+    } catch {
+      try {
+        const sale = await read(`/items/${itemId}/sale_price`);
+        setPrice(preview, sale.amount, sale.currency_id, "SALE_PRICE");
+      } catch {
+      }
+      return preview;
+    }
+    if (item.id !== itemId || type === "USER_PRODUCT" && (item.user_product_id !== id || String(item.seller_id) !== sellerId) || type === "PRODUCT" && item.catalog_product_id !== id) {
+      preview.price = null;
+      delete preview.priceSource;
+      delete preview.priceCheckedAt;
+      return preview;
+    }
     preview.title = shortText(item.title) ?? preview.title;
     preview.image = picture(item) ?? preview.image;
     if (item.status !== "active") {
+      preview.price = null;
+      delete preview.priceSource;
+      delete preview.priceCheckedAt;
       if (!preview.url) preview.status = "UNAVAILABLE";
       return preview;
     }
@@ -23815,7 +23855,14 @@ async function resolveProductPreview(id, type, read) {
       preview.url = url;
       preview.status = "AVAILABLE";
     }
-    preview.price = typeof item.price === "number" && Number.isFinite(item.price) && item.price >= 0 ? item.price : null;
+    setPrice(preview, item.price, item.currency_id, "ITEM");
+    if (preview.price === null) {
+      try {
+        const sale = await read(`/items/${itemId}/sale_price`);
+        setPrice(preview, sale.amount, sale.currency_id, "SALE_PRICE");
+      } catch {
+      }
+    }
     preview.currency = typeof item.currency_id === "string" && /^[A-Z]{3}$/.test(item.currency_id) ? item.currency_id : "BRL";
     try {
       const description = await read(`/items/${itemId}/description`);
@@ -24123,16 +24170,21 @@ function fillCard(card, snapshot, preview) {
   const body = textNode('div', '', 'product-body');
   body.append(textNode('h3', preview.title || snapshot.product_id));
   body.append(textNode('p', preview.description || 'Descrição não disponibilizada pela API.'));
-  let price = 'Preço não disponível';
+  let price = 'Consultar preço no Mercado Livre';
   if (typeof preview.price === 'number' && Number.isFinite(preview.price)) {
     try { price = new Intl.NumberFormat('pt-BR', {style:'currency',currency:preview.currency || 'BRL'}).format(preview.price); } catch { /* Keep fallback. */ }
   }
   body.append(textNode('strong', price, 'product-price'));
+  if (preview.priceSource) body.append(textNode('span', (preview.priceSource === 'CATALOG_OFFER' ? 'Preço da oferta de catálogo' : 'Preço informado pelo anúncio') + (preview.priceCheckedAt ? ' · Consultado em ' + date(preview.priceCheckedAt) : ''), 'product-meta'));
   body.append(textNode('span', snapshot.product_id + ' · ' + snapshot.type + ' · Tier ' + (snapshot.priority_tier || '—') + ' · Posição ' + (snapshot.position || '—'), 'product-meta'));
   body.append(textNode('span', 'Coletado em ' + date(snapshot.observed_at), 'product-meta'));
-  const href = safeUrl(preview.url, false);
+  const publicUrl = snapshot.type === 'PRODUCT' && /^MLB[0-9]+$/.test(snapshot.product_id)
+    ? 'https://www.mercadolivre.com.br/p/' + snapshot.product_id
+    : snapshot.type === 'USER_PRODUCT' && /^MLBU[0-9]+$/.test(snapshot.product_id)
+      ? 'https://www.mercadolivre.com.br/up/' + snapshot.product_id : null;
+  const href = safeUrl(preview.url, false) || publicUrl;
   if (href) {
-    const link = textNode('a', preview.status === 'CATALOG' ? 'Ver produto no catálogo ↗' : 'Abrir anúncio no Mercado Livre ↗', 'product-link');
+    const link = textNode('a', (preview.status === 'CATALOG' || !preview.url) ? 'Abrir produto e ofertas ↗' : 'Abrir anúncio no Mercado Livre ↗', 'product-link');
     link.href = href; link.target = '_blank'; link.rel = 'noopener noreferrer'; body.append(link);
   } else {
     body.append(textNode('p', preview.status === 'UNAVAILABLE' ? 'Anúncio indisponível no momento.' : 'Link não resolvido: dados indisponíveis ou acesso restrito pelo Mercado Livre.'));
