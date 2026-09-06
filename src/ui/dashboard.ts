@@ -76,7 +76,7 @@ function productCopy(snapshot, preview, link) {
     lines.push('Condições: ' + coupon.restrictions + (coupon.minPurchase ? ' · Mínimo ' + money(coupon.minPurchase) : '') + (coupon.maxDiscount ? ' · Limite ' + money(coupon.maxDiscount) : '') + ' · Até ' + date(coupon.expiresAt));
     lines.push('Confirme a elegibilidade e o desconto no checkout.');
   }
-  lines.push('🛒 ' + affiliateUrl(link), 'Link de afiliado — posso receber comissão.', 'Preço e disponibilidade sujeitos a alteração.');
+  lines.push('🛒 ' + affiliateUrl(link), 'Preço e estoque podem mudar. Confira a oferta e aproveite! 🛒');
   return lines.join('\\n');
 }
 function renderResults() {

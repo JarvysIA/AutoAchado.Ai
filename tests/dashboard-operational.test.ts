@@ -32,7 +32,7 @@ describe("operational dashboard browser script", () => {
     await button.handlers.click(); expect(copied).toEqual([]);
     input.value="https://meli.la/test-link"; input.handlers.change(); await button.handlers.click();
     expect(copied[0]).toContain("R$ 123,00"); expect(copied[0]).toContain("\n📦");
-    expect(copied[0]).toContain("Link de afiliado"); expect(storage.size).toBe(1);
+    expect(copied[0]).not.toContain("Link de afiliado — posso receber comissão."); expect(copied[0]).toContain("Preço e estoque podem mudar. Confira a oferta e aproveite! 🛒"); expect(storage.size).toBe(1);
     input.value="https://mercadolivre.com.br.evil.test/"; await button.handlers.click(); expect(copied).toHaveLength(1);
     input.value="https://meli.la/test-link";
     context.navigator.clipboard.writeText = async () => { throw new Error("denied"); };
