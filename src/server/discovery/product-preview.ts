@@ -24,6 +24,7 @@ export interface ProductPreview {
 }
 type RecordValue = Record<string, any>;
 export type PreviewReader = (path: string) => Promise<RecordValue>;
+export class PreviewUpstreamError extends Error {constructor(readonly status:number){super('PREVIEW_FETCH_FAILED');}}
 export function safePreviewUrl(value: unknown, image = false): string | null {
   if (typeof value !== "string") return null;
   try {
@@ -196,10 +197,10 @@ async function accessToken(client: SupabaseClient): Promise<string> {
   try { return await pendingToken; } finally { pendingToken = undefined; }
 }
 const previews = new Map<string, { expires: number; value: Promise<ProductPreview> }>();
-export async function configuredProductPreview(client: SupabaseClient, id: string, type: string): Promise<ProductPreview> {
+export async function configuredProductPreview(client: SupabaseClient, id: string, type: string, fresh = false): Promise<ProductPreview> {
   const key = type + ":" + id;
   const cached = previews.get(key);
-  if (cached && cached.expires > Date.now()) return cached.value;
+  if (!fresh && cached && cached.expires > Date.now()) return cached.value;
   const value = (async () => {
     const read = await configuredMeliReader(client);
     const result = await resolveProductPreview(id, type, read);
@@ -213,15 +214,14 @@ export async function configuredProductPreview(client: SupabaseClient, id: strin
 
 export async function configuredMeliReader(client: SupabaseClient): Promise<PreviewReader> {
     const bearer = await accessToken(client);
-    const signal = AbortSignal.timeout(20000);
     return async path => {
       const response = await fetch("https://api.mercadolibre.com" + path, {
-        headers: { Authorization: "Bearer " + bearer, Accept: "application/json" }, signal,
+        headers: { Authorization: "Bearer " + bearer, Accept: "application/json" }, signal: AbortSignal.timeout(20000),
       });
       if (response.status === 401) token = undefined;
       if (!response.ok) {
         console.warn(JSON.stringify({event:"PREVIEW_UPSTREAM_FAILED", path, status:response.status}));
-        throw new Error("PREVIEW_FETCH_FAILED");
+        throw new PreviewUpstreamError(response.status);
       }
       return await response.json() as RecordValue;
     };

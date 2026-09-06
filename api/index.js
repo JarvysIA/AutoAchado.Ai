@@ -23675,6 +23675,21 @@ var init_persistence_repository = __esm({
   }
 });
 
+// src/server/discovery/coverage.ts
+function dueCategories(categories, progress, now = Date.now()) {
+  const byId = new Map(progress.map((p) => [p.category_id, p]));
+  return categories.filter((c) => !byId.has(c.marketplaceCategoryId) || Date.parse(byId.get(c.marketplaceCategoryId).next_attempt_at) <= now).sort((a, b) => (Date.parse(byId.get(a.marketplaceCategoryId)?.last_attempt_at ?? "") || 0) - (Date.parse(byId.get(b.marketplaceCategoryId)?.last_attempt_at ?? "") || 0));
+}
+function categoryRetry(status, httpStatus, failures, now = Date.now()) {
+  const hours = status === "SUCCESS" || status === "EMPTY" ? 20 : httpStatus === 404 ? 7 * 24 : httpStatus === 403 ? 24 : Math.min(24, 2 ** Math.min(failures, 5));
+  return new Date(now + hours * 36e5).toISOString();
+}
+var init_coverage = __esm({
+  "src/server/discovery/coverage.ts"() {
+    "use strict";
+  }
+});
+
 // src/server/discovery/operational.ts
 var operational_exports = {};
 __export(operational_exports, {
@@ -23704,6 +23719,8 @@ var init_operational = __esm({
     init_registry_reader();
     init_persistence_repository();
     init_orchestrator();
+    init_coverage();
+    init_types();
     LiveSmokeDiscoveryAdapter = class {
       constructor(client) {
         this.client = client;
@@ -23729,17 +23746,42 @@ var init_operational = __esm({
           siteId: config.siteId,
           verticalKey: config.verticalKey
         });
-        const plan = planDiscoveryRun(categories, mode, config);
+        const initialPlan = planDiscoveryRun(categories, mode, config);
+        const progress = await client.from("discovery_category_progress").select("*");
+        if (progress.error) throw new Error("DISCOVERY_COVERAGE_UNAVAILABLE");
+        const previous = progress.data ?? [];
+        const plan = { ...initialPlan, selectedCategories: mode === "FULL_SWEEP" ? dueCategories(initialPlan.selectedCategories, previous) : initialPlan.selectedCategories };
+        if (!plan.selectedCategories.length) return { status: "UP_TO_DATE", selectedCategories: 0, persisted: 0 };
         const rotation = await createMeliOAuthRuntimeOperationRotationService(client).rotateMeliAccessTokenForRuntimeOperation("dashboard-" + randomUUID2());
         if (rotation.outcome !== "ROTATED") throw new Error("DISCOVERY_OAUTH_UNAVAILABLE");
         const repository = createDiscoveryPersistenceRepository(discoveryPersistenceClientFromSupabase(client));
         const now = (/* @__PURE__ */ new Date()).toISOString();
         const run = await repository.beginDiscoveryRun({ plan, scheduledBucket: now, startedAt: now, shardKey: "dashboard-" + randomUUID2() });
-        const result = await runDiscoveryOrchestrator({ plan, budgetMs: 18e4, adapter: createMeliHighlightsDiscoveryAdapter({
-          client: new MeliClient({ accessToken: rotation.accessToken, timeoutMs: 1e4 }),
-          nowIso: () => (/* @__PURE__ */ new Date()).toISOString()
-        }) });
+        const statuses = /* @__PURE__ */ new Map();
+        const adapter = createMeliHighlightsDiscoveryAdapter({ client: new MeliClient({ accessToken: rotation.accessToken, timeoutMs: 1e4 }), nowIso: () => (/* @__PURE__ */ new Date()).toISOString() });
+        const result = await runDiscoveryOrchestrator({ plan, budgetMs: 18e4, adapter: { discoverCategory: async (category) => {
+          try {
+            return await adapter.discoverCategory(category);
+          } catch (error) {
+            if (error instanceof DiscoveryError && typeof error.details.status === "number") statuses.set(category.marketplaceCategoryId, error.details.status);
+            throw error;
+          }
+        } } });
         const persisted = await repository.persistDiscoveryOccurrences(run.runId, result.occurrences);
+        const updates = result.outcomes.filter((o) => o.status !== "NOT_ATTEMPTED").map((o) => {
+          const failures = o.status === "FAILED" ? (previous.find((p) => p.category_id === o.category.marketplaceCategoryId)?.failures ?? 0) + 1 : 0;
+          const httpStatus = statuses.get(o.category.marketplaceCategoryId) ?? null;
+          return {
+            category_id: o.category.marketplaceCategoryId,
+            last_attempt_at: (/* @__PURE__ */ new Date()).toISOString(),
+            next_attempt_at: categoryRetry(o.status, httpStatus, failures),
+            status: httpStatus === 404 ? "NO_RANKING" : o.status,
+            error_code: o.errorCode,
+            http_status: httpStatus,
+            failures
+          };
+        });
+        if (updates.length && (await client.from("discovery_category_progress").upsert(updates)).error) throw new Error("DISCOVERY_COVERAGE_WRITE_FAILED");
         const status = result.fatalErrorCode === "DISCOVERY_TIME_BUDGET_EXCEEDED" ? "PARTIAL" : result.fatalErrorCode ? "FAILED" : result.metrics.failedCategories > 0 ? "PARTIAL" : "COMPLETED";
         await repository.completeDiscoveryRun({ runId: run.runId, result, status, finishedAt: (/* @__PURE__ */ new Date()).toISOString() });
         return { runId: run.runId, status, persisted, selectedCategories: plan.selectedCategories.length };
@@ -23751,6 +23793,7 @@ var init_operational = __esm({
 // src/server/discovery/product-preview.ts
 var product_preview_exports = {};
 __export(product_preview_exports, {
+  PreviewUpstreamError: () => PreviewUpstreamError,
   catalogOfferPreview: () => catalogOfferPreview,
   configuredMeliReader: () => configuredMeliReader,
   configuredProductPreview: () => configuredProductPreview,
@@ -23951,10 +23994,10 @@ async function accessToken(client) {
     pendingToken = void 0;
   }
 }
-async function configuredProductPreview(client, id, type) {
+async function configuredProductPreview(client, id, type, fresh = false) {
   const key = type + ":" + id;
   const cached = previews.get(key);
-  if (cached && cached.expires > Date.now()) return cached.value;
+  if (!fresh && cached && cached.expires > Date.now()) return cached.value;
   const value = (async () => {
     const read = await configuredMeliReader(client);
     const result = await resolveProductPreview(id, type, read);
@@ -23972,25 +24015,31 @@ async function configuredProductPreview(client, id, type) {
 }
 async function configuredMeliReader(client) {
   const bearer = await accessToken(client);
-  const signal = AbortSignal.timeout(2e4);
   return async (path) => {
     const response = await fetch("https://api.mercadolibre.com" + path, {
       headers: { Authorization: "Bearer " + bearer, Accept: "application/json" },
-      signal
+      signal: AbortSignal.timeout(2e4)
     });
     if (response.status === 401) token = void 0;
     if (!response.ok) {
       console.warn(JSON.stringify({ event: "PREVIEW_UPSTREAM_FAILED", path, status: response.status }));
-      throw new Error("PREVIEW_FETCH_FAILED");
+      throw new PreviewUpstreamError(response.status);
     }
     return await response.json();
   };
 }
-var shortText, token, pendingToken, previews;
+var PreviewUpstreamError, shortText, token, pendingToken, previews;
 var init_product_preview = __esm({
   "src/server/discovery/product-preview.ts"() {
     "use strict";
     init_factory();
+    PreviewUpstreamError = class extends Error {
+      constructor(status) {
+        super("PREVIEW_FETCH_FAILED");
+        this.status = status;
+      }
+      status;
+    };
     shortText = (value, max = 240) => typeof value === "string" ? value.slice(0, max) : null;
     previews = /* @__PURE__ */ new Map();
   }
@@ -24092,14 +24141,18 @@ function rankProduct(preview, history, feedback = null, now = Date.now()) {
   if (!sufficient) fail3("Histórico insuficiente: exigimos 20 dias observados, janela de 27 dias e 2 vendedores em até 30 dias.");
   else if (discount === null || discount < 10) fail3("Desconto histórico inferior a 10%.", true);
   else evidence.push(Math.round(discount) + "% abaixo da mediana dos melhores preços diários observados.");
-  const demand = /* @__PURE__ */ new Map();
+  const dimensions = /* @__PURE__ */ new Map();
   for (const observation of history) {
     const time = Date.parse(observation.observed_at);
     if (time <= now && time >= now - 14 * DAY && Number.isInteger(observation.position) && observation.position >= 1 && observation.position <= 20) {
       const day = observation.observed_at.slice(0, 10);
-      demand.set(day, Math.min(demand.get(day) ?? 21, observation.position));
+      const dimension = observation.demand_category ?? "legacy";
+      const demand2 = dimensions.get(dimension) ?? /* @__PURE__ */ new Map();
+      demand2.set(day, Math.min(demand2.get(day) ?? 21, observation.position));
+      dimensions.set(dimension, demand2);
     }
   }
+  const demand = [...dimensions.values()].sort((a, b) => Number(b.size >= 7 && median([...b.values()]) <= 10) - Number(a.size >= 7 && median([...a.values()]) <= 10) || b.size - a.size)[0] ?? /* @__PURE__ */ new Map();
   const strongDemand = demand.size >= 7 && median([...demand.values()]) <= 10;
   if (!strongDemand) fail3("Demanda não confirmada: exigimos presença em 7 dias de ranking em 14 dias, com posição mediana até 10.");
   else evidence.push("Presença recorrente entre mais vendidos em " + demand.size + " dias; indício de demanda, sem volume de vendas comprovado.");
@@ -24151,15 +24204,84 @@ var init_ranking = __esm({
   }
 });
 
+// src/server/commercial/admission.ts
+function admissionDecision(p, attempts) {
+  const group = commercialProfile(p.title).group;
+  if (group === "especializado" || p.status === "UNAVAILABLE") return { state: "REJECTED", reason: "UNSUITABLE_OR_UNAVAILABLE" };
+  if (p.comparable && p.seller_trusted && p.currency === "BRL" && typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0 && safePreviewUrl(p.image, true) && safePreviewUrl(p.url) && group !== "avaliar")
+    return { state: "QUALIFIED", reason: null };
+  return attempts >= 3 ? { state: "REJECTED", reason: "INSUFFICIENT_ACCESS_OR_COMMERCIAL_PROFILE" } : { state: "RETRY", reason: "INCOMPLETE_EVIDENCE" };
+}
+function checked(r) {
+  if (r.error) throw new Error("ADMISSION_STORAGE_FAILED");
+  return r.data;
+}
+async function exploreCandidates(client, deadline) {
+  const rows = checked(await client.from("commercial_candidate_queue").select("*").in("state", ["PENDING", "RETRY"]).lte("next_check_at", (/* @__PURE__ */ new Date()).toISOString()).order("next_check_at").order("best_position").order("first_seen_at").order("source_key").limit(24));
+  let evaluated = 0, failed = 0;
+  const queue = [...rows ?? []];
+  async function worker() {
+    while (queue.length && Date.now() < deadline) {
+      const row = queue.shift();
+      const attempts = row.attempts + 1;
+      try {
+        const p = await configuredProductPreview(client, row.product_id, row.type);
+        const decision = admissionDecision(p, attempts);
+        const identity = p.comparable && p.catalog_product_id ? "catalog:" + p.catalog_product_id + ":new:BRL:public" : row.source_key;
+        checked(await client.from("commercial_watchlist").upsert(
+          {
+            source_key: row.source_key,
+            product_id: row.product_id,
+            type: row.type,
+            category_id: row.category_id,
+            snapshot: row.snapshot,
+            identity_key: identity,
+            preview: p,
+            monitor: false
+          },
+          { onConflict: "source_key", ignoreDuplicates: true }
+        ));
+        checked(await client.from("commercial_watchlist").update({ preview: p, identity_key: identity }).eq("source_key", row.source_key).eq("monitor", false));
+        checked(await client.from("commercial_candidate_queue").update({
+          ...decision,
+          attempts,
+          evaluated_at: (/* @__PURE__ */ new Date()).toISOString(),
+          next_check_at: new Date(Date.now() + 864e5 * Math.min(attempts, 3)).toISOString()
+        }).eq("source_key", row.source_key));
+        evaluated++;
+      } catch {
+        failed++;
+        checked(await client.from("commercial_candidate_queue").update({
+          state: "RETRY",
+          reason: "UPSTREAM_OR_STORAGE_FAILURE",
+          attempts,
+          next_check_at: new Date(Date.now() + 864e5).toISOString()
+        }).eq("source_key", row.source_key));
+      }
+    }
+  }
+  await Promise.all([worker(), worker()]);
+  const promoted = checked(await client.rpc("promote_commercial_candidates"));
+  return { evaluated, failed, promoted, deferred: queue.length };
+}
+var init_admission = __esm({
+  "src/server/commercial/admission.ts"() {
+    "use strict";
+    init_product_preview();
+    init_ranking();
+  }
+});
+
 // src/server/commercial/service.ts
 var service_exports = {};
 __export(service_exports, {
   collectCommercialEvidence: () => collectCommercialEvidence,
   commercialOpportunities: () => commercialOpportunities,
   productIdentity: () => productIdentity,
-  saveCommercialFeedback: () => saveCommercialFeedback
+  saveCommercialFeedback: () => saveCommercialFeedback,
+  saveObservation: () => saveObservation
 });
-function checked(result) {
+function checked2(result) {
   if (result.error) throw new Error("COMMERCIAL_STORAGE_UNAVAILABLE");
   return result.data;
 }
@@ -24168,7 +24290,7 @@ function productIdentity(id, type, preview) {
 }
 async function saveObservation(client, id, type, preview, position) {
   const observed = preview.priceCheckedAt ?? (/* @__PURE__ */ new Date()).toISOString();
-  checked(await client.from("commercial_observations").upsert({
+  checked2(await client.from("commercial_observations").upsert({
     identity_key: productIdentity(id, type, preview),
     source_key: type + ":" + id,
     observed_at: observed,
@@ -24182,14 +24304,15 @@ async function saveObservation(client, id, type, preview, position) {
   }, { onConflict: "source_key,observed_at", ignoreDuplicates: true }));
 }
 async function collectCommercialEvidence(client) {
-  const runId = checked(await client.rpc("begin_commercial_collection"));
+  const runId = checked2(await client.rpc("begin_commercial_collection"));
   if (!runId) return { status: "BUSY", collected: 0, failed: 0 };
   let collected = 0, failed = 0;
   const started = Date.now();
   try {
-    checked(await client.rpc("seed_commercial_watchlist"));
-    const candidates = checked(await client.from("commercial_watchlist").select("*").eq("monitor", true).order("last_collected_at", { ascending: true, nullsFirst: true }).order("source_key").limit(24));
+    checked2(await client.rpc("seed_commercial_watchlist"));
+    const candidates = checked2(await client.from("commercial_watchlist").select("*").eq("monitor", true).order("last_collected_at", { ascending: true, nullsFirst: true }).order("source_key").limit(48));
     const liveRankings = /* @__PURE__ */ new Map();
+    const memberships = checked2(await client.rpc("commercial_candidate_categories", { keys: candidates.map((c) => c.source_key) }));
     const positions = (category) => {
       if (!liveRankings.has(category)) liveRankings.set(category, (async () => {
         try {
@@ -24209,12 +24332,23 @@ async function collectCommercialEvidence(client) {
     };
     const queue = [...candidates];
     async function worker() {
-      while (queue.length && Date.now() - started < 18e4) {
+      while (queue.length && Date.now() - started < 12e4) {
         const row = queue.shift();
         try {
           const preview = await configuredProductPreview(client, row.product_id, row.type);
           const position = (await positions(row.category_id)).get(row.source_key) ?? null;
           await saveObservation(client, row.product_id, row.type, preview, position);
+          const dimensions = [.../* @__PURE__ */ new Set([row.category_id, ...memberships.filter((m) => m.source_key === row.source_key).map((m) => m.category_id)])];
+          for (const category of dimensions) {
+            if (Date.now() - started >= 12e4) break;
+            const rank = (await positions(category)).get(row.source_key);
+            if (rank) checked2(await client.from("commercial_rank_observations").upsert({
+              identity_key: productIdentity(row.product_id, row.type, preview),
+              category_id: category,
+              observed_at: (/* @__PURE__ */ new Date()).toISOString(),
+              position: rank
+            }));
+          }
           if (preview.comparable && preview.catalog_product_id && Date.now() - started < 12e4) {
             try {
               const read = await configuredMeliReader(client);
@@ -24229,13 +24363,15 @@ async function collectCommercialEvidence(client) {
             }
           }
           const profile = commercialProfile(preview.title);
+          const priceDrop = preview.comparable && preview.seller_trusted && position !== null && position <= 10 && profile.group !== "avaliar" && preview.price !== null && row.preview.price !== null && preview.price <= row.preview.price * 0.95;
           const unavailable = !preview.price && preview.title === row.product_id ? (row.unavailable_attempts ?? 0) + 1 : 0;
-          checked(await client.from("commercial_watchlist").update({
+          checked2(await client.from("commercial_watchlist").update({
             preview,
             identity_key: productIdentity(row.product_id, row.type, preview),
             last_collected_at: (/* @__PURE__ */ new Date()).toISOString(),
             unavailable_attempts: unavailable,
-            monitor: profile.group !== "especializado" && unavailable < 3
+            monitor: profile.group !== "especializado" && unavailable < 3,
+            ...priceDrop ? { priority_until: new Date(Date.now() + 8 * 36e5).toISOString(), next_priority_check: (/* @__PURE__ */ new Date()).toISOString(), priority_reason: "OBSERVED_PRICE_DROP" } : {}
           }).eq("source_key", row.source_key));
           collected++;
         } catch {
@@ -24245,32 +24381,66 @@ async function collectCommercialEvidence(client) {
     }
     await Promise.all([worker(), worker(), worker()]);
     failed += queue.length;
-    const status = failed ? "PARTIAL" : "COMPLETED";
-    checked(await client.from("commercial_collection_runs").update({ status, collected, failed, finished_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", runId));
-    return { status, collected, failed };
+    const exploration = await exploreCandidates(client, started + 21e4);
+    const status = failed || exploration.failed || exploration.deferred ? "PARTIAL" : "COMPLETED";
+    checked2(await client.from("commercial_collection_runs").update({
+      status,
+      collected,
+      failed,
+      explored: exploration.evaluated,
+      exploration_failed: exploration.failed,
+      finished_at: (/* @__PURE__ */ new Date()).toISOString()
+    }).eq("id", runId));
+    return { status, collected, failed, exploration };
   } catch (error) {
     await client.from("commercial_collection_runs").update({ status: "FAILED", collected, failed, finished_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", runId);
     throw error;
   }
 }
 async function commercialOpportunities(client, view, offset = 0) {
-  const watches = checked(await client.from("commercial_watchlist").select("*").order("monitor", { ascending: false }).order("last_collected_at", { ascending: false, nullsFirst: false }).limit(200));
-  const feedback = watches.length ? checked(await client.from("commercial_feedback").select("identity_key,action").in("identity_key", [...new Set(watches.map((w) => w.identity_key))])) : [];
+  const watches = [];
+  for (let page = 0; ; page++) {
+    const rows = checked2(await client.from("commercial_watchlist").select("*").order("source_key").range(page * 500, page * 500 + 499));
+    watches.push(...rows);
+    if (rows.length < 500) break;
+    if (page >= 19) throw new Error("COMMERCIAL_WATCHLIST_LIMIT");
+  }
+  const feedback = [];
+  for (let page = 0; ; page++) {
+    const rows = checked2(await client.from("commercial_feedback").select("identity_key,action").order("identity_key").range(page * 500, page * 500 + 499));
+    feedback.push(...rows ?? []);
+    if (!rows || rows.length < 500) break;
+    if (page >= 19) throw new Error("COMMERCIAL_FEEDBACK_LIMIT");
+  }
   const now = Date.now(), history = [];
-  if (watches.length) for (let page = 0; ; page++) {
-    const rows = checked(await client.from("commercial_observations").select("identity_key,observed_at,price,currency,seller_id,comparable,trusted,position").in("identity_key", [...new Set(watches.map((w) => w.identity_key))]).gte("observed_at", new Date(now - 30 * 864e5).toISOString()).order("source_key").order("observed_at").range(page * 1e3, page * 1e3 + 999));
-    history.push(...rows);
+  const identities = [...new Set(watches.map((w) => w.identity_key))];
+  for (let start = 0; start < identities.length; start += 100) for (let page = 0; ; page++) {
+    const rows = checked2(await client.from("commercial_observations").select("identity_key,observed_at,price,currency,seller_id,comparable,trusted,position").in("identity_key", identities.slice(start, start + 100)).gte("observed_at", new Date(now - 30 * 864e5).toISOString()).order("source_key").order("observed_at").range(page * 1e3, page * 1e3 + 999));
+    history.push(...rows.map((row) => ({ ...row, position: null })));
     if (rows.length < 1e3) break;
     if (page >= 99) throw new Error("COMMERCIAL_HISTORY_LIMIT");
   }
+  for (let start = 0; start < identities.length; start += 100) for (let page = 0; ; page++) {
+    const rows = checked2(await client.from("commercial_rank_observations").select("identity_key,category_id,observed_at,position").in("identity_key", identities.slice(start, start + 100)).gte("observed_at", new Date(now - 14 * 864e5).toISOString()).order("identity_key").order("category_id").order("observed_at").range(page * 1e3, page * 1e3 + 999));
+    history.push(...(rows ?? []).map((row) => ({ ...row, demand_category: row.category_id, price: null, currency: "BRL", seller_id: null, comparable: false, trusted: false })));
+    if (!rows || rows.length < 1e3) break;
+    if (page >= 99) throw new Error("COMMERCIAL_RANK_HISTORY_LIMIT");
+  }
+  const historyByIdentity = /* @__PURE__ */ new Map();
+  for (const observation of history) {
+    const list = historyByIdentity.get(observation.identity_key) ?? [];
+    list.push(observation);
+    historyByIdentity.set(observation.identity_key, list);
+  }
+  const feedbackByIdentity = new Map(feedback.map((f) => [f.identity_key, f.action]));
   const allEvaluated = watches.filter((w) => w.preview?.title).map((w) => {
-    const action = feedback.find((f) => f.identity_key === w.identity_key)?.action ?? null;
+    const action = feedbackByIdentity.get(w.identity_key) ?? null;
     return {
       identity_key: w.identity_key,
       snapshot: w.snapshot,
       preview: { ...w.preview, ...affiliateIntelligence(w.preview) },
       feedback: action,
-      rank: rankProduct(w.preview, history.filter((h) => h.identity_key === w.identity_key), action, now)
+      rank: rankProduct(w.preview, historyByIdentity.get(w.identity_key) ?? [], action, now)
     };
   });
   const order = { APPROVED: 0, OBSERVING: 1, REJECTED: 2 };
@@ -24280,7 +24450,7 @@ async function commercialOpportunities(client, view, offset = 0) {
   const eligible = evaluated.filter((e) => e.rank.state === view).sort((a, b) => b.rank.score - a.rank.score || a.identity_key.localeCompare(b.identity_key));
   const unique = eligible.filter((e, i, rows) => rows.findIndex((r) => r.identity_key === e.identity_key) === i);
   const selected = view === "APPROVED" ? approved : unique;
-  const runs = checked(await client.from("commercial_collection_runs").select("status,started_at,finished_at,collected,failed").order("started_at", { ascending: false }).limit(1));
+  const runs = checked2(await client.from("commercial_collection_runs").select("status,started_at,finished_at,collected,failed,explored,exploration_failed").eq("kind", "HISTORY").order("started_at", { ascending: false }).limit(1));
   return {
     entries: selected.slice(offset, offset + 12),
     total: selected.length,
@@ -24292,17 +24462,18 @@ async function commercialOpportunities(client, view, offset = 0) {
       rejected: new Set(evaluated.filter((e) => e.rank.state === "REJECTED").map((e) => e.identity_key)).size,
       monitored: watches.filter((w) => w.monitor).length
     },
+    coverage: checked2(await client.rpc("commercial_coverage")),
     lastCollection: runs?.[0] ?? null,
     checkedAt: new Date(now).toISOString(),
     historyPolicy: "20 dias observados em 30, janela mínima de 27 dias, 2 vendedores; desconto mínimo de 10%."
   };
 }
 async function saveCommercialFeedback(client, id, type, action) {
-  const row = checked(await client.from("commercial_watchlist").select("identity_key").eq("source_key", type + ":" + id).maybeSingle());
+  const row = checked2(await client.from("commercial_watchlist").select("identity_key").eq("source_key", type + ":" + id).maybeSingle());
   if (!row) throw new Error("COMMERCIAL_PRODUCT_NOT_FOUND");
-  checked(await client.from("commercial_feedback").upsert({ identity_key: row.identity_key, action, updated_at: (/* @__PURE__ */ new Date()).toISOString() }));
-  if (action === "INTERESTED" || action === "RESET") checked(await client.from("commercial_watchlist").update({ monitor: true, unavailable_attempts: 0 }).eq("identity_key", row.identity_key));
-  if (action === "NOT_RELEVANT") checked(await client.from("commercial_watchlist").update({ monitor: false }).eq("identity_key", row.identity_key));
+  checked2(await client.from("commercial_feedback").upsert({ identity_key: row.identity_key, action, updated_at: (/* @__PURE__ */ new Date()).toISOString() }));
+  if (action === "INTERESTED" || action === "RESET") checked2(await client.from("commercial_watchlist").update({ monitor: true, unavailable_attempts: 0 }).eq("identity_key", row.identity_key));
+  if (action === "NOT_RELEVANT") checked2(await client.from("commercial_watchlist").update({ monitor: false }).eq("identity_key", row.identity_key));
   return { saved: true };
 }
 var init_service = __esm({
@@ -24310,6 +24481,150 @@ var init_service = __esm({
     "use strict";
     init_product_preview();
     init_coupon_service();
+    init_ranking();
+    init_admission();
+  }
+});
+
+// src/server/commercial/priority.ts
+var priority_exports = {};
+__export(priority_exports, {
+  collectPriority: () => collectPriority
+});
+function checked3(r) {
+  if (r.error) throw new Error("PRIORITY_STORAGE_FAILED");
+  return r.data;
+}
+async function collectPriority(client) {
+  const runId = checked3(await client.rpc("begin_commercial_collection"));
+  if (!runId) return { status: "BUSY", collected: 0, failed: 0 };
+  let collected = 0, failed = 0;
+  const start = Date.now();
+  try {
+    checked3(await client.from("commercial_collection_runs").update({ kind: "PRIORITY" }).eq("id", runId));
+    const rows = checked3(await client.from("commercial_watchlist").select("*").eq("monitor", true).gt("priority_until", (/* @__PURE__ */ new Date()).toISOString()).lte("next_priority_check", (/* @__PURE__ */ new Date()).toISOString()).order("next_priority_check").order("source_key").limit(6));
+    for (const row of rows ?? []) {
+      if (Date.now() - start > 12e4) {
+        failed++;
+        continue;
+      }
+      try {
+        const preview = await configuredProductPreview(client, row.product_id, row.type, true);
+        await saveObservation(client, row.product_id, row.type, preview, null);
+        if (preview.catalog_product_id) {
+          try {
+            const read = await configuredMeliReader(client);
+            const rank = await read("/highlights/MLB/product/" + preview.catalog_product_id);
+            if (rank.dimension === "category" && /^MLB\d+$/.test(rank.id) && Number.isInteger(rank.position) && rank.position >= 1 && rank.position <= 20)
+              checked3(await client.from("commercial_rank_observations").upsert({
+                identity_key: productIdentity(row.product_id, row.type, preview),
+                category_id: rank.id,
+                observed_at: (/* @__PURE__ */ new Date()).toISOString(),
+                position: rank.position
+              }));
+          } catch {
+          }
+        }
+        checked3(await client.from("commercial_watchlist").update({
+          preview,
+          identity_key: productIdentity(row.product_id, row.type, preview),
+          next_priority_check: new Date(Date.now() + 30 * 6e4).toISOString(),
+          ...preview.status === "UNAVAILABLE" ? { priority_until: (/* @__PURE__ */ new Date()).toISOString() } : {}
+        }).eq("source_key", row.source_key));
+        collected++;
+      } catch {
+        failed++;
+        checked3(await client.from("commercial_watchlist").update({ next_priority_check: new Date(Date.now() + 36e5).toISOString() }).eq("source_key", row.source_key));
+      }
+    }
+    const status = failed ? "PARTIAL" : "COMPLETED";
+    checked3(await client.from("commercial_collection_runs").update({ status, collected, failed, finished_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", runId));
+    return { status, collected, failed };
+  } catch (error) {
+    await client.from("commercial_collection_runs").update({ status: "FAILED", collected, failed, finished_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", runId);
+    throw error;
+  }
+}
+var init_priority = __esm({
+  "src/server/commercial/priority.ts"() {
+    "use strict";
+    init_product_preview();
+    init_service();
+  }
+});
+
+// src/server/commercial/feasibility-probe.ts
+var feasibility_probe_exports = {};
+__export(feasibility_probe_exports, {
+  probeOfficialSources: () => probeOfficialSources
+});
+async function probeOfficialSources(client) {
+  const read = await configuredMeliReader(client);
+  const paths = [
+    "/products/MLB57468821",
+    "/products/MLB57468821/items?limit=3",
+    "/highlights/MLB/product/MLB57468821",
+    "/seller-promotions/users/296984475?app_version=v2",
+    "/seller-promotions/items/MLB4690712449?app_version=v2"
+  ];
+  const results = [];
+  for (const path of paths) {
+    const start = Date.now();
+    try {
+      const data = await read(path);
+      results.push({
+        path,
+        status: 200,
+        ms: Date.now() - start,
+        fields: Object.keys(data).slice(0, 25),
+        count: Array.isArray(data.results) ? data.results.length : null,
+        hasDeadline: !!(data.finish_date || data.end_date || data.end_time),
+        position: Number.isInteger(data.position) ? data.position : null
+      });
+    } catch (error) {
+      results.push({ path, status: error instanceof PreviewUpstreamError ? error.status : 0, ms: Date.now() - start });
+    }
+  }
+  return { checkedAt: (/* @__PURE__ */ new Date()).toISOString(), globalPromotionFeedConfirmed: false, results };
+}
+var init_feasibility_probe = __esm({
+  "src/server/commercial/feasibility-probe.ts"() {
+    "use strict";
+    init_product_preview();
+  }
+});
+
+// src/server/commercial/revalidate.ts
+var revalidate_exports = {};
+__export(revalidate_exports, {
+  revalidateProduct: () => revalidateProduct
+});
+function checked4(r) {
+  if (r.error) throw new Error("REVALIDATION_STORAGE_FAILED");
+  return r.data;
+}
+async function revalidateProduct(client, id, type) {
+  const preview = await configuredProductPreview(client, id, type, true);
+  const identity = productIdentity(id, type, preview);
+  const rows = [];
+  for (const table of ["commercial_observations", "commercial_rank_observations"]) for (let page = 0; ; page++) {
+    const data = checked4(await client.from(table).select("*").eq("identity_key", identity).gte("observed_at", new Date(Date.now() - 30 * 864e5).toISOString()).order("observed_at").order(table === "commercial_observations" ? "source_key" : "category_id").range(page * 1e3, page * 1e3 + 999));
+    rows.push(...(data ?? []).map((row) => table === "commercial_observations" ? { ...row, position: null } : { ...row, demand_category: row.category_id, price: null, currency: "BRL", seller_id: null, comparable: false, trusted: false }));
+    if (!data || data.length < 1e3) break;
+    if (page >= 99) throw new Error("REVALIDATION_HISTORY_LIMIT");
+  }
+  const feedback = checked4(await client.from("commercial_feedback").select("action").eq("identity_key", identity).maybeSingle());
+  const commercial = rankProduct(preview, rows, feedback?.action ?? null);
+  checked4(await client.from("commercial_watchlist").update({ preview, identity_key: identity }).eq("source_key", type + ":" + id));
+  const ready = preview.status !== "UNAVAILABLE" && !!preview.title && preview.title !== id && !!safePreviewUrl(preview.image, true) && !!safePreviewUrl(preview.url) && !!preview.price && preview.currency === "BRL" && Date.parse(preview.priceCheckedAt ?? "") >= Date.now() - 6e4;
+  return { ready, preview: { ...preview, ...affiliateIntelligence(preview), commercial } };
+}
+var init_revalidate = __esm({
+  "src/server/commercial/revalidate.ts"() {
+    "use strict";
+    init_product_preview();
+    init_coupon_service();
+    init_service();
     init_ranking();
   }
 });
@@ -24535,6 +24850,8 @@ async function loadCommercial(append = false) {
     commercialOffset=offset+data.entries.length;
     el('commercial-more').hidden=!data.hasMore;
     el('commercial-summary').textContent=data.counts.approved+' aprovadas · '+data.counts.observing+' em observação · '+data.counts.rejected+' não aprovadas · '+data.counts.monitored+' monitoradas. '+(data.lastCollection?'Última coleta: '+date(data.lastCollection.started_at)+' · '+data.lastCollection.status+' · '+data.lastCollection.collected+' consultados.':'A coleta de histórico ainda não começou.');
+    if(data.coverage) el('commercial-summary').textContent+=' Novidades: '+data.coverage.pending+' aguardando avaliação · '+data.coverage.evaluated+' avaliadas · '+data.coverage.waiting+' aguardando vaga de histórico. '+data.coverage.fresh+' monitoradas consultadas nas últimas 24h.';
+    if(data.coverage) el('commercial-summary').textContent+=' Categorias: '+data.coverage.categories_failed+' com falha · '+data.coverage.categories_without_ranking+' sem ranking disponível. '+data.coverage.priority_active+' produtos em acompanhamento prioritário.';
     for(const entry of data.entries) {
       const card=textNode('article','','product-card');
       entry.preview.commercial=entry.rank;
@@ -24720,9 +25037,24 @@ function fillCard(card, snapshot, preview) {
     });
     const button = textNode('button', '📋 Copiar texto p/ WhatsApp', 'copy-button');
     button.addEventListener('click', async () => {
-      const copy = productCopy(snapshot, preview, input.value.trim());
-      if (!copy) { el('copy-status').textContent = 'Cole o link deste produto gerado pela Central de Afiliados antes de copiar.'; input.focus(); return; }
-      await copyText(copy, button);
+      if (!affiliateUrl(input.value.trim())) { el('copy-status').textContent = 'Cole o link deste produto gerado pela Central de Afiliados antes de copiar.'; input.focus(); return; }
+      button.disabled=true;button.textContent='Conferindo oferta…';
+      try {
+        const data=await request('/api/commercial/revalidate?id='+encodeURIComponent(snapshot.product_id)+'&type='+encodeURIComponent(snapshot.type),'POST');
+        if(!data.ready) {el('copy-status').textContent='Não foi possível confirmar uma oferta completa e atual. A cópia foi interrompida.';return;}
+        const fresh=data.preview;
+        const changed=['price','original_price','currency','seller_id','catalog_product_id','url'].some(key=>fresh[key]!==preview[key]);
+        const lostApproval=preview.commercial?.state==='APPROVED'&&fresh.commercial?.state!=='APPROVED';
+        Object.assign(preview,fresh);
+        if(changed || lostApproval) {
+          fillCard(card,snapshot,preview);
+          el('copy-status').textContent='As condições ou a aprovação mudaram. Revise o cartão atualizado e confirme o link de afiliado antes de copiar novamente.';
+          return;
+        }
+        const copy=productCopy(snapshot,fresh,input.value.trim());
+        if(copy) {button.textContent='📋 Copiar texto p/ WhatsApp';await copyText(copy,button);}
+      } catch {el('copy-status').textContent='Não foi possível revalidar a oferta. Tente novamente antes de divulgar.';}
+      finally {button.disabled=false;if(button.textContent==='Conferindo oferta…') button.textContent='📋 Copiar texto p/ WhatsApp';}
     }); body.append(button);
   }
   card.append(photo); card.append(body);
@@ -24990,14 +25322,17 @@ async function handleRequest(request, response, overrides = {}) {
     try {
       const collecting = url.pathname === "/api/commercial/collect";
       const discovering = url.pathname === "/api/commercial/discover";
-      const cron = discovering || url.pathname === "/api/commercial/cron";
+      const probing = url.pathname === "/api/commercial/probe";
+      const priority = url.pathname === "/api/commercial/priority";
+      const revalidating = url.pathname === "/api/commercial/revalidate";
+      const cron = discovering || probing || priority || url.pathname === "/api/commercial/cron";
       const feedback = url.pathname === "/api/commercial/feedback";
       const listing = url.pathname === "/api/commercial/opportunities";
-      if (!collecting && !cron && !feedback && !listing) {
+      if (!collecting && !cron && !feedback && !listing && !revalidating) {
         sendJson(response, 404, { errorCode: "NOT_FOUND" });
         return;
       }
-      if (method !== (collecting || feedback ? "POST" : "GET")) {
+      if (method !== (collecting || feedback || probing || revalidating ? "POST" : "GET")) {
         sendJson(response, 405, { errorCode: "METHOD_NOT_ALLOWED" });
         return;
       }
@@ -25014,7 +25349,7 @@ async function handleRequest(request, response, overrides = {}) {
           sendJson(response, 401, { errorCode: "AUTHORIZATION_REQUIRED" });
           return;
         }
-        if ((collecting || feedback) && request.headers.origin !== new URL(config.redirectUri).origin) {
+        if ((collecting || feedback || revalidating) && request.headers.origin !== new URL(config.redirectUri).origin) {
           sendJson(response, 403, { errorCode: "ORIGIN_NOT_ALLOWED" });
           return;
         }
@@ -25026,6 +25361,26 @@ async function handleRequest(request, response, overrides = {}) {
       }
       const { createOperationalDiscoveryAdapter: createOperationalDiscoveryAdapter2 } = await Promise.resolve().then(() => (init_operational(), operational_exports));
       const client = createOperationalDiscoveryAdapter2().client;
+      if (priority) {
+        const { collectPriority: collectPriority2 } = await Promise.resolve().then(() => (init_priority(), priority_exports));
+        sendJson(response, 200, await collectPriority2(client));
+        return;
+      }
+      if (probing) {
+        const { probeOfficialSources: probeOfficialSources2 } = await Promise.resolve().then(() => (init_feasibility_probe(), feasibility_probe_exports));
+        sendJson(response, 200, await probeOfficialSources2(client));
+        return;
+      }
+      if (revalidating) {
+        const id = url.searchParams.get("id") ?? "", type = url.searchParams.get("type") ?? "";
+        if (!(type === "USER_PRODUCT" ? /^MLBU[0-9]{1,20}$/.test(id) : ["ITEM", "PRODUCT"].includes(type) && /^MLB[0-9]{1,20}$/.test(id))) {
+          sendJson(response, 400, { errorCode: "INVALID_PRODUCT" });
+          return;
+        }
+        const { revalidateProduct: revalidateProduct2 } = await Promise.resolve().then(() => (init_revalidate(), revalidate_exports));
+        sendJson(response, 200, await revalidateProduct2(client, id, type));
+        return;
+      }
       const service = await Promise.resolve().then(() => (init_service(), service_exports));
       if (collecting || cron) {
         sendJson(response, 200, await service.collectCommercialEvidence(client));
@@ -25041,7 +25396,7 @@ async function handleRequest(request, response, overrides = {}) {
         return;
       }
       const view = url.searchParams.get("view") ?? "APPROVED", offset = Number(url.searchParams.get("offset") ?? 0);
-      if (!["APPROVED", "OBSERVING", "REJECTED"].includes(view) || !Number.isSafeInteger(offset) || offset < 0 || offset > 200) {
+      if (!["APPROVED", "OBSERVING", "REJECTED"].includes(view) || !Number.isSafeInteger(offset) || offset < 0 || offset > 1e4) {
         sendJson(response, 400, { errorCode: "INVALID_VIEW" });
         return;
       }

@@ -11,6 +11,7 @@ describe("operational dashboard browser script", () => {
     for (const id of ["count", "synced", "snapshots", "message", "sweep", "smoke", "refresh", "more", "results-summary", "raw-products", "commercial-results", "commercial-status", "commercial-summary", "commercial-more", "collect-evidence", "rank-APPROVED", "rank-OBSERVING", "rank-REJECTED", "coupons", "copy-status", "manual-copy", ...["all","discount","tier","coupon","incomplete"].map(f => "filter-" + f)]) elements.set(id, node());
     const calls: any[] = [];
     const copied: string[] = [];
+    let revalidationReady=true, revalidationPrice=123;
     const storage = new Map<string,string>();
     const context = createContext({ URL, navigator:{clipboard:{writeText:async (text:string) => {copied.push(text);}}}, setTimeout:() => 0, localStorage:{getItem:(key:string)=>storage.get(key),setItem:(key:string,value:string)=>storage.set(key,value)}, document: { getElementById: (id: string) => elements.get(id),
       createElement: node, querySelectorAll: () => [elements.get("sweep"), elements.get("smoke"), elements.get("refresh")] },
@@ -18,7 +19,7 @@ describe("operational dashboard browser script", () => {
         calls.push({path, options});
         return { ok: true, json: async () => path.endsWith("latest-snapshots") ? {
           total: 345, syncedAt: "2026-09-05T00:00:00Z", snapshots: [{product_id:"MLBU999",type:"USER_PRODUCT"}, { product_id: "MLB123", type:"ITEM", priority_tier:"A", observed_at: "2026-09-05T00:00:00Z" }]
-        } : path.includes("/commercial/opportunities") ? {entries:[],counts:{approved:0,observing:0,rejected:0,monitored:0},total:0,hasMore:false,lastCollection:null} : path.endsWith("/coupons") ? {coupons:[]} : path.includes("MLBU999") ? {title:"MLBU999",url:"https://www.mercadolivre.com.br/up/MLBU999"} : path.includes("/preview?") ? { title: "<script>alert(1)</script>", url: "https://produto.mercadolivre.com.br/MLB-123-_JM", price: 123, original_price: 150, currency: "BRL", image:"https://http2.mlstatic.com/test.jpg", status: "AVAILABLE" } : { status: "COMPLETED", persisted: 2 } };
+        } : path.includes("/commercial/revalidate?") ? {ready:revalidationReady,preview:{title:"<script>alert(1)</script>",url:"https://produto.mercadolivre.com.br/MLB-123-_JM",price:revalidationPrice,original_price:150,currency:"BRL",image:"https://http2.mlstatic.com/test.jpg",status:"AVAILABLE"}} : path.includes("/commercial/opportunities") ? {entries:[],counts:{approved:0,observing:0,rejected:0,monitored:0},total:0,hasMore:false,lastCollection:null} : path.endsWith("/coupons") ? {coupons:[]} : path.includes("MLBU999") ? {title:"MLBU999",url:"https://www.mercadolivre.com.br/up/MLBU999"} : path.includes("/preview?") ? { title: "<script>alert(1)</script>", url: "https://produto.mercadolivre.com.br/MLB-123-_JM", price: 123, original_price: 150, currency: "BRL", image:"https://http2.mlstatic.com/test.jpg", status: "AVAILABLE" } : { status: "COMPLETED", persisted: 2 } };
       } });
     const html = dashboardPage({authorized: true, userId: "296984475"});
     new Script(html.match(/<script>([\s\S]*?)<\/script>/)![1]!).runInContext(context);
@@ -40,13 +41,20 @@ describe("operational dashboard browser script", () => {
     await button.handlers.click();
     expect(elements.get("manual-copy").hidden).toBe(false);
     expect(elements.get("manual-copy").value).toContain("https://meli.la/test-link");
+    revalidationReady=false;
+    await button.handlers.click();expect(copied).toHaveLength(1);
+    expect(elements.get('copy-status').textContent).toContain('interrompida');
+    revalidationReady=true;revalidationPrice=130;
+    await button.handlers.click();expect(copied).toHaveLength(1);
+    expect(elements.get('copy-status').textContent).toContain('Revise o cartão');
+    expect(calls.some(call=>call.path.includes('/commercial/revalidate?')&&call.options.method==='POST')).toBe(true);
     elements.get("filter-incomplete").handlers.click();
     expect(elements.get("snapshots").children[0].children[1].children[0].textContent).toBe("MLBU999");
     elements.get("filter-discount").handlers.click();
     expect(elements.get("results-summary").textContent).toContain("0 neste filtro");
     await elements.get("sweep").handlers.click();
     await elements.get("smoke").handlers.click();
-    expect(calls.filter(call => call.options.method === "POST").map(call => call.path)).toEqual(["/api/discovery/sweep", "/api/discovery/smoke"]);
+    expect(calls.filter(call => call.options.method === "POST" && !call.path.includes("/revalidate?")).map(call => call.path)).toEqual(["/api/discovery/sweep", "/api/discovery/smoke"]);
     expect(calls.every(call => call.options.cache === "no-store")).toBe(true);
   });
 });

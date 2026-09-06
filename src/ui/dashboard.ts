@@ -39,6 +39,8 @@ async function loadCommercial(append = false) {
     commercialOffset=offset+data.entries.length;
     el('commercial-more').hidden=!data.hasMore;
     el('commercial-summary').textContent=data.counts.approved+' aprovadas · '+data.counts.observing+' em observação · '+data.counts.rejected+' não aprovadas · '+data.counts.monitored+' monitoradas. '+(data.lastCollection?'Última coleta: '+date(data.lastCollection.started_at)+' · '+data.lastCollection.status+' · '+data.lastCollection.collected+' consultados.':'A coleta de histórico ainda não começou.');
+    if(data.coverage) el('commercial-summary').textContent+=' Novidades: '+data.coverage.pending+' aguardando avaliação · '+data.coverage.evaluated+' avaliadas · '+data.coverage.waiting+' aguardando vaga de histórico. '+data.coverage.fresh+' monitoradas consultadas nas últimas 24h.';
+    if(data.coverage) el('commercial-summary').textContent+=' Categorias: '+data.coverage.categories_failed+' com falha · '+data.coverage.categories_without_ranking+' sem ranking disponível. '+data.coverage.priority_active+' produtos em acompanhamento prioritário.';
     for(const entry of data.entries) {
       const card=textNode('article','','product-card');
       entry.preview.commercial=entry.rank;
@@ -224,9 +226,24 @@ function fillCard(card, snapshot, preview) {
     });
     const button = textNode('button', '📋 Copiar texto p/ WhatsApp', 'copy-button');
     button.addEventListener('click', async () => {
-      const copy = productCopy(snapshot, preview, input.value.trim());
-      if (!copy) { el('copy-status').textContent = 'Cole o link deste produto gerado pela Central de Afiliados antes de copiar.'; input.focus(); return; }
-      await copyText(copy, button);
+      if (!affiliateUrl(input.value.trim())) { el('copy-status').textContent = 'Cole o link deste produto gerado pela Central de Afiliados antes de copiar.'; input.focus(); return; }
+      button.disabled=true;button.textContent='Conferindo oferta…';
+      try {
+        const data=await request('/api/commercial/revalidate?id='+encodeURIComponent(snapshot.product_id)+'&type='+encodeURIComponent(snapshot.type),'POST');
+        if(!data.ready) {el('copy-status').textContent='Não foi possível confirmar uma oferta completa e atual. A cópia foi interrompida.';return;}
+        const fresh=data.preview;
+        const changed=['price','original_price','currency','seller_id','catalog_product_id','url'].some(key=>fresh[key]!==preview[key]);
+        const lostApproval=preview.commercial?.state==='APPROVED'&&fresh.commercial?.state!=='APPROVED';
+        Object.assign(preview,fresh);
+        if(changed || lostApproval) {
+          fillCard(card,snapshot,preview);
+          el('copy-status').textContent='As condições ou a aprovação mudaram. Revise o cartão atualizado e confirme o link de afiliado antes de copiar novamente.';
+          return;
+        }
+        const copy=productCopy(snapshot,fresh,input.value.trim());
+        if(copy) {button.textContent='📋 Copiar texto p/ WhatsApp';await copyText(copy,button);}
+      } catch {el('copy-status').textContent='Não foi possível revalidar a oferta. Tente novamente antes de divulgar.';}
+      finally {button.disabled=false;if(button.textContent==='Conferindo oferta…') button.textContent='📋 Copiar texto p/ WhatsApp';}
     }); body.append(button);
   }
   card.append(photo); card.append(body);

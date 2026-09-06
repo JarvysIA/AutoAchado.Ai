@@ -11,6 +11,7 @@ export interface Observation {
   comparable: boolean;
   trusted: boolean;
   position: number | null;
+  demand_category?:string;
 }
 export interface CommercialRank {
   version: string;
@@ -88,14 +89,18 @@ export function rankProduct(preview: ProductPreview, history: Observation[], fee
   else evidence.push(Math.round(discount) + "% abaixo da mediana dos melhores preços diários observados.");
 
   // Rankings are category-relative signals, never fabricated sales counts.
-  const demand = new Map<string, number>();
+  const dimensions = new Map<string,Map<string,number>>();
   for (const observation of history) {
     const time = Date.parse(observation.observed_at);
     if (time <= now && time >= now - 14 * DAY && Number.isInteger(observation.position) && observation.position! >= 1 && observation.position! <= 20) {
       const day = observation.observed_at.slice(0,10);
+      const dimension=observation.demand_category??'legacy';
+      const demand=dimensions.get(dimension)??new Map<string,number>();
       demand.set(day, Math.min(demand.get(day) ?? 21, observation.position!));
+      dimensions.set(dimension,demand);
     }
   }
+  const demand=[...dimensions.values()].sort((a,b)=>Number(b.size>=7&&median([...b.values()])<=10)-Number(a.size>=7&&median([...a.values()])<=10)||b.size-a.size)[0]??new Map<string,number>();
   const strongDemand = demand.size >= 7 && median([...demand.values()]) <= 10;
   if (!strongDemand) fail("Demanda não confirmada: exigimos presença em 7 dias de ranking em 14 dias, com posição mediana até 10.");
   else evidence.push("Presença recorrente entre mais vendidos em " + demand.size + " dias; indício de demanda, sem volume de vendas comprovado.");

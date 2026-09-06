@@ -6,6 +6,11 @@ const now=Date.parse('2026-10-05T12:00:00Z');
 const preview:ProductPreview={title:'Mini aspirador portátil',description:'Uso automotivo',image:'https://http2.mlstatic.com/a.jpg',url:'https://www.mercadolivre.com.br/p/MLB123',price:80,currency:'BRL',status:'AVAILABLE',catalog_product_id:'MLB123',comparable:true,seller_trusted:true,seller_id:'1',seller_level:'5_green',priceCheckedAt:new Date(now).toISOString()};
 const history=():Observation[]=>Array.from({length:28},(_,i)=>({observed_at:new Date(now-(i+1)*86400000).toISOString(),price:100,currency:'BRL',seller_id:String(i%2+1),comparable:true,trusted:true,position:3}));
 describe('commercial gates before scoring',()=>{
+ it('never combines days across different ranking dimensions',()=>{
+  const rows=history().map(o=>({...o,position:null}));
+  const ranks=history().slice(0,12).map((o,i)=>({...o,demand_category:i<6?'MLB1':'MLB2'}));
+  expect(rankProduct(preview,[...rows,...ranks],null,now)).toMatchObject({state:'OBSERVING',demand_days:6});
+ });
  it('approves independent history, recurring demand and trusted current offer',()=>{
   expect(rankProduct(preview,history(),null,now)).toMatchObject({state:'APPROVED',historical_discount_percent:20,reference_price:100,history_days:28,seller_count:2});
  });

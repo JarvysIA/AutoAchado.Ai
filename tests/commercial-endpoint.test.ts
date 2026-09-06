@@ -24,6 +24,9 @@ describe('commercial endpoint boundaries',()=>{
   expect(calls.collect).toHaveBeenCalledTimes(1);
  });
  it('protects collection and feedback against unauthenticated or cross-origin writes',async()=>{
+  expect((await request('/api/commercial/revalidate?id=MLB123&type=PRODUCT','POST')).status).toBe(401);
+  expect((await request('/api/commercial/revalidate?id=MLB123&type=PRODUCT','POST',{cookie:cookie(),origin:'https://evil.test'})).status).toBe(403);
+  expect((await request('/api/commercial/probe','POST',{cookie:cookie()})).status).toBe(401);
   expect((await request('/api/commercial/collect','POST')).status).toBe(401);
   expect((await request('/api/commercial/collect','POST',{cookie:cookie(),origin:'https://evil.test'})).status).toBe(403);
   expect((await request('/api/commercial/feedback?id=MLB123&type=ITEM&action=SHARED','POST',{cookie:cookie()})).status).toBe(403);
