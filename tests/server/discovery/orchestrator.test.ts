@@ -36,6 +36,15 @@ function success(category: DiscoveryEligibleCategory, content: "PRODUCT" | "ITEM
 }
 
 describe("discovery orchestrator", () => {
+  it("stops within the runtime budget and preserves completed categories", async () => {
+    let elapsed=0;
+    const result=await runDiscoveryOrchestrator({plan:planDiscoveryRun(categories(),"FULL_SWEEP"),budgetMs:100,nowMs:()=>elapsed,
+      adapter:{discoverCategory:async category=>{elapsed+=60;return success(category);}}});
+    expect(result.fatalErrorCode).toBe("DISCOVERY_TIME_BUDGET_EXCEEDED");
+    expect(result.metrics.attemptedCategories).toBe(2);
+    expect(result.occurrences.length).toBeGreaterThan(0);
+    expect(result.outcomes.slice(2).every(o=>o.status==="NOT_ATTEMPTED")).toBe(true);
+  });
   it("runs the four-category smoke, deduplicates PRODUCT, and closes metrics", async () => {
     const plan = planDiscoveryRun(categories(), "SMOKE");
     const result = await runDiscoveryOrchestrator({ plan, adapter: { discoverCategory: async (category) => success(category) } });

@@ -17,6 +17,7 @@ export interface RunDiscoveryOrchestratorInput {
   readonly nowMs?: () => number;
   readonly registryReadMs?: number;
   readonly planningMs?: number;
+  readonly budgetMs?: number;
 }
 
 interface Attempt {
@@ -85,6 +86,7 @@ export async function runDiscoveryOrchestrator(input: RunDiscoveryOrchestratorIn
   const selected = input.plan.selectedCategories;
 
   for (let offset = 0; offset < selected.length && fatalErrorCode === null; offset += input.plan.config.concurrency) {
+    if (input.budgetMs !== undefined && clock() - started >= input.budgetMs) { fatalErrorCode = "DISCOVERY_TIME_BUDGET_EXCEEDED"; break; }
     const batch = selected.slice(offset, offset + input.plan.config.concurrency);
     const attempts: Attempt[] = await Promise.all(batch.map(async (category) => {
       try {

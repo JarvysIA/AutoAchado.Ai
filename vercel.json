@@ -3,9 +3,40 @@
   "buildCommand": "npm run build",
   "framework": null,
   "routes": [
-    { "src": "/dashboard", "dest": "/api/index.js" },
-    { "src": "/api/(.*)", "dest": "/api/index.js" },
-    { "src": "/auth/(.*)", "dest": "/api/index.js" },
-    { "src": "/(.*)", "dest": "/api/index.js" }
+    {
+      "src": "/dashboard",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/auth/(.*)",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.js"
+    }
+  ],
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 300
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/commercial/discover",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/commercial/cron",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/commercial/cron",
+      "schedule": "0 21 * * *"
+    }
   ]
 }

@@ -9,6 +9,11 @@ export interface ProductPreview {
   url: string | null;
   price: number | null;
   currency: string;
+  catalog_product_id?: string;
+  seller_id?: string;
+  seller_level?: string;
+  seller_trusted?: boolean;
+  comparable?: boolean;
   original_price?: number;
   category_id?: string;
   priceSource?: "CATALOG_OFFER" | "ITEM" | "SALE_PRICE";
@@ -101,6 +106,8 @@ export async function resolveProductPreview(id: string, type: string, read: Prev
     }
     if (item.id !== itemId || (type === "USER_PRODUCT" && (item.user_product_id !== id || String(item.seller_id) !== sellerId))
       || (type === "PRODUCT" && item.catalog_product_id !== id)) { preview.price = null; delete preview.original_price; delete preview.priceSource; delete preview.priceCheckedAt; return preview; }
+    if (typeof item.catalog_product_id === "string" && /^MLB\d+$/.test(item.catalog_product_id)) preview.catalog_product_id = item.catalog_product_id;
+    if (/^\d+$/.test(String(item.seller_id))) preview.seller_id = String(item.seller_id);
     if (typeof item.category_id === "string" && /^MLB\d+$/.test(item.category_id)) preview.category_id = item.category_id;
     preview.title = shortText(item.title) ?? preview.title;
     preview.image = picture(item) ?? preview.image;
@@ -114,6 +121,17 @@ export async function resolveProductPreview(id: string, type: string, read: Prev
     setPrice(preview, item.price, item.currency_id, "ITEM", item.original_price);
     if (preview.price === null) {
       try { const sale = await read(`/items/${itemId}/sale_price`); setPrice(preview, sale.amount, sale.currency_id, "SALE_PRICE", sale.regular_amount); } catch { /* Price unavailable. */ }
+    }
+    preview.comparable = !!preview.catalog_product_id && item.condition === "new"
+      && Array.isArray(item.variations) && item.variations.length <= 1 && preview.priceSource === "ITEM";
+    if (preview.seller_id) {
+      try {
+        const seller = await read('/users/' + preview.seller_id);
+        if (String(seller.id) === preview.seller_id && typeof seller.seller_reputation?.level_id === "string") {
+          preview.seller_level = seller.seller_reputation.level_id;
+          preview.seller_trusted = ["5_green", "4_light_green"].includes(preview.seller_level!);
+        }
+      } catch { /* Unknown reputation cannot qualify an offer. */ }
     }
     try {
       const description = await read(`/items/${itemId}/description`);
@@ -143,23 +161,28 @@ export async function configuredProductPreview(client: SupabaseClient, id: strin
   const cached = previews.get(key);
   if (cached && cached.expires > Date.now()) return cached.value;
   const value = (async () => {
-    const bearer = await accessToken(client);
-    const signal = AbortSignal.timeout(20000);
-    const result = await resolveProductPreview(id, type, async path => {
-      const response = await fetch("https://api.mercadolibre.com" + path, {
-        headers: { Authorization: "Bearer " + bearer, Accept: "application/json" }, signal,
-      });
-      if (response.status === 401) token = undefined;
-      if (!response.ok) {
-        console.warn(JSON.stringify({event:"PREVIEW_UPSTREAM_FAILED", id, type, path, status:response.status}));
-        throw new Error("PREVIEW_FETCH_FAILED");
-      }
-      return await response.json() as RecordValue;
-    });
+    const read = await configuredMeliReader(client);
+    const result = await resolveProductPreview(id, type, read);
     console.info(JSON.stringify({event:"PREVIEW_RESOLVED", id, type, hasTitle:result.title !== id, hasImage:Boolean(result.image), hasPrice:result.price !== null}));
     return result;
   })();
   if (previews.size >= 500) previews.delete(previews.keys().next().value!);
   previews.set(key, { expires: Date.now() + 120000, value });
   try { return await value; } catch (error) { previews.delete(key); throw error; }
+}
+
+export async function configuredMeliReader(client: SupabaseClient): Promise<PreviewReader> {
+    const bearer = await accessToken(client);
+    const signal = AbortSignal.timeout(20000);
+    return async path => {
+      const response = await fetch("https://api.mercadolibre.com" + path, {
+        headers: { Authorization: "Bearer " + bearer, Accept: "application/json" }, signal,
+      });
+      if (response.status === 401) token = undefined;
+      if (!response.ok) {
+        console.warn(JSON.stringify({event:"PREVIEW_UPSTREAM_FAILED", path, status:response.status}));
+        throw new Error("PREVIEW_FETCH_FAILED");
+      }
+      return await response.json() as RecordValue;
+    };
 }

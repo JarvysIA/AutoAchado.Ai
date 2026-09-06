@@ -23148,6 +23148,10 @@ async function runDiscoveryOrchestrator(input) {
   let transportFailureStreak = 0;
   const selected = input.plan.selectedCategories;
   for (let offset = 0; offset < selected.length && fatalErrorCode === null; offset += input.plan.config.concurrency) {
+    if (input.budgetMs !== void 0 && clock() - started >= input.budgetMs) {
+      fatalErrorCode = "DISCOVERY_TIME_BUDGET_EXCEEDED";
+      break;
+    }
     const batch = selected.slice(offset, offset + input.plan.config.concurrency);
     const attempts = await Promise.all(batch.map(async (category) => {
       try {
@@ -23422,52 +23426,6 @@ var init_live_smoke = __esm({
       code;
       details;
     };
-  }
-});
-
-// src/server/affiliate/coupon-service.ts
-var coupon_service_exports = {};
-__export(coupon_service_exports, {
-  activeCoupons: () => activeCoupons,
-  affiliateIntelligence: () => affiliateIntelligence,
-  couponRegistry: () => couponRegistry,
-  findBestCouponForProduct: () => findBestCouponForProduct
-});
-function activeCoupons(coupons = couponRegistry, now = Date.now()) {
-  return coupons.filter((c) => {
-    let official = false;
-    try {
-      const url = new URL(c.sourceUrl);
-      official = url.protocol === "https:" && !url.username && !url.password && !url.port && (url.hostname === "mercadolivre.com.br" || url.hostname.endsWith(".mercadolivre.com.br"));
-    } catch {
-    }
-    return c.active && official && !!c.code.trim() && Number.isFinite(c.amount) && c.amount > 0 && (c.discountType === "FIXED" || c.discountType === "PERCENT" && c.amount <= 100) && (c.minPurchase === void 0 || Number.isFinite(c.minPurchase) && c.minPurchase >= 0) && (c.maxDiscount === void 0 || Number.isFinite(c.maxDiscount) && c.maxDiscount > 0) && Date.parse(c.startsAt) <= now && Date.parse(c.expiresAt) > now && Date.parse(c.verifiedAt) <= now && Date.parse(c.verifiedAt) >= Date.parse(c.startsAt);
-  });
-}
-function findBestCouponForProduct(categoryId, price, coupons = couponRegistry, now = Date.now()) {
-  if (!Number.isFinite(price) || price <= 0) return null;
-  const eligible = activeCoupons(coupons, now).filter((c) => price >= (c.minPurchase ?? 0) && (c.categoryMatch?.includes("ALL") || /^MLB\d+$/.test(categoryId) && c.categoryMatch?.includes(categoryId)));
-  const saving = (c) => Math.min(
-    price,
-    c.maxDiscount ?? Infinity,
-    c.discountType === "PERCENT" ? price * c.amount / 100 : c.amount
-  );
-  return eligible.sort((a, b) => saving(b) - saving(a) || a.code.localeCompare(b.code))[0] ?? null;
-}
-function affiliateIntelligence(item) {
-  const valid = typeof item.price === "number" && Number.isFinite(item.price) && item.price > 0 && typeof item.original_price === "number" && Number.isFinite(item.original_price) && item.original_price > item.price;
-  const percent = valid ? (item.original_price - item.price) / item.original_price * 100 : 0;
-  return {
-    discount_percent: Math.round(percent),
-    has_advertised_discount: percent >= 5,
-    matched_coupon: item.currency === "BRL" ? findBestCouponForProduct(item.category_id ?? "", item.price ?? 0) : null
-  };
-}
-var couponRegistry;
-var init_coupon_service = __esm({
-  "src/server/affiliate/coupon-service.ts"() {
-    "use strict";
-    couponRegistry = [];
   }
 });
 
@@ -23777,12 +23735,12 @@ var init_operational = __esm({
         const repository = createDiscoveryPersistenceRepository(discoveryPersistenceClientFromSupabase(client));
         const now = (/* @__PURE__ */ new Date()).toISOString();
         const run = await repository.beginDiscoveryRun({ plan, scheduledBucket: now, startedAt: now, shardKey: "dashboard-" + randomUUID2() });
-        const result = await runDiscoveryOrchestrator({ plan, adapter: createMeliHighlightsDiscoveryAdapter({
+        const result = await runDiscoveryOrchestrator({ plan, budgetMs: 18e4, adapter: createMeliHighlightsDiscoveryAdapter({
           client: new MeliClient({ accessToken: rotation.accessToken, timeoutMs: 1e4 }),
           nowIso: () => (/* @__PURE__ */ new Date()).toISOString()
         }) });
         const persisted = await repository.persistDiscoveryOccurrences(run.runId, result.occurrences);
-        const status = result.fatalErrorCode ? "FAILED" : result.metrics.failedCategories > 0 ? "PARTIAL" : "COMPLETED";
+        const status = result.fatalErrorCode === "DISCOVERY_TIME_BUDGET_EXCEEDED" ? "PARTIAL" : result.fatalErrorCode ? "FAILED" : result.metrics.failedCategories > 0 ? "PARTIAL" : "COMPLETED";
         await repository.completeDiscoveryRun({ runId: run.runId, result, status, finishedAt: (/* @__PURE__ */ new Date()).toISOString() });
         return { runId: run.runId, status, persisted, selectedCategories: plan.selectedCategories.length };
       }
@@ -23793,6 +23751,7 @@ var init_operational = __esm({
 // src/server/discovery/product-preview.ts
 var product_preview_exports = {};
 __export(product_preview_exports, {
+  configuredMeliReader: () => configuredMeliReader,
   configuredProductPreview: () => configuredProductPreview,
   publicProductUrl: () => publicProductUrl,
   resolveProductPreview: () => resolveProductPreview,
@@ -23892,6 +23851,8 @@ async function resolveProductPreview(id, type, read) {
       delete preview.priceCheckedAt;
       return preview;
     }
+    if (typeof item.catalog_product_id === "string" && /^MLB\d+$/.test(item.catalog_product_id)) preview.catalog_product_id = item.catalog_product_id;
+    if (/^\d+$/.test(String(item.seller_id))) preview.seller_id = String(item.seller_id);
     if (typeof item.category_id === "string" && /^MLB\d+$/.test(item.category_id)) preview.category_id = item.category_id;
     preview.title = shortText(item.title) ?? preview.title;
     preview.image = picture(item) ?? preview.image;
@@ -23913,6 +23874,17 @@ async function resolveProductPreview(id, type, read) {
       try {
         const sale = await read(`/items/${itemId}/sale_price`);
         setPrice(preview, sale.amount, sale.currency_id, "SALE_PRICE", sale.regular_amount);
+      } catch {
+      }
+    }
+    preview.comparable = !!preview.catalog_product_id && item.condition === "new" && Array.isArray(item.variations) && item.variations.length <= 1 && preview.priceSource === "ITEM";
+    if (preview.seller_id) {
+      try {
+        const seller = await read("/users/" + preview.seller_id);
+        if (String(seller.id) === preview.seller_id && typeof seller.seller_reputation?.level_id === "string") {
+          preview.seller_level = seller.seller_reputation.level_id;
+          preview.seller_trusted = ["5_green", "4_light_green"].includes(preview.seller_level);
+        }
       } catch {
       }
     }
@@ -23945,20 +23917,8 @@ async function configuredProductPreview(client, id, type) {
   const cached = previews.get(key);
   if (cached && cached.expires > Date.now()) return cached.value;
   const value = (async () => {
-    const bearer = await accessToken(client);
-    const signal = AbortSignal.timeout(2e4);
-    const result = await resolveProductPreview(id, type, async (path) => {
-      const response = await fetch("https://api.mercadolibre.com" + path, {
-        headers: { Authorization: "Bearer " + bearer, Accept: "application/json" },
-        signal
-      });
-      if (response.status === 401) token = void 0;
-      if (!response.ok) {
-        console.warn(JSON.stringify({ event: "PREVIEW_UPSTREAM_FAILED", id, type, path, status: response.status }));
-        throw new Error("PREVIEW_FETCH_FAILED");
-      }
-      return await response.json();
-    });
+    const read = await configuredMeliReader(client);
+    const result = await resolveProductPreview(id, type, read);
     console.info(JSON.stringify({ event: "PREVIEW_RESOLVED", id, type, hasTitle: result.title !== id, hasImage: Boolean(result.image), hasPrice: result.price !== null }));
     return result;
   })();
@@ -23971,6 +23931,22 @@ async function configuredProductPreview(client, id, type) {
     throw error;
   }
 }
+async function configuredMeliReader(client) {
+  const bearer = await accessToken(client);
+  const signal = AbortSignal.timeout(2e4);
+  return async (path) => {
+    const response = await fetch("https://api.mercadolibre.com" + path, {
+      headers: { Authorization: "Bearer " + bearer, Accept: "application/json" },
+      signal
+    });
+    if (response.status === 401) token = void 0;
+    if (!response.ok) {
+      console.warn(JSON.stringify({ event: "PREVIEW_UPSTREAM_FAILED", path, status: response.status }));
+      throw new Error("PREVIEW_FETCH_FAILED");
+    }
+    return await response.json();
+  };
+}
 var shortText, token, pendingToken, previews;
 var init_product_preview = __esm({
   "src/server/discovery/product-preview.ts"() {
@@ -23978,6 +23954,323 @@ var init_product_preview = __esm({
     init_factory();
     shortText = (value, max = 240) => typeof value === "string" ? value.slice(0, max) : null;
     previews = /* @__PURE__ */ new Map();
+  }
+});
+
+// src/server/affiliate/coupon-service.ts
+var coupon_service_exports = {};
+__export(coupon_service_exports, {
+  activeCoupons: () => activeCoupons,
+  affiliateIntelligence: () => affiliateIntelligence,
+  couponRegistry: () => couponRegistry,
+  findBestCouponForProduct: () => findBestCouponForProduct
+});
+function activeCoupons(coupons = couponRegistry, now = Date.now()) {
+  return coupons.filter((c) => {
+    let official = false;
+    try {
+      const url = new URL(c.sourceUrl);
+      official = url.protocol === "https:" && !url.username && !url.password && !url.port && (url.hostname === "mercadolivre.com.br" || url.hostname.endsWith(".mercadolivre.com.br"));
+    } catch {
+    }
+    return c.active && official && !!c.code.trim() && Number.isFinite(c.amount) && c.amount > 0 && (c.discountType === "FIXED" || c.discountType === "PERCENT" && c.amount <= 100) && (c.minPurchase === void 0 || Number.isFinite(c.minPurchase) && c.minPurchase >= 0) && (c.maxDiscount === void 0 || Number.isFinite(c.maxDiscount) && c.maxDiscount > 0) && Date.parse(c.startsAt) <= now && Date.parse(c.expiresAt) > now && Date.parse(c.verifiedAt) <= now && Date.parse(c.verifiedAt) >= Date.parse(c.startsAt);
+  });
+}
+function findBestCouponForProduct(categoryId, price, coupons = couponRegistry, now = Date.now()) {
+  if (!Number.isFinite(price) || price <= 0) return null;
+  const eligible = activeCoupons(coupons, now).filter((c) => price >= (c.minPurchase ?? 0) && (c.categoryMatch?.includes("ALL") || /^MLB\d+$/.test(categoryId) && c.categoryMatch?.includes(categoryId)));
+  const saving = (c) => Math.min(
+    price,
+    c.maxDiscount ?? Infinity,
+    c.discountType === "PERCENT" ? price * c.amount / 100 : c.amount
+  );
+  return eligible.sort((a, b) => saving(b) - saving(a) || a.code.localeCompare(b.code))[0] ?? null;
+}
+function affiliateIntelligence(item) {
+  const valid = typeof item.price === "number" && Number.isFinite(item.price) && item.price > 0 && typeof item.original_price === "number" && Number.isFinite(item.original_price) && item.original_price > item.price;
+  const percent = valid ? (item.original_price - item.price) / item.original_price * 100 : 0;
+  return {
+    discount_percent: Math.round(percent),
+    has_advertised_discount: percent >= 5,
+    matched_coupon: item.currency === "BRL" ? findBestCouponForProduct(item.category_id ?? "", item.price ?? 0) : null
+  };
+}
+var couponRegistry;
+var init_coupon_service = __esm({
+  "src/server/affiliate/coupon-service.ts"() {
+    "use strict";
+    couponRegistry = [];
+  }
+});
+
+// src/server/commercial/ranking.ts
+function commercialProfile(title) {
+  const text3 = title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (/rastreador|rack de teto|bagageiro|mensalidade|assinatura/.test(text3))
+    return { group: "especializado", appeal: 20, ease: 15, reason: "Uso específico ou possível instalação/recorrência; fora do perfil amplo inicial." };
+  if (/aspirador/.test(text3)) return { group: "aspiracao", appeal: 90, ease: 85, reason: null };
+  if (/compressor|calibrador|inflador/.test(text3)) return { group: "pneus", appeal: 85, ease: 75, reason: null };
+  if (/carregador|suporte.*celular|cabo usb/.test(text3)) return { group: "celular", appeal: 85, ease: 85, reason: null };
+  if (/organizador|lixeira|protetor solar|quebra.sol/.test(text3)) return { group: "organizacao", appeal: 75, ease: 85, reason: null };
+  if (/microfibra|shampoo|cera|limpador|limpeza|vonixx|lavagem/.test(text3)) return { group: "limpeza", appeal: 65, ease: 85, reason: null };
+  if (/ferramenta|chave|lanterna|kit.*reparo/.test(text3)) return { group: "ferramentas", appeal: 75, ease: 75, reason: null };
+  return { group: "avaliar", appeal: 40, ease: 40, reason: null };
+}
+function rankProduct(preview, history, feedback = null, now = Date.now()) {
+  const profile = commercialProfile(preview.title);
+  const reasons = [], evidence = [];
+  let rejected = false;
+  const fail3 = (text3, hard = false) => {
+    reasons.push(text3);
+    rejected ||= hard;
+  };
+  const currentTime = Date.parse(preview.priceCheckedAt ?? "");
+  const complete = !!preview.title.trim() && !/^MLBU?\d+$/.test(preview.title.trim()) && !!safePreviewUrl(preview.image, true) && !!safePreviewUrl(preview.url) && typeof preview.price === "number" && Number.isFinite(preview.price) && preview.price > 0 && preview.currency === "BRL";
+  if (!complete) fail3("Faltam título, foto, preço em BRL ou link utilizável.");
+  if (!(currentTime <= now && currentTime >= now - DAY)) fail3("Preço precisa ser consultado novamente (validade de 24 horas).");
+  if (preview.status === "UNAVAILABLE") fail3("Oferta indisponível.", true);
+  if (!preview.comparable) fail3("Identidade, condição, variação ou contexto de preço ainda não confirmados.");
+  if (!preview.seller_trusted) fail3("Reputação do vendedor ainda não confirmada.");
+  if (preview.seller_level && !["5_green", "4_light_green"].includes(preview.seller_level)) fail3("Reputação do vendedor abaixo do mínimo.", true);
+  if (profile.reason) fail3(profile.reason, true);
+  if (profile.group === "avaliar") fail3("Utilidade e compatibilidade ampla precisam de avaliação editorial.");
+  if (feedback === "NOT_RELEVANT") fail3("Você marcou este produto como inadequado para o público.", true);
+  const today = new Date(now).toISOString().slice(0, 10);
+  const historical = history.filter((o) => {
+    const time = Date.parse(o.observed_at);
+    return o.comparable && o.trusted && o.currency === preview.currency && o.seller_id && typeof o.price === "number" && Number.isFinite(o.price) && o.price > 0 && time >= now - 30 * DAY && time < Date.parse(today);
+  });
+  const daily = /* @__PURE__ */ new Map();
+  for (const observation of historical) {
+    const day = observation.observed_at.slice(0, 10);
+    daily.set(day, Math.min(daily.get(day) ?? Infinity, observation.price));
+  }
+  const sellers = new Set(historical.map((o) => o.seller_id));
+  const span = historical.length ? (now - Math.min(...historical.map((o) => Date.parse(o.observed_at)))) / DAY : 0;
+  const reference = daily.size ? median([...daily.values()]) : null;
+  const discount = reference && preview.price ? (reference - preview.price) / reference * 100 : null;
+  const sufficient = daily.size >= 20 && span >= 27 && sellers.size >= 2;
+  if (!sufficient) fail3("Histórico insuficiente: exigimos 20 dias observados, janela de 27 dias e 2 vendedores em até 30 dias.");
+  else if (discount === null || discount < 10) fail3("Desconto histórico inferior a 10%.", true);
+  else evidence.push(Math.round(discount) + "% abaixo da mediana dos melhores preços diários observados.");
+  const demand = /* @__PURE__ */ new Map();
+  for (const observation of history) {
+    const time = Date.parse(observation.observed_at);
+    if (time <= now && time >= now - 14 * DAY && Number.isInteger(observation.position) && observation.position >= 1 && observation.position <= 20) {
+      const day = observation.observed_at.slice(0, 10);
+      demand.set(day, Math.min(demand.get(day) ?? 21, observation.position));
+    }
+  }
+  const strongDemand = demand.size >= 7 && median([...demand.values()]) <= 10;
+  if (!strongDemand) fail3("Demanda não confirmada: exigimos presença em 7 dias de ranking em 14 dias, com posição mediana até 10.");
+  else evidence.push("Presença recorrente entre mais vendidos em " + demand.size + " dias; indício de demanda, sem volume de vendas comprovado.");
+  if (preview.seller_trusted) evidence.push("Vendedor com reputação verde confirmada.");
+  evidence.push("Preço do produto sem frete; confira entrega, pagamento e compatibilidade antes de divulgar.");
+  const demandScore = strongDemand ? Math.min(100, 60 + demand.size * 2) : 0;
+  const discountScore = sufficient && discount !== null ? Math.max(0, Math.min(100, discount * 3)) : 0;
+  const commercial = preview.price && preview.price <= 150 ? 80 : preview.price && preview.price <= 300 ? 60 : 30;
+  const score = Math.round(demandScore * 0.3 + discountScore * 0.25 + profile.appeal * 0.15 + profile.ease * 0.15 + (preview.seller_trusted ? 100 : 0) * 0.1 + commercial * 0.05);
+  return {
+    version: RANKING_VERSION,
+    state: rejected ? "REJECTED" : reasons.length ? "OBSERVING" : "APPROVED",
+    score,
+    group: profile.group,
+    reasons,
+    evidence,
+    reference_price: reference,
+    historical_discount_percent: sufficient && discount !== null ? Math.round(discount) : null,
+    history_days: daily.size,
+    seller_count: sellers.size,
+    demand_days: demand.size,
+    checked_at: new Date(now).toISOString()
+  };
+}
+function selectDiverse(entries, limit = 20) {
+  const selected = [], groups = /* @__PURE__ */ new Map(), identities = /* @__PURE__ */ new Set();
+  for (const entry of [...entries].sort((a, b) => b.rank.score - a.rank.score || a.identity_key.localeCompare(b.identity_key))) {
+    if (entry.rank.state !== "APPROVED" || identities.has(entry.identity_key) || (groups.get(entry.rank.group) ?? 0) >= 3) continue;
+    identities.add(entry.identity_key);
+    groups.set(entry.rank.group, (groups.get(entry.rank.group) ?? 0) + 1);
+    selected.push(entry);
+    if (selected.length >= limit) break;
+  }
+  return selected;
+}
+var RANKING_VERSION, DAY, median;
+var init_ranking = __esm({
+  "src/server/commercial/ranking.ts"() {
+    "use strict";
+    init_product_preview();
+    RANKING_VERSION = "commercial-v1";
+    DAY = 864e5;
+    median = (values) => {
+      const sorted = [...values].sort((a, b) => a - b);
+      const half = Math.floor(sorted.length / 2);
+      return sorted.length % 2 ? sorted[half] : (sorted[half - 1] + sorted[half]) / 2;
+    };
+  }
+});
+
+// src/server/commercial/service.ts
+var service_exports = {};
+__export(service_exports, {
+  collectCommercialEvidence: () => collectCommercialEvidence,
+  commercialOpportunities: () => commercialOpportunities,
+  productIdentity: () => productIdentity,
+  saveCommercialFeedback: () => saveCommercialFeedback
+});
+function checked(result) {
+  if (result.error) throw new Error("COMMERCIAL_STORAGE_UNAVAILABLE");
+  return result.data;
+}
+function productIdentity(id, type, preview) {
+  return preview.comparable && preview.catalog_product_id ? "catalog:" + preview.catalog_product_id + ":new:BRL:public" : type + ":" + id;
+}
+async function saveObservation(client, id, type, preview, position) {
+  const observed = preview.priceCheckedAt ?? (/* @__PURE__ */ new Date()).toISOString();
+  checked(await client.from("commercial_observations").upsert({
+    identity_key: productIdentity(id, type, preview),
+    source_key: type + ":" + id,
+    observed_at: observed,
+    observed_day: observed.slice(0, 10),
+    price: preview.price,
+    currency: preview.currency,
+    seller_id: preview.seller_id ?? null,
+    comparable: preview.comparable === true,
+    trusted: preview.seller_trusted === true,
+    position
+  }, { onConflict: "source_key,observed_at", ignoreDuplicates: true }));
+}
+async function collectCommercialEvidence(client) {
+  const runId = checked(await client.rpc("begin_commercial_collection"));
+  if (!runId) return { status: "BUSY", collected: 0, failed: 0 };
+  let collected = 0, failed = 0;
+  const started = Date.now();
+  try {
+    checked(await client.rpc("seed_commercial_watchlist"));
+    const candidates = checked(await client.from("commercial_watchlist").select("*").eq("monitor", true).order("last_collected_at", { ascending: true, nullsFirst: true }).order("source_key").limit(24));
+    const liveRankings = /* @__PURE__ */ new Map();
+    const positions = (category) => {
+      if (!liveRankings.has(category)) liveRankings.set(category, (async () => {
+        try {
+          const categoryRead = await configuredMeliReader(client);
+          const data = await categoryRead("/highlights/MLB/category/" + category);
+          const values = /* @__PURE__ */ new Map();
+          for (const entry of Array.isArray(data.content) ? data.content : []) {
+            if (typeof entry.id === "string" && Number.isInteger(entry.position) && entry.position >= 1 && entry.position <= 20)
+              values.set(entry.type + ":" + entry.id, entry.position);
+          }
+          return values;
+        } catch {
+          return /* @__PURE__ */ new Map();
+        }
+      })());
+      return liveRankings.get(category);
+    };
+    const queue = [...candidates];
+    async function worker() {
+      while (queue.length && Date.now() - started < 18e4) {
+        const row = queue.shift();
+        try {
+          const preview = await configuredProductPreview(client, row.product_id, row.type);
+          const position = (await positions(row.category_id)).get(row.source_key) ?? null;
+          await saveObservation(client, row.product_id, row.type, preview, position);
+          if (preview.comparable && preview.catalog_product_id && Date.now() - started < 12e4) {
+            try {
+              const read = await configuredMeliReader(client);
+              const offers = await read("/products/" + preview.catalog_product_id + "/items?limit=3");
+              for (const offer of (Array.isArray(offers.results) ? offers.results : []).slice(0, 3)) {
+                if (typeof offer.item_id !== "string" || !/^MLB\d+$/.test(offer.item_id)) continue;
+                const extra = await configuredProductPreview(client, offer.item_id, "ITEM");
+                if (extra.catalog_product_id === preview.catalog_product_id && extra.comparable)
+                  await saveObservation(client, offer.item_id, "ITEM", extra, null);
+              }
+            } catch {
+            }
+          }
+          const profile = commercialProfile(preview.title);
+          const unavailable = !preview.price && preview.title === row.product_id ? (row.unavailable_attempts ?? 0) + 1 : 0;
+          checked(await client.from("commercial_watchlist").update({
+            preview,
+            identity_key: productIdentity(row.product_id, row.type, preview),
+            last_collected_at: (/* @__PURE__ */ new Date()).toISOString(),
+            unavailable_attempts: unavailable,
+            monitor: profile.group !== "especializado" && unavailable < 3
+          }).eq("source_key", row.source_key));
+          collected++;
+        } catch {
+          failed++;
+        }
+      }
+    }
+    await Promise.all([worker(), worker(), worker()]);
+    failed += queue.length;
+    const status = failed ? "PARTIAL" : "COMPLETED";
+    checked(await client.from("commercial_collection_runs").update({ status, collected, failed, finished_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", runId));
+    return { status, collected, failed };
+  } catch (error) {
+    await client.from("commercial_collection_runs").update({ status: "FAILED", collected, failed, finished_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", runId);
+    throw error;
+  }
+}
+async function commercialOpportunities(client, view, offset = 0) {
+  const watches = checked(await client.from("commercial_watchlist").select("*").order("monitor", { ascending: false }).order("last_collected_at", { ascending: false, nullsFirst: false }).limit(200));
+  const feedback = watches.length ? checked(await client.from("commercial_feedback").select("identity_key,action").in("identity_key", [...new Set(watches.map((w) => w.identity_key))])) : [];
+  const now = Date.now(), history = [];
+  if (watches.length) for (let page = 0; ; page++) {
+    const rows = checked(await client.from("commercial_observations").select("identity_key,observed_at,price,currency,seller_id,comparable,trusted,position").in("identity_key", [...new Set(watches.map((w) => w.identity_key))]).gte("observed_at", new Date(now - 30 * 864e5).toISOString()).order("source_key").order("observed_at").range(page * 1e3, page * 1e3 + 999));
+    history.push(...rows);
+    if (rows.length < 1e3) break;
+    if (page >= 99) throw new Error("COMMERCIAL_HISTORY_LIMIT");
+  }
+  const allEvaluated = watches.filter((w) => w.preview?.title).map((w) => {
+    const action = feedback.find((f) => f.identity_key === w.identity_key)?.action ?? null;
+    return {
+      identity_key: w.identity_key,
+      snapshot: w.snapshot,
+      preview: { ...w.preview, ...affiliateIntelligence(w.preview) },
+      feedback: action,
+      rank: rankProduct(w.preview, history.filter((h) => h.identity_key === w.identity_key), action, now)
+    };
+  });
+  const order = { APPROVED: 0, OBSERVING: 1, REJECTED: 2 };
+  const sorted = allEvaluated.sort((a, b) => order[a.rank.state] - order[b.rank.state] || b.rank.score - a.rank.score || (a.preview.price ?? Infinity) - (b.preview.price ?? Infinity));
+  const evaluated = sorted.filter((entry, index, rows) => rows.findIndex((e) => e.identity_key === entry.identity_key) === index);
+  const approved = selectDiverse(evaluated);
+  const eligible = evaluated.filter((e) => e.rank.state === view).sort((a, b) => b.rank.score - a.rank.score || a.identity_key.localeCompare(b.identity_key));
+  const unique = eligible.filter((e, i, rows) => rows.findIndex((r) => r.identity_key === e.identity_key) === i);
+  const selected = view === "APPROVED" ? approved : unique;
+  const runs = checked(await client.from("commercial_collection_runs").select("status,started_at,finished_at,collected,failed").order("started_at", { ascending: false }).limit(1));
+  return {
+    entries: selected.slice(offset, offset + 12),
+    total: selected.length,
+    offset,
+    hasMore: offset + 12 < selected.length,
+    counts: {
+      approved: approved.length,
+      observing: new Set(evaluated.filter((e) => e.rank.state === "OBSERVING").map((e) => e.identity_key)).size,
+      rejected: new Set(evaluated.filter((e) => e.rank.state === "REJECTED").map((e) => e.identity_key)).size,
+      monitored: watches.filter((w) => w.monitor).length
+    },
+    lastCollection: runs?.[0] ?? null,
+    checkedAt: new Date(now).toISOString(),
+    historyPolicy: "20 dias observados em 30, janela mínima de 27 dias, 2 vendedores; desconto mínimo de 10%."
+  };
+}
+async function saveCommercialFeedback(client, id, type, action) {
+  const row = checked(await client.from("commercial_watchlist").select("identity_key").eq("source_key", type + ":" + id).maybeSingle());
+  if (!row) throw new Error("COMMERCIAL_PRODUCT_NOT_FOUND");
+  checked(await client.from("commercial_feedback").upsert({ identity_key: row.identity_key, action, updated_at: (/* @__PURE__ */ new Date()).toISOString() }));
+  if (action === "INTERESTED" || action === "RESET") checked(await client.from("commercial_watchlist").update({ monitor: true, unavailable_attempts: 0 }).eq("identity_key", row.identity_key));
+  if (action === "NOT_RELEVANT") checked(await client.from("commercial_watchlist").update({ monitor: false }).eq("identity_key", row.identity_key));
+  return { saved: true };
+}
+var init_service = __esm({
+  "src/server/commercial/service.ts"() {
+    "use strict";
+    init_product_preview();
+    init_coupon_service();
+    init_ranking();
   }
 });
 
@@ -24188,10 +24481,57 @@ function dashboardPage(props) {
 <div class="card">Última Sincronização<strong id="synced">—</strong><small>Atualização automática a cada 30 segundos</small></div></section>
 <section class="panel"><h2>Matriz de Expansão (10 Verticais Estratégicas)</h2><ol class="matrix">${verticals.map(([name, id], i) => `<li>${i + 1}. ${name}<span>${id} · ${i === 0 ? "ATIVO (144 Cats)" : "PLANEJADO"}</span></li>`).join("")}</ol></section>
 <section class="panel"><h2>Painel de Controle</h2><div class="controls"><button id="sweep">🚀 Executar Varredura Persistida (0B3D-C)</button><button id="smoke">⚡ Teste Smoke (2 cats)</button><button id="refresh">🔄 Atualizar Dados</button></div><p id="message" role="status" aria-live="polite"></p></section>
-<section class="panel"><h2>Produtos encontrados</h2><p>Prévia dos destaques minerados: foto, descrição e preço informado pelo Mercado Livre. Preço e disponibilidade podem mudar; os destaques ainda não representam descontos validados.</p><h2>Central de Cupons Ativos</h2><div id="coupons" class="coupon-bar" aria-live="polite">Consultando campanhas verificadas…</div><p>Cupons sugeridos conforme categoria e valor. Confira as restrições e a aplicação no checkout. Para divulgar com comissão, cole em cada produto o link criado no gerador oficial de afiliados do Mercado Livre. Os links ficam salvos somente neste navegador.</p><div class="filters" aria-label="Filtrar produtos"><button id="filter-all" aria-pressed="true">Todas as ofertas completas</button><button id="filter-discount" aria-pressed="false">🔥 Desconto anunciado ≥ 5%</button><button id="filter-tier" aria-pressed="false">⚡ Prioridade Tier A</button><button id="filter-coupon" aria-pressed="false">🏷️ Cupom sugerido</button><button id="filter-incomplete" aria-pressed="false">Registros incompletos</button></div><p id="copy-status" role="status" aria-live="polite"></p><textarea id="manual-copy" hidden readonly aria-label="Texto para copiar manualmente"></textarea><p id="results-summary"></p><div id="snapshots" class="results" aria-label="Produtos minerados"></div><button id="more" hidden>Mostrar mais produtos</button></section></main>
+<section class="panel"><h2>Melhores ofertas para divulgar</h2><p>Desconto histórico + demanda recorrente + confiança. Uma oferta só entra após cumprir todos os requisitos. Máximo de 20 ofertas, até 3 por grupo.</p><div class="controls"><button id="collect-evidence">📊 Coletar evidências agora</button><button id="rank-APPROVED" aria-pressed="true">Aprovadas</button><button id="rank-OBSERVING" aria-pressed="false">Em observação</button><button id="rank-REJECTED" aria-pressed="false">Não aprovadas</button></div><p id="commercial-status" role="status" aria-live="polite"></p><p id="copy-status" role="status" aria-live="polite"></p><textarea id="manual-copy" hidden readonly aria-label="Texto para copiar manualmente"></textarea><p>Para copiar a divulgação, cole no produto o link criado pelo gerador oficial de afiliados.</p><p id="commercial-summary"></p><div id="commercial-results" class="results"></div><button id="commercial-more" hidden>Mostrar mais desta seleção</button></section><details id="raw-products" class="panel"><summary>Explorar todos os registros minerados (sem aprovação comercial)</summary><section><h2>Produtos encontrados</h2><p>Prévia dos destaques minerados: foto, descrição e preço informado pelo Mercado Livre. Preço e disponibilidade podem mudar; os destaques ainda não representam descontos validados.</p><h2>Central de Cupons Ativos</h2><div id="coupons" class="coupon-bar" aria-live="polite">Consultando campanhas verificadas…</div><p>Cupons sugeridos conforme categoria e valor. Confira as restrições e a aplicação no checkout. Para divulgar com comissão, cole em cada produto o link criado no gerador oficial de afiliados do Mercado Livre. Os links ficam salvos somente neste navegador.</p><div class="filters" aria-label="Filtrar produtos"><button id="filter-all" aria-pressed="true">Todas as ofertas completas</button><button id="filter-discount" aria-pressed="false">🔥 Desconto anunciado ≥ 5%</button><button id="filter-tier" aria-pressed="false">⚡ Prioridade Tier A</button><button id="filter-coupon" aria-pressed="false">🏷️ Cupom sugerido</button><button id="filter-incomplete" aria-pressed="false">Registros incompletos</button></div><p id="results-summary"></p><div id="snapshots" class="results" aria-label="Produtos minerados"></div><button id="more" hidden>Mostrar mais produtos</button></section></details></main>
 <script>
 const el = id => document.getElementById(id);
 let busy = false;
+let commercialView = 'APPROVED', commercialOffset = 0, commercialRevision = 0, collecting = false;
+async function loadCommercial(append = false) {
+  const version=++commercialRevision, view=commercialView, offset=append?commercialOffset:0;
+  try {
+    const data=await request('/api/commercial/opportunities?view='+view+'&offset='+offset);
+    if(version!==commercialRevision) return;
+    if(!append) el('commercial-results').replaceChildren();
+    commercialOffset=offset+data.entries.length;
+    el('commercial-more').hidden=!data.hasMore;
+    el('commercial-summary').textContent=data.counts.approved+' aprovadas · '+data.counts.observing+' em observação · '+data.counts.rejected+' não aprovadas · '+data.counts.monitored+' monitoradas. '+(data.lastCollection?'Última coleta: '+date(data.lastCollection.started_at)+' · '+data.lastCollection.status+' · '+data.lastCollection.collected+' consultados.':'A coleta de histórico ainda não começou.');
+    for(const entry of data.entries) {
+      const card=textNode('article','','product-card');
+      entry.preview.commercial=entry.rank;
+      fillCard(card,entry.snapshot,entry.preview);
+      const body=textNode('div','','product-body');
+      body.append(textNode('strong',(entry.rank.state==='APPROVED'?'✅ Aprovada':entry.rank.state==='OBSERVING'?'⏳ Em observação':'Não aprovada')+' · Pontuação '+entry.rank.score+'/100','badge'));
+      body.append(textNode('p',entry.rank.history_days+' dias de preços comparáveis · '+entry.rank.seller_count+' vendedores · '+entry.rank.demand_days+' dias entre mais vendidos.'));
+      if(entry.rank.historical_discount_percent!==null) body.append(textNode('p',entry.rank.historical_discount_percent+'% de desconto histórico · Referência '+money(entry.rank.reference_price)));
+      for(const reason of entry.rank.reasons) body.append(textNode('p','• '+reason));
+      for(const reason of entry.rank.evidence) body.append(textNode('p',reason,'product-meta'));
+      const feedback=textNode('div','','controls');
+      for(const [action,label] of [['INTERESTED','Interessante'],['SHARED','Divulguei'],['NOT_RELEVANT','Não serve para meu público'],['RESET','Limpar avaliação']]) {
+        const button=textNode('button',(entry.feedback===action?'✓ ':'')+label);
+        button.addEventListener('click',async()=>{
+          button.disabled=true;
+          try {await request('/api/commercial/feedback?id='+encodeURIComponent(entry.snapshot.product_id)+'&type='+encodeURIComponent(entry.snapshot.type)+'&action='+action,'POST');await loadCommercial();}
+          catch(error){el('commercial-status').textContent=error.message;} finally{button.disabled=false;}
+        });feedback.append(button);
+      }
+      body.append(feedback);card.append(body);el('commercial-results').append(card);
+    }
+    if(!data.total) el('commercial-results').append(textNode('p',view==='APPROVED'?'Ainda não há ofertas com todas as evidências exigidas. Consulte Em observação para acompanhar o histórico.':'Nenhum produto nesta seleção.'));
+  } catch {el('commercial-status').textContent='Não foi possível carregar o ranking comercial. Tente atualizar os dados.';}
+}
+for(const view of ['APPROVED','OBSERVING','REJECTED']) el('rank-'+view).addEventListener('click',()=>{
+  commercialView=view;
+  for(const other of ['APPROVED','OBSERVING','REJECTED']) el('rank-'+other).setAttribute('aria-pressed',String(view===other));
+  loadCommercial();
+});
+el('commercial-more').addEventListener('click',()=>loadCommercial(true));
+el('collect-evidence').addEventListener('click',async()=>{
+  if(collecting) return; collecting=true;el('collect-evidence').disabled=true;
+  el('commercial-status').textContent='Coletando preços e demanda. O lote pode levar alguns minutos; as evidências ficam salvas no banco.';
+  try {const result=await request('/api/commercial/collect','POST');el('commercial-status').textContent='Coleta: '+result.status+' · '+result.collected+' consultados · '+result.failed+' falhas. Coleta concluída não significa oferta aprovada.';await loadCommercial();}
+  catch(error){el('commercial-status').textContent=error.message;}finally{collecting=false;el('collect-evidence').disabled=false;}
+});
+el('raw-products').addEventListener('toggle',()=>{if(el('raw-products').open && !visible && !loading) showMore();});
 const date = value => new Date(value).toLocaleString('pt-BR');
 async function request(path, method = 'GET') {
   const response = await fetch(path, { method, cache: 'no-store', credentials: 'same-origin' });
@@ -24239,6 +24579,7 @@ function productCopy(snapshot, preview, link) {
     lines.push('Condições: ' + coupon.restrictions + (coupon.minPurchase ? ' · Mínimo ' + money(coupon.minPurchase) : '') + (coupon.maxDiscount ? ' · Limite ' + money(coupon.maxDiscount) : '') + ' · Até ' + date(coupon.expiresAt));
     lines.push('Confirme a elegibilidade e o desconto no checkout.');
   }
+  if (preview.commercial?.state === 'APPROVED') lines.push('📉 ' + preview.commercial.historical_discount_percent + '% abaixo da referência histórica observada de ' + money(preview.commercial.reference_price) + '.');
   lines.push('🛒 ' + affiliateUrl(link), 'Preço e estoque podem mudar. Confira a oferta e aproveite! 🛒');
   return lines.join('\\n');
 }
@@ -24383,7 +24724,7 @@ async function refresh() {
   visible = 0; loaded = []; el('snapshots').replaceChildren();
   el('results-summary').textContent = snapshots.length + ' produtos distintos nos ' + data.snapshots.length + ' snapshots recentes.';
   if (!snapshots.length) el('snapshots').append(textNode('p', 'Nenhum produto persistido ainda.'));
-  await showMore();
+  if (el('raw-products').open) await showMore();
 }
 el('more').addEventListener('click', () => showMore());
 async function act(action) {
@@ -24395,7 +24736,7 @@ async function act(action) {
   try {
     let result;
     if (action !== 'refresh') result = await request('/api/discovery/' + action, 'POST');
-    await Promise.all([refresh(), loadCoupons()]);
+    await Promise.all([refresh(), loadCoupons(), loadCommercial()]);
     el('message').textContent = result ? 'Execução: ' + result.status + ' · ' + result.persisted + ' snapshots persistidos.' : 'Dados sincronizados.';
   } catch (error) { el('message').textContent = error.message; }
   finally { busy = false; document.querySelectorAll('button').forEach(button => button.disabled = false); }
@@ -24605,6 +24946,71 @@ async function handleRequest(request, response, overrides = {}) {
   const dependencies = { ...DEFAULT_DEPENDENCIES, ...overrides };
   const url = requestUrl(request);
   const method = request.method ?? "GET";
+  if (url.pathname.startsWith("/api/commercial/")) {
+    try {
+      const collecting = url.pathname === "/api/commercial/collect";
+      const discovering = url.pathname === "/api/commercial/discover";
+      const cron = discovering || url.pathname === "/api/commercial/cron";
+      const feedback = url.pathname === "/api/commercial/feedback";
+      const listing = url.pathname === "/api/commercial/opportunities";
+      if (!collecting && !cron && !feedback && !listing) {
+        sendJson(response, 404, { errorCode: "NOT_FOUND" });
+        return;
+      }
+      if (method !== (collecting || feedback ? "POST" : "GET")) {
+        sendJson(response, 405, { errorCode: "METHOD_NOT_ALLOWED" });
+        return;
+      }
+      if (cron) {
+        const secret = process.env.CRON_SECRET;
+        if (!secret || request.headers.authorization !== "Bearer " + secret) {
+          sendJson(response, 401, { errorCode: "AUTHORIZATION_REQUIRED" });
+          return;
+        }
+      } else {
+        const config = dependencies.loadAppConfig();
+        const session = readAuthorizationSession(request.headers.cookie, config.sessionSecret);
+        if (!session || session.userId !== 296984475) {
+          sendJson(response, 401, { errorCode: "AUTHORIZATION_REQUIRED" });
+          return;
+        }
+        if ((collecting || feedback) && request.headers.origin !== new URL(config.redirectUri).origin) {
+          sendJson(response, 403, { errorCode: "ORIGIN_NOT_ALLOWED" });
+          return;
+        }
+      }
+      if (discovering) {
+        const { runConfiguredDiscoveryLiveSmoke: runConfiguredDiscoveryLiveSmoke3 } = await Promise.resolve().then(() => (init_operational(), operational_exports));
+        sendJson(response, 200, await runConfiguredDiscoveryLiveSmoke3("FULL_SWEEP"));
+        return;
+      }
+      const { createOperationalDiscoveryAdapter: createOperationalDiscoveryAdapter2 } = await Promise.resolve().then(() => (init_operational(), operational_exports));
+      const client = createOperationalDiscoveryAdapter2().client;
+      const service = await Promise.resolve().then(() => (init_service(), service_exports));
+      if (collecting || cron) {
+        sendJson(response, 200, await service.collectCommercialEvidence(client));
+        return;
+      }
+      if (feedback) {
+        const id = url.searchParams.get("id") ?? "", type = url.searchParams.get("type") ?? "", action = url.searchParams.get("action") ?? "";
+        if (!(type === "USER_PRODUCT" ? /^MLBU[0-9]{1,20}$/.test(id) : ["ITEM", "PRODUCT"].includes(type) && /^MLB[0-9]{1,20}$/.test(id)) || !["SHARED", "INTERESTED", "NOT_RELEVANT", "RESET"].includes(action)) {
+          sendJson(response, 400, { errorCode: "INVALID_FEEDBACK" });
+          return;
+        }
+        sendJson(response, 200, await service.saveCommercialFeedback(client, id, type, action));
+        return;
+      }
+      const view = url.searchParams.get("view") ?? "APPROVED", offset = Number(url.searchParams.get("offset") ?? 0);
+      if (!["APPROVED", "OBSERVING", "REJECTED"].includes(view) || !Number.isSafeInteger(offset) || offset < 0 || offset > 200) {
+        sendJson(response, 400, { errorCode: "INVALID_VIEW" });
+        return;
+      }
+      sendJson(response, 200, await service.commercialOpportunities(client, view, offset));
+    } catch {
+      sendJson(response, 503, { errorCode: "COMMERCIAL_UNAVAILABLE" });
+    }
+    return;
+  }
   if (["/api/affiliate/coupons", "/api/discovery/preview", "/api/discovery/latest-snapshots", "/api/discovery/smoke", "/api/discovery/sweep"].includes(url.pathname)) {
     try {
       const config = dependencies.loadAppConfig();

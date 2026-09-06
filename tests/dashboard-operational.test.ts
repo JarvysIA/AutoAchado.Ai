@@ -5,10 +5,10 @@ import { dashboardPage } from "../src/ui/dashboard.js";
 describe("operational dashboard browser script", () => {
   it("renders persisted rows as text, refreshes count and posts both actions", async () => {
     const elements = new Map<string, any>();
-    const node = () => ({ textContent: "", disabled: false, children: [] as any[], handlers: {} as any, value: "", hidden:false, focus() {}, select() {}, setAttribute() {},
+    const node = () => ({ textContent: "", disabled: false, children: [] as any[], handlers: {} as any, value: "", hidden:false, open:true, focus() {}, select() {}, setAttribute() {},
       append(child: any) { this.children.push(child); }, replaceChildren() { this.children = []; },
       addEventListener(event: string, handler: any) { this.handlers[event] = handler; } });
-    for (const id of ["count", "synced", "snapshots", "message", "sweep", "smoke", "refresh", "more", "results-summary", "coupons", "copy-status", "manual-copy", ...["all","discount","tier","coupon","incomplete"].map(f => "filter-" + f)]) elements.set(id, node());
+    for (const id of ["count", "synced", "snapshots", "message", "sweep", "smoke", "refresh", "more", "results-summary", "raw-products", "commercial-results", "commercial-status", "commercial-summary", "commercial-more", "collect-evidence", "rank-APPROVED", "rank-OBSERVING", "rank-REJECTED", "coupons", "copy-status", "manual-copy", ...["all","discount","tier","coupon","incomplete"].map(f => "filter-" + f)]) elements.set(id, node());
     const calls: any[] = [];
     const copied: string[] = [];
     const storage = new Map<string,string>();
@@ -18,11 +18,12 @@ describe("operational dashboard browser script", () => {
         calls.push({path, options});
         return { ok: true, json: async () => path.endsWith("latest-snapshots") ? {
           total: 345, syncedAt: "2026-09-05T00:00:00Z", snapshots: [{product_id:"MLBU999",type:"USER_PRODUCT"}, { product_id: "MLB123", type:"ITEM", priority_tier:"A", observed_at: "2026-09-05T00:00:00Z" }]
-        } : path.endsWith("/coupons") ? {coupons:[]} : path.includes("MLBU999") ? {title:"MLBU999",url:"https://www.mercadolivre.com.br/up/MLBU999"} : path.includes("/preview?") ? { title: "<script>alert(1)</script>", url: "https://produto.mercadolivre.com.br/MLB-123-_JM", price: 123, original_price: 150, currency: "BRL", image:"https://http2.mlstatic.com/test.jpg", status: "AVAILABLE" } : { status: "COMPLETED", persisted: 2 } };
+        } : path.includes("/commercial/opportunities") ? {entries:[],counts:{approved:0,observing:0,rejected:0,monitored:0},total:0,hasMore:false,lastCollection:null} : path.endsWith("/coupons") ? {coupons:[]} : path.includes("MLBU999") ? {title:"MLBU999",url:"https://www.mercadolivre.com.br/up/MLBU999"} : path.includes("/preview?") ? { title: "<script>alert(1)</script>", url: "https://produto.mercadolivre.com.br/MLB-123-_JM", price: 123, original_price: 150, currency: "BRL", image:"https://http2.mlstatic.com/test.jpg", status: "AVAILABLE" } : { status: "COMPLETED", persisted: 2 } };
       } });
     const html = dashboardPage({authorized: true, userId: "296984475"});
     new Script(html.match(/<script>([\s\S]*?)<\/script>/)![1]!).runInContext(context);
     await new Promise(resolve => setImmediate(resolve));
+    expect(elements.get("commercial-results").children[0].textContent).toContain("Ainda não há ofertas");
     expect(elements.get("count").textContent).toBe("345");
     expect(elements.get("snapshots").children[0].children[1].children[0].textContent).toBe("<script>alert(1)</script>");
     expect(elements.get("results-summary").textContent).toContain("1 completos · 1 incompletos");

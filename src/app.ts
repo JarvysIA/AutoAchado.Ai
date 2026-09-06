@@ -239,6 +239,41 @@ export async function handleRequest(
   const url = requestUrl(request);
   const method = request.method ?? "GET";
 
+  if (url.pathname.startsWith("/api/commercial/")) {
+    try {
+      const collecting=url.pathname === "/api/commercial/collect";
+      const discovering=url.pathname === "/api/commercial/discover";
+      const cron=discovering || url.pathname === "/api/commercial/cron";
+      const feedback=url.pathname === "/api/commercial/feedback";
+      const listing=url.pathname === "/api/commercial/opportunities";
+      if(!collecting && !cron && !feedback && !listing) { sendJson(response,404,{errorCode:"NOT_FOUND"}); return; }
+      if(method !== (collecting || feedback ? "POST" : "GET")) {sendJson(response,405,{errorCode:"METHOD_NOT_ALLOWED"});return;}
+      if(cron) {
+        const secret=process.env.CRON_SECRET;
+        if(!secret || request.headers.authorization !== "Bearer "+secret) {sendJson(response,401,{errorCode:"AUTHORIZATION_REQUIRED"});return;}
+      } else {
+        const config=dependencies.loadAppConfig();
+        const session=readAuthorizationSession(request.headers.cookie,config.sessionSecret);
+        if(!session || session.userId!==296984475) {sendJson(response,401,{errorCode:"AUTHORIZATION_REQUIRED"});return;}
+        if((collecting || feedback) && request.headers.origin!==new URL(config.redirectUri).origin) {sendJson(response,403,{errorCode:"ORIGIN_NOT_ALLOWED"});return;}
+      }
+      if(discovering) { const {runConfiguredDiscoveryLiveSmoke}=await import("./server/discovery/operational.js");sendJson(response,200,await runConfiguredDiscoveryLiveSmoke("FULL_SWEEP"));return;}
+      const {createOperationalDiscoveryAdapter}=await import("./server/discovery/operational.js");
+      const client=createOperationalDiscoveryAdapter().client;
+      const service=await import("./server/commercial/service.js");
+      if(collecting || cron) {sendJson(response,200,await service.collectCommercialEvidence(client));return;}
+      if(feedback) {
+        const id=url.searchParams.get('id')??'',type=url.searchParams.get('type')??'',action=url.searchParams.get('action')??'';
+        if(!(type==='USER_PRODUCT' ? /^MLBU[0-9]{1,20}$/.test(id) : ['ITEM','PRODUCT'].includes(type) && /^MLB[0-9]{1,20}$/.test(id))
+          || !['SHARED','INTERESTED','NOT_RELEVANT','RESET'].includes(action)) {sendJson(response,400,{errorCode:'INVALID_FEEDBACK'});return;}
+        sendJson(response,200,await service.saveCommercialFeedback(client,id,type,action));return;
+      }
+      const view=url.searchParams.get('view')??'APPROVED',offset=Number(url.searchParams.get('offset')??0);
+      if(!['APPROVED','OBSERVING','REJECTED'].includes(view) || !Number.isSafeInteger(offset) || offset<0 || offset>200) {sendJson(response,400,{errorCode:'INVALID_VIEW'});return;}
+      sendJson(response,200,await service.commercialOpportunities(client,view,offset));
+    } catch {sendJson(response,503,{errorCode:'COMMERCIAL_UNAVAILABLE'});}
+    return;
+  }
   if (["/api/affiliate/coupons", "/api/discovery/preview", "/api/discovery/latest-snapshots", "/api/discovery/smoke", "/api/discovery/sweep"].includes(url.pathname)) {
     try {
       const config = dependencies.loadAppConfig();

@@ -25,10 +25,57 @@ export function dashboardPage(props: DashboardProps): string {
 <div class="card">Última Sincronização<strong id="synced">—</strong><small>Atualização automática a cada 30 segundos</small></div></section>
 <section class="panel"><h2>Matriz de Expansão (10 Verticais Estratégicas)</h2><ol class="matrix">${verticals.map(([name,id],i)=>`<li>${i+1}. ${name}<span>${id} · ${i===0 ? "ATIVO (144 Cats)" : "PLANEJADO"}</span></li>`).join("")}</ol></section>
 <section class="panel"><h2>Painel de Controle</h2><div class="controls"><button id="sweep">🚀 Executar Varredura Persistida (0B3D-C)</button><button id="smoke">⚡ Teste Smoke (2 cats)</button><button id="refresh">🔄 Atualizar Dados</button></div><p id="message" role="status" aria-live="polite"></p></section>
-<section class="panel"><h2>Produtos encontrados</h2><p>Prévia dos destaques minerados: foto, descrição e preço informado pelo Mercado Livre. Preço e disponibilidade podem mudar; os destaques ainda não representam descontos validados.</p><h2>Central de Cupons Ativos</h2><div id="coupons" class="coupon-bar" aria-live="polite">Consultando campanhas verificadas…</div><p>Cupons sugeridos conforme categoria e valor. Confira as restrições e a aplicação no checkout. Para divulgar com comissão, cole em cada produto o link criado no gerador oficial de afiliados do Mercado Livre. Os links ficam salvos somente neste navegador.</p><div class="filters" aria-label="Filtrar produtos"><button id="filter-all" aria-pressed="true">Todas as ofertas completas</button><button id="filter-discount" aria-pressed="false">🔥 Desconto anunciado ≥ 5%</button><button id="filter-tier" aria-pressed="false">⚡ Prioridade Tier A</button><button id="filter-coupon" aria-pressed="false">🏷️ Cupom sugerido</button><button id="filter-incomplete" aria-pressed="false">Registros incompletos</button></div><p id="copy-status" role="status" aria-live="polite"></p><textarea id="manual-copy" hidden readonly aria-label="Texto para copiar manualmente"></textarea><p id="results-summary"></p><div id="snapshots" class="results" aria-label="Produtos minerados"></div><button id="more" hidden>Mostrar mais produtos</button></section></main>
+<section class="panel"><h2>Melhores ofertas para divulgar</h2><p>Desconto histórico + demanda recorrente + confiança. Uma oferta só entra após cumprir todos os requisitos. Máximo de 20 ofertas, até 3 por grupo.</p><div class="controls"><button id="collect-evidence">📊 Coletar evidências agora</button><button id="rank-APPROVED" aria-pressed="true">Aprovadas</button><button id="rank-OBSERVING" aria-pressed="false">Em observação</button><button id="rank-REJECTED" aria-pressed="false">Não aprovadas</button></div><p id="commercial-status" role="status" aria-live="polite"></p><p id="copy-status" role="status" aria-live="polite"></p><textarea id="manual-copy" hidden readonly aria-label="Texto para copiar manualmente"></textarea><p>Para copiar a divulgação, cole no produto o link criado pelo gerador oficial de afiliados.</p><p id="commercial-summary"></p><div id="commercial-results" class="results"></div><button id="commercial-more" hidden>Mostrar mais desta seleção</button></section><details id="raw-products" class="panel"><summary>Explorar todos os registros minerados (sem aprovação comercial)</summary><section><h2>Produtos encontrados</h2><p>Prévia dos destaques minerados: foto, descrição e preço informado pelo Mercado Livre. Preço e disponibilidade podem mudar; os destaques ainda não representam descontos validados.</p><h2>Central de Cupons Ativos</h2><div id="coupons" class="coupon-bar" aria-live="polite">Consultando campanhas verificadas…</div><p>Cupons sugeridos conforme categoria e valor. Confira as restrições e a aplicação no checkout. Para divulgar com comissão, cole em cada produto o link criado no gerador oficial de afiliados do Mercado Livre. Os links ficam salvos somente neste navegador.</p><div class="filters" aria-label="Filtrar produtos"><button id="filter-all" aria-pressed="true">Todas as ofertas completas</button><button id="filter-discount" aria-pressed="false">🔥 Desconto anunciado ≥ 5%</button><button id="filter-tier" aria-pressed="false">⚡ Prioridade Tier A</button><button id="filter-coupon" aria-pressed="false">🏷️ Cupom sugerido</button><button id="filter-incomplete" aria-pressed="false">Registros incompletos</button></div><p id="results-summary"></p><div id="snapshots" class="results" aria-label="Produtos minerados"></div><button id="more" hidden>Mostrar mais produtos</button></section></details></main>
 <script>
 const el = id => document.getElementById(id);
 let busy = false;
+let commercialView = 'APPROVED', commercialOffset = 0, commercialRevision = 0, collecting = false;
+async function loadCommercial(append = false) {
+  const version=++commercialRevision, view=commercialView, offset=append?commercialOffset:0;
+  try {
+    const data=await request('/api/commercial/opportunities?view='+view+'&offset='+offset);
+    if(version!==commercialRevision) return;
+    if(!append) el('commercial-results').replaceChildren();
+    commercialOffset=offset+data.entries.length;
+    el('commercial-more').hidden=!data.hasMore;
+    el('commercial-summary').textContent=data.counts.approved+' aprovadas · '+data.counts.observing+' em observação · '+data.counts.rejected+' não aprovadas · '+data.counts.monitored+' monitoradas. '+(data.lastCollection?'Última coleta: '+date(data.lastCollection.started_at)+' · '+data.lastCollection.status+' · '+data.lastCollection.collected+' consultados.':'A coleta de histórico ainda não começou.');
+    for(const entry of data.entries) {
+      const card=textNode('article','','product-card');
+      entry.preview.commercial=entry.rank;
+      fillCard(card,entry.snapshot,entry.preview);
+      const body=textNode('div','','product-body');
+      body.append(textNode('strong',(entry.rank.state==='APPROVED'?'✅ Aprovada':entry.rank.state==='OBSERVING'?'⏳ Em observação':'Não aprovada')+' · Pontuação '+entry.rank.score+'/100','badge'));
+      body.append(textNode('p',entry.rank.history_days+' dias de preços comparáveis · '+entry.rank.seller_count+' vendedores · '+entry.rank.demand_days+' dias entre mais vendidos.'));
+      if(entry.rank.historical_discount_percent!==null) body.append(textNode('p',entry.rank.historical_discount_percent+'% de desconto histórico · Referência '+money(entry.rank.reference_price)));
+      for(const reason of entry.rank.reasons) body.append(textNode('p','• '+reason));
+      for(const reason of entry.rank.evidence) body.append(textNode('p',reason,'product-meta'));
+      const feedback=textNode('div','','controls');
+      for(const [action,label] of [['INTERESTED','Interessante'],['SHARED','Divulguei'],['NOT_RELEVANT','Não serve para meu público'],['RESET','Limpar avaliação']]) {
+        const button=textNode('button',(entry.feedback===action?'✓ ':'')+label);
+        button.addEventListener('click',async()=>{
+          button.disabled=true;
+          try {await request('/api/commercial/feedback?id='+encodeURIComponent(entry.snapshot.product_id)+'&type='+encodeURIComponent(entry.snapshot.type)+'&action='+action,'POST');await loadCommercial();}
+          catch(error){el('commercial-status').textContent=error.message;} finally{button.disabled=false;}
+        });feedback.append(button);
+      }
+      body.append(feedback);card.append(body);el('commercial-results').append(card);
+    }
+    if(!data.total) el('commercial-results').append(textNode('p',view==='APPROVED'?'Ainda não há ofertas com todas as evidências exigidas. Consulte Em observação para acompanhar o histórico.':'Nenhum produto nesta seleção.'));
+  } catch {el('commercial-status').textContent='Não foi possível carregar o ranking comercial. Tente atualizar os dados.';}
+}
+for(const view of ['APPROVED','OBSERVING','REJECTED']) el('rank-'+view).addEventListener('click',()=>{
+  commercialView=view;
+  for(const other of ['APPROVED','OBSERVING','REJECTED']) el('rank-'+other).setAttribute('aria-pressed',String(view===other));
+  loadCommercial();
+});
+el('commercial-more').addEventListener('click',()=>loadCommercial(true));
+el('collect-evidence').addEventListener('click',async()=>{
+  if(collecting) return; collecting=true;el('collect-evidence').disabled=true;
+  el('commercial-status').textContent='Coletando preços e demanda. O lote pode levar alguns minutos; as evidências ficam salvas no banco.';
+  try {const result=await request('/api/commercial/collect','POST');el('commercial-status').textContent='Coleta: '+result.status+' · '+result.collected+' consultados · '+result.failed+' falhas. Coleta concluída não significa oferta aprovada.';await loadCommercial();}
+  catch(error){el('commercial-status').textContent=error.message;}finally{collecting=false;el('collect-evidence').disabled=false;}
+});
+el('raw-products').addEventListener('toggle',()=>{if(el('raw-products').open && !visible && !loading) showMore();});
 const date = value => new Date(value).toLocaleString('pt-BR');
 async function request(path, method = 'GET') {
   const response = await fetch(path, { method, cache: 'no-store', credentials: 'same-origin' });
@@ -76,6 +123,7 @@ function productCopy(snapshot, preview, link) {
     lines.push('Condições: ' + coupon.restrictions + (coupon.minPurchase ? ' · Mínimo ' + money(coupon.minPurchase) : '') + (coupon.maxDiscount ? ' · Limite ' + money(coupon.maxDiscount) : '') + ' · Até ' + date(coupon.expiresAt));
     lines.push('Confirme a elegibilidade e o desconto no checkout.');
   }
+  if (preview.commercial?.state === 'APPROVED') lines.push('📉 ' + preview.commercial.historical_discount_percent + '% abaixo da referência histórica observada de ' + money(preview.commercial.reference_price) + '.');
   lines.push('🛒 ' + affiliateUrl(link), 'Preço e estoque podem mudar. Confira a oferta e aproveite! 🛒');
   return lines.join('\\n');
 }
@@ -220,7 +268,7 @@ async function refresh() {
   visible = 0; loaded = []; el('snapshots').replaceChildren();
   el('results-summary').textContent = snapshots.length + ' produtos distintos nos ' + data.snapshots.length + ' snapshots recentes.';
   if (!snapshots.length) el('snapshots').append(textNode('p', 'Nenhum produto persistido ainda.'));
-  await showMore();
+  if (el('raw-products').open) await showMore();
 }
 el('more').addEventListener('click', () => showMore());
 async function act(action) {
@@ -232,7 +280,7 @@ async function act(action) {
   try {
     let result;
     if (action !== 'refresh') result = await request('/api/discovery/' + action, 'POST');
-    await Promise.all([refresh(), loadCoupons()]);
+    await Promise.all([refresh(), loadCoupons(), loadCommercial()]);
     el('message').textContent = result ? 'Execução: ' + result.status + ' · ' + result.persisted + ' snapshots persistidos.' : 'Dados sincronizados.';
   } catch (error) { el('message').textContent = error.message; }
   finally { busy = false; document.querySelectorAll('button').forEach(button => button.disabled = false); }

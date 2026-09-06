@@ -35,10 +35,10 @@ export class LiveSmokeDiscoveryRunner {
     const repository = createDiscoveryPersistenceRepository(discoveryPersistenceClientFromSupabase(client));
     const now = new Date().toISOString();
     const run = await repository.beginDiscoveryRun({ plan, scheduledBucket: now, startedAt: now, shardKey: "dashboard-" + randomUUID() });
-    const result = await runDiscoveryOrchestrator({ plan, adapter: createMeliHighlightsDiscoveryAdapter({
+    const result = await runDiscoveryOrchestrator({ plan, budgetMs: 180000, adapter: createMeliHighlightsDiscoveryAdapter({
       client: new MeliClient({ accessToken: rotation.accessToken, timeoutMs: 10000 }), nowIso: () => new Date().toISOString() }) });
     const persisted = await repository.persistDiscoveryOccurrences(run.runId, result.occurrences);
-    const status = result.fatalErrorCode ? "FAILED" : result.metrics.failedCategories > 0 ? "PARTIAL" : "COMPLETED";
+    const status = result.fatalErrorCode === "DISCOVERY_TIME_BUDGET_EXCEEDED" ? "PARTIAL" : result.fatalErrorCode ? "FAILED" : result.metrics.failedCategories > 0 ? "PARTIAL" : "COMPLETED";
     await repository.completeDiscoveryRun({ runId: run.runId, result, status, finishedAt: new Date().toISOString() });
     return { runId: run.runId, status, persisted, selectedCategories: plan.selectedCategories.length };
   }

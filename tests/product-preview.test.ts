@@ -70,3 +70,20 @@ describe("consistent reference prices", () => {
   expect(result.price).toBeNull(); expect(result.original_price).toBeUndefined();
  });
 });
+
+describe("commercial identity and reputation evidence", () => {
+ it("only enables comparison after item identity, condition and seller are checked", async () => {
+  const result=await resolveProductPreview("MLB123","ITEM",reader({"/items/MLB123":{...item,condition:"new",variations:[]},"/users/42":{id:42,seller_reputation:{level_id:"5_green"}}}));
+  expect(result).toMatchObject({catalog_product_id:"MLB456",comparable:true,seller_id:"42",seller_trusted:true,seller_level:"5_green"});
+ });
+ it("does not compare used or multi-variation listings",async()=>{
+  for(const change of [{condition:"used",variations:[]},{condition:"new",variations:[{id:1},{id:2}]}]) {
+   const result=await resolveProductPreview("MLB123","ITEM",reader({"/items/MLB123":{...item,...change}}));
+   expect(result.comparable).toBe(false);
+  }
+ });
+ it("does not accept reputation from a different seller",async()=>{
+  const result=await resolveProductPreview("MLB123","ITEM",reader({"/items/MLB123":{...item,condition:"new",variations:[]},"/users/42":{id:999,seller_reputation:{level_id:"5_green"}}}));
+  expect(result.seller_trusted).not.toBe(true);
+ });
+});
