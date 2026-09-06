@@ -4,7 +4,7 @@ A seleção principal consulta /api/commercial/opportunities. A galeria anterior
 
 ## Evidência e requisitos
 
-- Identidade agregada somente quando a API confirma catalog_product_id, condição nova, no máximo uma variação e preço público do item. Não há associação por semelhança de título. Outros registros guardam identidade individual e não obtêm aprovação histórica.
+- Identidade agregada somente quando a API confirma catalog_product_id, condição nova, no máximo uma variação e preço público do item. Também é aceita a oferta de um PDP ativo sem filhos, com condição nova, vendedor e moeda confirmados no recurso oficial de ofertas de catálogo. Não há associação por semelhança de título. Outros registros guardam identidade individual e não obtêm aprovação histórica.
 - Preços e vendedor são observados no momento da coleta; até 3 ofertas adicionais do mesmo catálogo são consultadas quando houver identidade confirmada e orçamento de execução.
 - A referência é a mediana dos menores preços diários observados em ofertas comparáveis e com vendedor verde, nos 30 dias anteriores. O dia atual é excluído. Exigem-se 20 dias distintos, cobertura temporal de pelo menos 27 dias e 2 vendedores. Isso representa o universo observado, não o menor preço de todo o mercado.
 - Desconto mínimo de 10%, calculado antes do arredondamento; original_price do vendedor não entra no cálculo histórico.

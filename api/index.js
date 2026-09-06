@@ -23751,6 +23751,7 @@ var init_operational = __esm({
 // src/server/discovery/product-preview.ts
 var product_preview_exports = {};
 __export(product_preview_exports, {
+  catalogOfferPreview: () => catalogOfferPreview,
   configuredMeliReader: () => configuredMeliReader,
   configuredProductPreview: () => configuredProductPreview,
   publicProductUrl: () => publicProductUrl,
@@ -23786,12 +23787,37 @@ function publicProductUrl(id, type) {
 }
 function setPrice(preview, amount, currency, source, original) {
   if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0 || typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency)) return;
+  preview.comparable = false;
   delete preview.original_price;
   if (typeof original === "number" && Number.isFinite(original) && original > amount) preview.original_price = original;
   preview.price = amount;
   preview.currency = currency;
   preview.priceSource = source;
   preview.priceCheckedAt = (/* @__PURE__ */ new Date()).toISOString();
+}
+async function sellerEvidence(preview, read) {
+  preview.seller_trusted = false;
+  delete preview.seller_level;
+  if (!preview.seller_id) return;
+  try {
+    const seller = await read("/users/" + preview.seller_id);
+    if (String(seller.id) === preview.seller_id && typeof seller.seller_reputation?.level_id === "string") {
+      preview.seller_level = seller.seller_reputation.level_id;
+      preview.seller_trusted = ["5_green", "4_light_green"].includes(preview.seller_level);
+    }
+  } catch {
+  }
+}
+async function catalogOfferPreview(catalogId, base, offer, read) {
+  if (base.catalog_product_id !== catalogId || !/^MLB\d+$/.test(catalogId) || typeof offer.item_id !== "string" || !/^MLB\d+$/.test(offer.item_id) || offer.product_id && offer.product_id !== catalogId || offer.condition !== "new" || !/^\d+$/.test(String(offer.seller_id)) || offer.currency_id !== "BRL") return null;
+  const preview = { ...base, seller_id: String(offer.seller_id), seller_trusted: false, comparable: false };
+  delete preview.seller_level;
+  preview.price = null;
+  setPrice(preview, offer.price, offer.currency_id, "CATALOG_OFFER", offer.original_price);
+  if (!preview.price || typeof offer.available_quantity === "number" && offer.available_quantity <= 0) return null;
+  preview.comparable = true;
+  await sellerEvidence(preview, read);
+  return preview;
 }
 async function resolveProductPreview(id, type, read) {
   const preview = { title: id, description: null, image: null, url: null, price: null, currency: "BRL", status: "UNRESOLVED" };
@@ -23804,6 +23830,11 @@ async function resolveProductPreview(id, type, read) {
     if (type !== "ITEM") {
       const data = await read(type === "PRODUCT" ? `/products/${id}` : `/user-products/${id}`);
       if (data.id !== id) return preview;
+      if (type === "PRODUCT" && data.status === "active" && (!Array.isArray(data.children_ids) || data.children_ids.length === 0)) preview.catalog_product_id = id;
+      if (type === "PRODUCT" && Number.isSafeInteger(data.sold_quantity) && data.sold_quantity >= 0) {
+        preview.sales_total_reported = data.sold_quantity;
+        preview.sales_source = "CATALOG";
+      }
       if (typeof data.category_id === "string" && /^MLB\d+$/.test(data.category_id)) preview.category_id = data.category_id;
       preview.title = shortText(data.name) ?? id;
       preview.image = picture(data);
@@ -23815,6 +23846,16 @@ async function resolveProductPreview(id, type, read) {
         itemId = data.buy_box_winner?.item_id ?? null;
         if (typeof itemId === "string" && /^MLB\d+$/.test(itemId) && data.status !== "inactive") {
           setPrice(preview, data.buy_box_winner?.price, data.buy_box_winner?.currency_id, "CATALOG_OFFER", data.buy_box_winner?.original_price);
+          let candidate = data.buy_box_winner;
+          if (preview.catalog_product_id && candidate?.condition !== "new") {
+            try {
+              const offers = await read(`/products/${id}/items?limit=3`);
+              candidate = offers.results?.find((o) => o.item_id === itemId) ?? candidate;
+            } catch {
+            }
+          }
+          const offerPreview = await catalogOfferPreview(id, preview, candidate, read);
+          if (offerPreview) Object.assign(preview, offerPreview);
         }
         if (!itemId) {
           const offers = await read(`/products/${id}/items?limit=1`);
@@ -23822,6 +23863,8 @@ async function resolveProductPreview(id, type, read) {
           itemId = offer?.item_id ?? null;
           if (typeof itemId === "string" && /^MLB\d+$/.test(itemId) && (!offer.product_id || offer.product_id === id)) {
             setPrice(preview, offer.price, offer.currency_id, "CATALOG_OFFER", offer.original_price);
+            const offerPreview = await catalogOfferPreview(id, preview, offer, read);
+            if (offerPreview) Object.assign(preview, offerPreview);
           }
         }
       } else {
@@ -23846,6 +23889,7 @@ async function resolveProductPreview(id, type, read) {
     }
     if (item.id !== itemId || type === "USER_PRODUCT" && (item.user_product_id !== id || String(item.seller_id) !== sellerId) || type === "PRODUCT" && item.catalog_product_id !== id) {
       preview.price = null;
+      preview.comparable = false;
       delete preview.original_price;
       delete preview.priceSource;
       delete preview.priceCheckedAt;
@@ -23853,6 +23897,10 @@ async function resolveProductPreview(id, type, read) {
     }
     if (typeof item.catalog_product_id === "string" && /^MLB\d+$/.test(item.catalog_product_id)) preview.catalog_product_id = item.catalog_product_id;
     if (/^\d+$/.test(String(item.seller_id))) preview.seller_id = String(item.seller_id);
+    if (type !== "PRODUCT" && Number.isSafeInteger(item.sold_quantity) && item.sold_quantity >= 0) {
+      preview.sales_total_reported = item.sold_quantity;
+      preview.sales_source = "ITEM";
+    }
     if (typeof item.category_id === "string" && /^MLB\d+$/.test(item.category_id)) preview.category_id = item.category_id;
     preview.title = shortText(item.title) ?? preview.title;
     preview.image = picture(item) ?? preview.image;
@@ -23878,16 +23926,7 @@ async function resolveProductPreview(id, type, read) {
       }
     }
     preview.comparable = !!preview.catalog_product_id && item.condition === "new" && Array.isArray(item.variations) && item.variations.length <= 1 && preview.priceSource === "ITEM";
-    if (preview.seller_id) {
-      try {
-        const seller = await read("/users/" + preview.seller_id);
-        if (String(seller.id) === preview.seller_id && typeof seller.seller_reputation?.level_id === "string") {
-          preview.seller_level = seller.seller_reputation.level_id;
-          preview.seller_trusted = ["5_green", "4_light_green"].includes(preview.seller_level);
-        }
-      } catch {
-      }
-    }
+    await sellerEvidence(preview, read);
     try {
       const description = await read(`/items/${itemId}/description`);
       preview.description = shortText(description.plain_text, 400) ?? preview.description;
@@ -24064,6 +24103,7 @@ function rankProduct(preview, history, feedback = null, now = Date.now()) {
   const strongDemand = demand.size >= 7 && median([...demand.values()]) <= 10;
   if (!strongDemand) fail3("Demanda não confirmada: exigimos presença em 7 dias de ranking em 14 dias, com posição mediana até 10.");
   else evidence.push("Presença recorrente entre mais vendidos em " + demand.size + " dias; indício de demanda, sem volume de vendas comprovado.");
+  if (Number.isSafeInteger(preview.sales_total_reported) && preview.sales_total_reported >= 0) evidence.push("Vendas acumuladas informadas pela API: " + preview.sales_total_reported + (preview.sales_source === "CATALOG" ? " (produto de catálogo)." : " (anúncio).") + " Não representa vendas recentes.");
   if (preview.seller_trusted) evidence.push("Vendedor com reputação verde confirmada.");
   evidence.push("Preço do produto sem frete; confira entrega, pagamento e compatibilidade antes de divulgar.");
   const demandScore = strongDemand ? Math.min(100, 60 + demand.size * 2) : 0;
@@ -24181,8 +24221,8 @@ async function collectCommercialEvidence(client) {
               const offers = await read("/products/" + preview.catalog_product_id + "/items?limit=3");
               for (const offer of (Array.isArray(offers.results) ? offers.results : []).slice(0, 3)) {
                 if (typeof offer.item_id !== "string" || !/^MLB\d+$/.test(offer.item_id)) continue;
-                const extra = await configuredProductPreview(client, offer.item_id, "ITEM");
-                if (extra.catalog_product_id === preview.catalog_product_id && extra.comparable)
+                const extra = await catalogOfferPreview(preview.catalog_product_id, preview, offer, read);
+                if (extra?.catalog_product_id === preview.catalog_product_id && extra.comparable)
                   await saveObservation(client, offer.item_id, "ITEM", extra, null);
               }
             } catch {

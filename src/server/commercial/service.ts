@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { configuredMeliReader, configuredProductPreview, type ProductPreview } from "../discovery/product-preview.js";
+import { catalogOfferPreview, configuredMeliReader, configuredProductPreview, type ProductPreview } from "../discovery/product-preview.js";
 import { affiliateIntelligence } from "../affiliate/coupon-service.js";
 import { commercialProfile, rankProduct, selectDiverse, type Observation } from "./ranking.js";
 
@@ -63,8 +63,8 @@ export async function collectCommercialEvidence(client:SupabaseClient) {
               const offers=await read('/products/'+preview.catalog_product_id+'/items?limit=3');
               for (const offer of (Array.isArray(offers.results)?offers.results:[]).slice(0,3)) {
                 if(typeof offer.item_id !== 'string' || !/^MLB\d+$/.test(offer.item_id)) continue;
-                const extra=await configuredProductPreview(client,offer.item_id,'ITEM');
-                if(extra.catalog_product_id === preview.catalog_product_id && extra.comparable)
+                const extra=await catalogOfferPreview(preview.catalog_product_id,preview,offer,read);
+                if(extra?.catalog_product_id === preview.catalog_product_id && extra.comparable)
                   await saveObservation(client,offer.item_id,'ITEM',extra,null);
               }
             } catch { /* Insufficient seller coverage remains visible in the ranking. */ }

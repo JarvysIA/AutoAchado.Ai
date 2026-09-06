@@ -99,6 +99,7 @@ export function rankProduct(preview: ProductPreview, history: Observation[], fee
   const strongDemand = demand.size >= 7 && median([...demand.values()]) <= 10;
   if (!strongDemand) fail("Demanda não confirmada: exigimos presença em 7 dias de ranking em 14 dias, com posição mediana até 10.");
   else evidence.push("Presença recorrente entre mais vendidos em " + demand.size + " dias; indício de demanda, sem volume de vendas comprovado.");
+  if (Number.isSafeInteger(preview.sales_total_reported) && preview.sales_total_reported! >= 0) evidence.push("Vendas acumuladas informadas pela API: " + preview.sales_total_reported + (preview.sales_source === "CATALOG" ? " (produto de catálogo)." : " (anúncio).") + " Não representa vendas recentes.");
   if (preview.seller_trusted) evidence.push("Vendedor com reputação verde confirmada.");
   evidence.push("Preço do produto sem frete; confira entrega, pagamento e compatibilidade antes de divulgar.");
   const demandScore = strongDemand ? Math.min(100, 60 + demand.size * 2) : 0;

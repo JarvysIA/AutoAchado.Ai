@@ -87,3 +87,20 @@ describe("commercial identity and reputation evidence", () => {
   expect(result.seller_trusted).not.toBe(true);
  });
 });
+
+describe("catalog offer evidence despite restricted item details",()=>{
+ it("uses official catalog offer condition and seller reputation without inventing item details",async()=>{
+  const result=await resolveProductPreview("MLB456","PRODUCT",reader({
+   "/products/MLB456":{id:"MLB456",status:"active",children_ids:[],name:"Aspirador",sold_quantity:500,buy_box_winner:{item_id:"MLB123",seller_id:42,price:80,currency_id:"BRL"}},
+   "/products/MLB456/items?limit=3":{results:[{item_id:"MLB123",seller_id:42,price:80,currency_id:"BRL",condition:"new"}]},
+   "/users/42":{id:42,seller_reputation:{level_id:"5_green"}}
+  }));
+  expect(result).toMatchObject({comparable:true,seller_trusted:true,seller_id:"42",catalog_product_id:"MLB456",sales_total_reported:500,sales_source:"CATALOG",price:80});
+ });
+ it("rejects catalog parent products and offers with unknown condition",async()=>{
+  for(const change of [{children_ids:["MLB999"],condition:"new"},{children_ids:[],condition:undefined}]) {
+   const result=await resolveProductPreview("MLB456","PRODUCT",reader({"/products/MLB456":{id:"MLB456",status:"active",children_ids:change.children_ids,buy_box_winner:{item_id:"MLB123",seller_id:42,price:80,currency_id:"BRL",condition:change.condition}},"/users/42":{id:42,seller_reputation:{level_id:"5_green"}}}));
+   expect(result.comparable).not.toBe(true);
+  }
+ });
+});
