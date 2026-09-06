@@ -18,7 +18,7 @@ describe("operational dashboard browser script", () => {
         calls.push({path, options});
         return { ok: true, json: async () => path.endsWith("latest-snapshots") ? {
           total: 345, syncedAt: "2026-09-05T00:00:00Z", snapshots: [{product_id:"MLBU999",type:"USER_PRODUCT"}, { product_id: "MLB123", type:"ITEM", priority_tier:"A", observed_at: "2026-09-05T00:00:00Z" }]
-        } : path.endsWith("/coupons") ? {coupons:[]} : path.includes("MLBU999") ? {title:"MLBU999",url:"https://www.mercadolivre.com.br/up/MLBU999"} : path.includes("/preview?") ? { title: "<script>alert(1)</script>", url: "https://produto.mercadolivre.com.br/MLB-123-_JM", price: 123, currency: "BRL", image:"https://http2.mlstatic.com/test.jpg", status: "AVAILABLE" } : { status: "COMPLETED", persisted: 2 } };
+        } : path.endsWith("/coupons") ? {coupons:[]} : path.includes("MLBU999") ? {title:"MLBU999",url:"https://www.mercadolivre.com.br/up/MLBU999"} : path.includes("/preview?") ? { title: "<script>alert(1)</script>", url: "https://produto.mercadolivre.com.br/MLB-123-_JM", price: 123, original_price: 150, currency: "BRL", image:"https://http2.mlstatic.com/test.jpg", status: "AVAILABLE" } : { status: "COMPLETED", persisted: 2 } };
       } });
     const html = dashboardPage({authorized: true, userId: "296984475"});
     new Script(html.match(/<script>([\s\S]*?)<\/script>/)![1]!).runInContext(context);
@@ -31,7 +31,7 @@ describe("operational dashboard browser script", () => {
     const input = body.children.find((n:any) => n.children[0]?.type === "url").children[0];
     await button.handlers.click(); expect(copied).toEqual([]);
     input.value="https://meli.la/test-link"; input.handlers.change(); await button.handlers.click();
-    expect(copied[0]).toContain("R$ 123,00"); expect(copied[0]).toContain("\n📦");
+    expect(copied[0]).toContain("R$ 123,00"); expect(copied[0]).toContain("~De: R$ 150,00~"); expect(copied[0]).toContain("\n📦");
     expect(copied[0]).not.toContain("Link de afiliado — posso receber comissão."); expect(copied[0]).toContain("Preço e estoque podem mudar. Confira a oferta e aproveite! 🛒"); expect(storage.size).toBe(1);
     input.value="https://mercadolivre.com.br.evil.test/"; await button.handlers.click(); expect(copied).toHaveLength(1);
     input.value="https://meli.la/test-link";

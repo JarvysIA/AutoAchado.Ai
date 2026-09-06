@@ -24231,7 +24231,7 @@ async function copyText(text, button) {
 function productCopy(snapshot, preview, link) {
   if (!complete(snapshot, preview) || !affiliateUrl(link)) return null;
   const lines = ['🔥 ACHADO NO MERCADO LIVRE!', '📦 ' + preview.title];
-  if (Number.isFinite(preview.original_price) && preview.original_price > preview.price) lines.push('De: ' + money(preview.original_price, preview.currency));
+  if (Number.isFinite(preview.original_price) && preview.original_price > preview.price) lines.push('~De: ' + money(preview.original_price, preview.currency) + '~');
   lines.push('💥 Por: ' + money(preview.price, preview.currency) + (preview.has_advertised_discount ? ' (' + preview.discount_percent + '% de desconto anunciado)' : ''));
   const coupon = preview.matched_coupon;
   if (coupon && Date.parse(coupon.expiresAt) > Date.now()) {
