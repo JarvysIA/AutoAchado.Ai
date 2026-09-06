@@ -56,3 +56,17 @@ it("retains an ITEM link when both detail and price are forbidden", async () => 
   const result = await resolveProductPreview("MLB5425836866", "ITEM", reader({}));
   expect(result).toMatchObject({url:"https://produto.mercadolivre.com.br/MLB-5425836866-_JM",price:null,image:null,status:"UNRESOLVED"});
 });
+describe("consistent reference prices", () => {
+ it("drops an old catalog reference when the item supplies a new price without a reference", async () => {
+  const result = await resolveProductPreview("MLB456","PRODUCT",reader({"/products/MLB456":{id:"MLB456",buy_box_winner:{item_id:"MLB123",price:80,original_price:100,currency_id:"BRL"}},"/items/MLB123":{...item,price:90}}));
+  expect(result.price).toBe(90); expect(result.original_price).toBeUndefined();
+ });
+ it("retains reference and currency from the selected sale price response", async () => {
+  const result = await resolveProductPreview("MLB123","ITEM",reader({"/items/MLB123/sale_price":{amount:80,regular_amount:100,currency_id:"BRL"}}));
+  expect(result).toMatchObject({price:80,original_price:100,currency:"BRL",priceSource:"SALE_PRICE"});
+ });
+ it("clears reference prices for unavailable or mismatched offers", async () => {
+  const result = await resolveProductPreview("MLB456","PRODUCT",reader({"/products/MLB456":{id:"MLB456",buy_box_winner:{item_id:"MLB123",price:80,original_price:100,currency_id:"BRL"}},"/items/MLB123":{...item,status:"paused"}}));
+  expect(result.price).toBeNull(); expect(result.original_price).toBeUndefined();
+ });
+});

@@ -239,7 +239,7 @@ export async function handleRequest(
   const url = requestUrl(request);
   const method = request.method ?? "GET";
 
-  if (["/api/discovery/preview", "/api/discovery/latest-snapshots", "/api/discovery/smoke", "/api/discovery/sweep"].includes(url.pathname)) {
+  if (["/api/affiliate/coupons", "/api/discovery/preview", "/api/discovery/latest-snapshots", "/api/discovery/smoke", "/api/discovery/sweep"].includes(url.pathname)) {
     try {
       const config = dependencies.loadAppConfig();
       const session = readAuthorizationSession(request.headers.cookie, config.sessionSecret);
@@ -248,13 +248,19 @@ export async function handleRequest(
         return;
       }
       const previewing = url.pathname.endsWith("/preview");
-      const reading = previewing || url.pathname.endsWith("latest-snapshots");
+      const coupons = url.pathname === "/api/affiliate/coupons";
+      const reading = coupons || previewing || url.pathname.endsWith("latest-snapshots");
       if (method !== (reading ? "GET" : "POST")) {
         sendJson(response, 405, { errorCode: "METHOD_NOT_ALLOWED" });
         return;
       }
       if (!reading && request.headers.origin !== new URL(config.redirectUri).origin) {
         sendJson(response, 403, { errorCode: "ORIGIN_NOT_ALLOWED" });
+        return;
+      }
+      if (coupons) {
+        const { activeCoupons } = await import("./server/affiliate/coupon-service.js");
+        sendJson(response, 200, { coupons: activeCoupons() });
         return;
       }
       const operational = await import("./server/discovery/operational.js");
@@ -266,7 +272,9 @@ export async function handleRequest(
           return;
         }
         const { configuredProductPreview } = await import("./server/discovery/product-preview.js");
-        sendJson(response, 200, await configuredProductPreview(operational.createOperationalDiscoveryAdapter().client, id, type));
+        const preview = await configuredProductPreview(operational.createOperationalDiscoveryAdapter().client, id, type);
+        const { affiliateIntelligence } = await import("./server/affiliate/coupon-service.js");
+        sendJson(response, 200, { ...preview, ...affiliateIntelligence(preview) });
         return;
       }
       const result = reading ? await operational.createOperationalDiscoveryAdapter().latestSnapshots()
