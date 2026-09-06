@@ -24217,7 +24217,10 @@ function checked(r) {
   return r.data;
 }
 async function exploreCandidates(client, deadline) {
-  const rows = checked(await client.from("commercial_candidate_queue").select("*").in("state", ["PENDING", "RETRY"]).lte("next_check_at", (/* @__PURE__ */ new Date()).toISOString()).order("next_check_at").order("best_position").order("first_seen_at").order("source_key").limit(24));
+  const due = () => client.from("commercial_candidate_queue").select("*").in("state", ["PENDING", "RETRY"]).lte("next_check_at", (/* @__PURE__ */ new Date()).toISOString());
+  const order = (query) => query.order("next_check_at").order("best_position").order("first_seen_at").order("source_key");
+  const [catalog, others] = await Promise.all([order(due().eq("type", "PRODUCT")).limit(20), order(due().neq("type", "PRODUCT")).limit(4)]);
+  const rows = [...checked(catalog) ?? [], ...checked(others) ?? []];
   let evaluated = 0, failed = 0;
   const queue = [...rows ?? []];
   async function worker() {
@@ -24364,14 +24367,14 @@ async function collectCommercialEvidence(client) {
           }
           const profile = commercialProfile(preview.title);
           const priceDrop = preview.comparable && preview.seller_trusted && position !== null && position <= 10 && profile.group !== "avaliar" && preview.price !== null && row.preview.price !== null && preview.price <= row.preview.price * 0.95;
+          if (priceDrop) checked2(await client.rpc("request_commercial_priority", { candidate_key: row.source_key, request_reason: "OBSERVED_PRICE_DROP" }));
           const unavailable = !preview.price && preview.title === row.product_id ? (row.unavailable_attempts ?? 0) + 1 : 0;
           checked2(await client.from("commercial_watchlist").update({
             preview,
             identity_key: productIdentity(row.product_id, row.type, preview),
             last_collected_at: (/* @__PURE__ */ new Date()).toISOString(),
             unavailable_attempts: unavailable,
-            monitor: profile.group !== "especializado" && unavailable < 3,
-            ...priceDrop ? { priority_until: new Date(Date.now() + 8 * 36e5).toISOString(), next_priority_check: (/* @__PURE__ */ new Date()).toISOString(), priority_reason: "OBSERVED_PRICE_DROP" } : {}
+            monitor: profile.group !== "especializado" && unavailable < 3
           }).eq("source_key", row.source_key));
           collected++;
         } catch {

@@ -81,10 +81,10 @@ export async function collectCommercialEvidence(client:SupabaseClient) {
           const profile=commercialProfile(preview.title);
           const priceDrop=preview.comparable&&preview.seller_trusted&&position!==null&&position<=10&&profile.group!=='avaliar'
             &&preview.price!==null&&row.preview.price!==null&&preview.price<=row.preview.price*.95;
+          if(priceDrop) checked(await client.rpc('request_commercial_priority',{candidate_key:row.source_key,request_reason:'OBSERVED_PRICE_DROP'}));
           const unavailable = !preview.price && preview.title === row.product_id ? (row.unavailable_attempts ?? 0) + 1 : 0;
           checked(await client.from('commercial_watchlist').update({preview,identity_key:productIdentity(row.product_id,row.type,preview),
-            last_collected_at:new Date().toISOString(),unavailable_attempts:unavailable,monitor:profile.group !== 'especializado' && unavailable < 3,
-            ...(priceDrop?{priority_until:new Date(Date.now()+8*3600000).toISOString(),next_priority_check:new Date().toISOString(),priority_reason:'OBSERVED_PRICE_DROP'}:{})}).eq('source_key',row.source_key));
+            last_collected_at:new Date().toISOString(),unavailable_attempts:unavailable,monitor:profile.group !== 'especializado' && unavailable < 3}).eq('source_key',row.source_key));
           collected++;
         } catch { failed++; }
       }

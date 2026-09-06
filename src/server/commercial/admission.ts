@@ -15,9 +15,12 @@ function checked<T>(r:{data:T;error:unknown}):T {if(r.error) throw new Error('AD
 
 // Called under the collector's database lock, after its reserved history budget.
 export async function exploreCandidates(client:SupabaseClient, deadline:number) {
- const rows=checked(await client.from('commercial_candidate_queue').select('*')
-  .in('state',['PENDING','RETRY']).lte('next_check_at',new Date().toISOString())
-  .order('next_check_at').order('best_position').order('first_seen_at').order('source_key').limit(24));
+ const due=()=>client.from('commercial_candidate_queue').select('*')
+  .in('state',['PENDING','RETRY']).lte('next_check_at',new Date().toISOString());
+ const order=(query:ReturnType<typeof due>)=>query.order('next_check_at').order('best_position').order('first_seen_at').order('source_key');
+ // Retain exploration of other types without allowing restricted USER_PRODUCTs to consume the whole budget.
+ const [catalog,others]=await Promise.all([order(due().eq('type','PRODUCT')).limit(20),order(due().neq('type','PRODUCT')).limit(4)]);
+ const rows=[...(checked(catalog)??[]),...(checked(others)??[])];
  let evaluated=0,failed=0;
  const queue=[...(rows??[])];
  async function worker() {
