@@ -2,9 +2,9 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import {afterEach,describe,expect,it,vi} from 'vitest';
 import {handleRequest} from '../src/app.js';
 import {createAuthorizationCookie} from '../src/oauth/session.js';
-const calls=vi.hoisted(()=>({collect:vi.fn(async()=>({status:'COMPLETED',collected:2,failed:0})),feedback:vi.fn(async()=>({saved:true})),list:vi.fn(async()=>({entries:[]}))}));
+const calls=vi.hoisted(()=>({sent:vi.fn(async()=>({saved:true})),collect:vi.fn(async()=>({status:'COMPLETED',collected:2,failed:0})),feedback:vi.fn(async()=>({saved:true})),list:vi.fn(async()=>({entries:[]}))}));
 vi.mock('../src/server/discovery/operational.js',()=>({createOperationalDiscoveryAdapter:()=>({client:{}})}));
-vi.mock('../src/server/commercial/service.js',()=>({collectCommercialEvidence:calls.collect,commercialOpportunities:calls.list,saveCommercialFeedback:calls.feedback}));
+vi.mock('../src/server/commercial/service.js',()=>({collectCommercialEvidence:calls.collect,commercialOpportunities:calls.list,saveCommercialFeedback:calls.feedback,markCommercialSent:calls.sent}));
 const config={clientId:'fake',clientSecret:'fake',redirectUri:'https://autoachado-ai.vercel.app/auth/mercadolivre/callback',sessionSecret:'fake-test-session-secret-123456789012345'};
 async function request(path:string,method='GET',headers:Record<string,string>={}) {
  const result={status:0,body:''};
@@ -14,6 +14,18 @@ async function request(path:string,method='GET',headers:Record<string,string>={}
 const cookie=()=>createAuthorizationCookie({authorized:true,userId:296984475,authorizedAt:Date.now()},config.sessionSecret).split(';')[0]!;
 afterEach(()=>{vi.unstubAllEnvs();vi.clearAllMocks();});
 describe('commercial endpoint boundaries',()=>{
+ it('protects and validates explicit sent confirmations',async()=>{
+  const path='/api/commercial/sent?id=MLB123&type=PRODUCT&sent=true';
+  expect((await request(path,'POST')).status).toBe(401);
+  expect((await request(path,'POST',{cookie:cookie(),origin:'https://evil.test'})).status).toBe(403);
+  const headers={cookie:cookie(),origin:'https://autoachado-ai.vercel.app'};
+  expect((await request(path.replace('sent=true','sent=maybe'),'POST',headers)).status).toBe(400);
+  expect(calls.sent).not.toHaveBeenCalled();
+  expect((await request(path,'POST',headers)).status).toBe(200);
+  expect(calls.sent).toHaveBeenLastCalledWith({},'MLB123','PRODUCT',true);
+  expect((await request(path.replace('sent=true','sent=false'),'POST',headers)).status).toBe(200);
+  expect(calls.sent).toHaveBeenLastCalledWith({},'MLB123','PRODUCT',false);
+ });
  it('does not apply Automotive feedback or rankings to an inactive vertical',async()=>{
   const headers={cookie:cookie(),origin:'https://autoachado-ai.vercel.app'};
   const result=await request('/api/commercial/feedback?id=MLB123&type=ITEM&action=NOT_RELEVANT&vertical=HOME','POST',headers);

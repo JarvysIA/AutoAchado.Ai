@@ -24,26 +24,25 @@ export function dashboardPage(props: DashboardProps): string {
 <div class="card">Oportunidades no Banco<strong id="count">—</strong><small>Registros em public.highlight_snapshots</small></div>
 <div class="card">Última Sincronização<strong id="synced">—</strong><small>Atualização automática a cada 30 segundos</small></div></section>
 <section class="panel"><h2>Matriz de Expansão (10 Verticais Estratégicas)</h2><ol class="matrix">${verticals.map(([name,id],i)=>`<li><button id="vertical-${i}" class="vertical-button" aria-controls="vertical-products" aria-pressed="${i===0}">${i+1}. ${name}<span>${id} · ${i===0 ? "ATIVO (144 Cats)" : "PLANEJADO"}</span></button></li>`).join("")}</ol></section>
-<section class="panel"><h2>Painel de Controle</h2><div class="controls"><button id="sweep">🚀 Executar Varredura Persistida (0B3D-C)</button><button id="smoke">⚡ Teste Smoke (2 cats)</button><button id="refresh">🔄 Atualizar Dados</button></div><p id="message" role="status" aria-live="polite"></p></section>
-<section class="panel" id="vertical-products"><h2 id="vertical-title" tabindex="-1">Automotivo — produtos e ofertas</h2><p>Desconto histórico + demanda recorrente + confiança. Uma oferta só entra após cumprir todos os requisitos. Máximo de 20 ofertas, até 3 por grupo.</p><div class="controls"><button id="collect-evidence">📊 Coletar evidências agora</button><button id="rank-APPROVED" aria-pressed="true">Aprovadas</button><button id="rank-OBSERVING" aria-pressed="false">Em observação</button><button id="rank-REJECTED" aria-pressed="false">Não aprovadas</button></div><p id="commercial-status" role="status" aria-live="polite"></p><p id="copy-status" role="status" aria-live="polite"></p><textarea id="manual-copy" hidden readonly aria-label="Texto para copiar manualmente"></textarea><p>Para copiar a divulgação, cole no produto o link criado pelo gerador oficial de afiliados.</p><p id="commercial-summary"></p><div id="commercial-results" class="results"></div><button id="commercial-more" hidden>Mostrar mais desta seleção</button></section><details id="raw-products" class="panel"><summary>Explorar todos os registros minerados (sem aprovação comercial)</summary><section><h2>Produtos encontrados</h2><p>Prévia dos destaques minerados: foto, descrição e preço informado pelo Mercado Livre. Preço e disponibilidade podem mudar; os destaques ainda não representam descontos validados.</p><h2>Central de Cupons Ativos</h2><div id="coupons" class="coupon-bar" aria-live="polite">Consultando campanhas verificadas…</div><p>Cupons sugeridos conforme categoria e valor. Confira as restrições e a aplicação no checkout. Para divulgar com comissão, cole em cada produto o link criado no gerador oficial de afiliados do Mercado Livre. Os links ficam salvos somente neste navegador.</p><div class="filters" aria-label="Filtrar produtos"><button id="filter-all" aria-pressed="true">Todas as ofertas completas</button><button id="filter-discount" aria-pressed="false">🔥 Desconto anunciado ≥ 5%</button><button id="filter-tier" aria-pressed="false">⚡ Prioridade Tier A</button><button id="filter-coupon" aria-pressed="false">🏷️ Cupom sugerido</button><button id="filter-incomplete" aria-pressed="false">Registros incompletos</button></div><p id="results-summary"></p><div id="snapshots" class="results" aria-label="Produtos minerados"></div><button id="more" hidden>Mostrar mais produtos</button></section></details></main>
+<section class="panel" id="vertical-products"><h2 id="vertical-title" tabindex="-1">Automotivo — produtos e ofertas</h2><p>Todos os produtos monitorados nesta categoria. Use os filtros para escolher o que divulgar e acompanhar os envios.</p><div class="controls filters"><button id="rank-ALL" aria-pressed="true">Todos</button><button id="rank-APPROVED" aria-pressed="false">🔥 Prontos para divulgar</button><button id="rank-OBSERVING" aria-pressed="false">⏳ Em acompanhamento</button><button id="rank-SENT" aria-pressed="false">✅ Enviados</button><button id="refresh">🔄 Atualizar</button></div><p id="message" role="status" aria-live="polite"></p><p id="commercial-status" role="status" aria-live="polite"></p><p id="copy-status" role="status" aria-live="polite"></p><textarea id="manual-copy" hidden readonly aria-label="Texto para copiar manualmente"></textarea><p>Para copiar a divulgação, cole no produto o link criado pelo gerador oficial de afiliados.</p><p id="commercial-summary"></p><div id="commercial-results" class="results"></div><button id="commercial-more" hidden>Mostrar mais desta seleção</button></section><details id="robot-admin" class="panel"><summary>Administração do robô</summary><p>Ferramentas técnicas de coleta e diagnóstico — Automotivo.</p><div class="controls"><button id="sweep">🚀 Executar varredura</button><button id="smoke">⚡ Teste de coleta (2 categorias)</button><button id="collect-evidence">📊 Coletar evidências agora</button></div><p id="admin-summary"></p><details id="raw-products" class="panel"><summary>Explorar todos os registros minerados (sem aprovação comercial)</summary><section><h2>Produtos encontrados</h2><p>Prévia dos destaques minerados: foto, descrição e preço informado pelo Mercado Livre. Preço e disponibilidade podem mudar; os destaques ainda não representam descontos validados.</p><h2>Central de Cupons Ativos</h2><div id="coupons" class="coupon-bar" aria-live="polite">Consultando campanhas verificadas…</div><p>Cupons sugeridos conforme categoria e valor. Confira as restrições e a aplicação no checkout. Para divulgar com comissão, cole em cada produto o link criado no gerador oficial de afiliados do Mercado Livre. Os links ficam salvos somente neste navegador.</p><div class="filters" aria-label="Filtrar produtos"><button id="filter-all" aria-pressed="true">Todas as ofertas completas</button><button id="filter-discount" aria-pressed="false">🔥 Desconto anunciado ≥ 5%</button><button id="filter-tier" aria-pressed="false">⚡ Prioridade Tier A</button><button id="filter-coupon" aria-pressed="false">🏷️ Cupom sugerido</button><button id="filter-incomplete" aria-pressed="false">Registros incompletos</button></div><p id="results-summary"></p><div id="snapshots" class="results" aria-label="Produtos minerados"></div><button id="more" hidden>Mostrar mais produtos</button></section></details></details></main>
 <script>
 const el = id => document.getElementById(id);
 let busy = false;
 const verticalNames = ["Automotivo","Casa, utilidades e organização","Eletrodomésticos","Moda","Beleza e cuidado pessoal","Eletrônicos, celulares e acessórios","Infantil — bebês, brinquedos e moda infantil","Games","Esportes e fitness","Pet"];
 let selectedVertical = 0;
-let commercialView = 'APPROVED', commercialOffset = 0, commercialRevision = 0, collecting = false;
+let commercialView = 'ALL', commercialOffset = 0, commercialRevision = 0, collecting = false;
 function updateVerticalControls() {
   const inactive=selectedVertical!==0;
   el('raw-products').hidden=inactive;
-  for(const id of ['collect-evidence','rank-APPROVED','rank-OBSERVING','rank-REJECTED']) el(id).disabled=inactive||busy||(id==='collect-evidence'&&collecting);
+  for(const id of ['collect-evidence','rank-ALL','rank-APPROVED','rank-OBSERVING','rank-SENT']) el(id).disabled=inactive||busy||(id==='collect-evidence'&&collecting);
 }
 for(let index=0;index<verticalNames.length;index++) el('vertical-'+index).addEventListener('click',async()=>{
   selectedVertical=index;
   commercialRevision++;
   commercialOffset=0;
-  commercialView='OBSERVING';
+  commercialView='ALL';
   for(let other=0;other<verticalNames.length;other++) el('vertical-'+other).setAttribute('aria-pressed',String(other===index));
-  for(const view of ['APPROVED','OBSERVING','REJECTED']) el('rank-'+view).setAttribute('aria-pressed',String(view===commercialView));
+  for(const view of ['ALL','APPROVED','OBSERVING','SENT']) el('rank-'+view).setAttribute('aria-pressed',String(view===commercialView));
   el('vertical-title').textContent=verticalNames[index]+' — produtos e ofertas';
   el('commercial-results').replaceChildren();
   el('commercial-summary').textContent='';
@@ -68,12 +67,12 @@ async function loadCommercial(append = false) {
   try {
     const data=await request('/api/commercial/opportunities?view='+view+'&offset='+offset);
     if(version!==commercialRevision) return;
+    el('commercial-status').textContent='';
     if(!append) el('commercial-results').replaceChildren();
     commercialOffset=offset+data.entries.length;
     el('commercial-more').hidden=!data.hasMore;
-    el('commercial-summary').textContent=data.counts.approved+' aprovadas · '+data.counts.observing+' em observação · '+data.counts.rejected+' não aprovadas · '+data.counts.monitored+' monitoradas. '+(data.lastCollection?'Última coleta: '+date(data.lastCollection.started_at)+' · '+data.lastCollection.status+' · '+data.lastCollection.collected+' consultados.':'A coleta de histórico ainda não começou.');
-    if(data.coverage) el('commercial-summary').textContent+=' Novidades: '+data.coverage.pending+' aguardando avaliação · '+data.coverage.evaluated+' avaliadas · '+data.coverage.waiting+' aguardando vaga de histórico. '+data.coverage.fresh+' monitoradas consultadas nas últimas 24h.';
-    if(data.coverage) el('commercial-summary').textContent+=' Categorias: '+data.coverage.categories_failed+' com falha · '+data.coverage.categories_without_ranking+' sem ranking disponível. '+data.coverage.priority_active+' produtos em acompanhamento prioritário.';
+    el('commercial-summary').textContent=data.counts.monitored+' de '+data.capacity+' produtos monitorados · '+data.counts.approved+' prontos para divulgar · '+data.counts.observing+' em acompanhamento · '+data.counts.sent+' enviados.';
+    el('admin-summary').textContent=data.lastCollection?'Última coleta: '+date(data.lastCollection.started_at)+' · '+data.lastCollection.status+' · '+data.lastCollection.collected+' consultados.':'';
     for(const entry of data.entries) {
       const card=textNode('article','','product-card');
       entry.preview.commercial=entry.rank;
@@ -85,7 +84,7 @@ async function loadCommercial(append = false) {
       for(const reason of entry.rank.reasons) body.append(textNode('p','• '+reason));
       for(const reason of entry.rank.evidence) body.append(textNode('p',reason,'product-meta'));
       const feedback=textNode('div','','controls');
-      for(const [action,label] of [['INTERESTED','Interessante'],['SHARED','Divulguei'],['NOT_RELEVANT','Não serve para meu público'],['RESET','Limpar avaliação']]) {
+      for(const [action,label] of [['INTERESTED','Interessante'],['NOT_RELEVANT','Não serve para meu público'],['RESET','Limpar avaliação']]) {
         const button=textNode('button',(entry.feedback===action?'✓ ':'')+label);
         button.addEventListener('click',async()=>{
           button.disabled=true;
@@ -93,14 +92,24 @@ async function loadCommercial(append = false) {
           catch(error){el('commercial-status').textContent=error.message;} finally{button.disabled=false;}
         });feedback.append(button);
       }
-      body.append(feedback);card.append(body);el('commercial-results').append(card);
+      if(entry.sent_at) body.append(textNode('p','✅ Enviado · '+verticalNames[0]+' · '+date(entry.sent_at),'badge'));
+      const sentButton=textNode('button',entry.sent_at?'Desfazer enviado':'✅ Marcar como enviado');
+      sentButton.addEventListener('click',async()=>{
+        sentButton.disabled=true;
+        try {
+          await request('/api/commercial/sent?id='+encodeURIComponent(entry.snapshot.product_id)+'&type='+encodeURIComponent(entry.snapshot.type)+'&sent='+String(!entry.sent_at),'POST');
+          await loadCommercial();
+        } catch(error) {el('commercial-status').textContent=error.message;}
+        finally {sentButton.disabled=false;}
+      });
+      body.append(sentButton);body.append(feedback);card.append(body);el('commercial-results').append(card);
     }
-    if(!data.total) el('commercial-results').append(textNode('p',view==='APPROVED'?'Ainda não há ofertas com todas as evidências exigidas. Consulte Em observação para acompanhar o histórico.':'Nenhum produto nesta seleção.'));
-  } catch {if(version!==commercialRevision) return;el('commercial-status').textContent='Não foi possível carregar o ranking comercial. Tente atualizar os dados.';}
+    if(!data.total) el('commercial-results').append(textNode('p',view==='APPROVED'?'Ainda não há ofertas com todas as evidências exigidas. Consulte Em acompanhamento para acompanhar o histórico.':'Nenhum produto nesta seleção.'));
+  } catch(error) {if(version!==commercialRevision) return;el('commercial-status').textContent=error.message;}
 }
-for(const view of ['APPROVED','OBSERVING','REJECTED']) el('rank-'+view).addEventListener('click',()=>{
+for(const view of ['ALL','APPROVED','OBSERVING','SENT']) el('rank-'+view).addEventListener('click',()=>{
   commercialView=view;
-  for(const other of ['APPROVED','OBSERVING','REJECTED']) el('rank-'+other).setAttribute('aria-pressed',String(view===other));
+  for(const other of ['ALL','APPROVED','OBSERVING','SENT']) el('rank-'+other).setAttribute('aria-pressed',String(view===other));
   loadCommercial();
 });
 el('commercial-more').addEventListener('click',()=>loadCommercial(true));

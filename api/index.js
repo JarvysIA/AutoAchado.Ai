@@ -24178,17 +24178,6 @@ function rankProduct(preview, history, feedback = null, now = Date.now()) {
     checked_at: new Date(now).toISOString()
   };
 }
-function selectDiverse(entries, limit = 20) {
-  const selected = [], groups = /* @__PURE__ */ new Map(), identities = /* @__PURE__ */ new Set();
-  for (const entry of [...entries].sort((a, b) => b.rank.score - a.rank.score || a.identity_key.localeCompare(b.identity_key))) {
-    if (entry.rank.state !== "APPROVED" || identities.has(entry.identity_key) || (groups.get(entry.rank.group) ?? 0) >= 3) continue;
-    identities.add(entry.identity_key);
-    groups.set(entry.rank.group, (groups.get(entry.rank.group) ?? 0) + 1);
-    selected.push(entry);
-    if (selected.length >= limit) break;
-  }
-  return selected;
-}
 var RANKING_VERSION, DAY, median;
 var init_ranking = __esm({
   "src/server/commercial/ranking.ts"() {
@@ -24280,6 +24269,7 @@ var service_exports = {};
 __export(service_exports, {
   collectCommercialEvidence: () => collectCommercialEvidence,
   commercialOpportunities: () => commercialOpportunities,
+  markCommercialSent: () => markCommercialSent,
   productIdentity: () => productIdentity,
   saveCommercialFeedback: () => saveCommercialFeedback,
   saveObservation: () => saveObservation
@@ -24401,10 +24391,19 @@ async function collectCommercialEvidence(client) {
   }
 }
 async function commercialOpportunities(client, view, offset = 0) {
+  const sentByIdentity = /* @__PURE__ */ new Map();
+  for (let page = 0; ; page++) {
+    const rows = checked2(await client.from("commercial_sent_products").select("identity_key,sent_at").eq("vertical_key", "AUTOMOTIVE").not("sent_at", "is", null).order("identity_key").range(page * 500, page * 500 + 499));
+    for (const row of rows ?? []) sentByIdentity.set(row.identity_key, row.sent_at);
+    if (!rows || rows.length < 500) break;
+    if (page >= 19) throw new Error("COMMERCIAL_SENT_LIMIT");
+  }
+  const vertical = checked2(await client.from("commercial_verticals").select("monitor_capacity").eq("vertical_key", "AUTOMOTIVE").single());
+  if (!vertical) throw new Error("COMMERCIAL_VERTICAL_NOT_FOUND");
   const watches = [];
   for (let page = 0; ; page++) {
     const rows = checked2(await client.from("commercial_watchlist").select("*").order("source_key").range(page * 500, page * 500 + 499));
-    watches.push(...rows);
+    watches.push(...rows.filter((row) => row.monitor || sentByIdentity.has(row.identity_key)));
     if (rows.length < 500) break;
     if (page >= 19) throw new Error("COMMERCIAL_WATCHLIST_LIMIT");
   }
@@ -24440,6 +24439,8 @@ async function commercialOpportunities(client, view, offset = 0) {
     const action = feedbackByIdentity.get(w.identity_key) ?? null;
     return {
       identity_key: w.identity_key,
+      monitor: w.monitor,
+      sent_at: sentByIdentity.get(w.identity_key) ?? null,
       snapshot: w.snapshot,
       preview: { ...w.preview, ...affiliateIntelligence(w.preview) },
       feedback: action,
@@ -24447,12 +24448,11 @@ async function commercialOpportunities(client, view, offset = 0) {
     };
   });
   const order = { APPROVED: 0, OBSERVING: 1, REJECTED: 2 };
-  const sorted = allEvaluated.sort((a, b) => order[a.rank.state] - order[b.rank.state] || b.rank.score - a.rank.score || (a.preview.price ?? Infinity) - (b.preview.price ?? Infinity));
+  const sorted = allEvaluated.sort((a, b) => Number(b.monitor) - Number(a.monitor) || order[a.rank.state] - order[b.rank.state] || b.rank.score - a.rank.score || (a.preview.price ?? Infinity) - (b.preview.price ?? Infinity));
   const evaluated = sorted.filter((entry, index, rows) => rows.findIndex((e) => e.identity_key === entry.identity_key) === index);
-  const approved = selectDiverse(evaluated);
-  const eligible = evaluated.filter((e) => e.rank.state === view).sort((a, b) => b.rank.score - a.rank.score || a.identity_key.localeCompare(b.identity_key));
-  const unique = eligible.filter((e, i, rows) => rows.findIndex((r) => r.identity_key === e.identity_key) === i);
-  const selected = view === "APPROVED" ? approved : unique;
+  const monitored = evaluated.filter((e) => e.monitor);
+  const approved = monitored.filter((e) => e.rank.state === "APPROVED" && !e.sent_at);
+  const selected = view === "ALL" ? monitored : view === "SENT" ? evaluated.filter((e) => e.sent_at).sort((a, b) => b.sent_at.localeCompare(a.sent_at)) : view === "APPROVED" ? approved : view === "OBSERVING" ? monitored.filter((e) => e.rank.state !== "APPROVED" && !e.sent_at) : monitored.filter((e) => e.rank.state === view);
   const runs = checked2(await client.from("commercial_collection_runs").select("status,started_at,finished_at,collected,failed,explored,exploration_failed").eq("kind", "HISTORY").order("started_at", { ascending: false }).limit(1));
   return {
     entries: selected.slice(offset, offset + 12),
@@ -24461,15 +24461,29 @@ async function commercialOpportunities(client, view, offset = 0) {
     hasMore: offset + 12 < selected.length,
     counts: {
       approved: approved.length,
-      observing: new Set(evaluated.filter((e) => e.rank.state === "OBSERVING").map((e) => e.identity_key)).size,
-      rejected: new Set(evaluated.filter((e) => e.rank.state === "REJECTED").map((e) => e.identity_key)).size,
-      monitored: watches.filter((w) => w.monitor).length
+      observing: monitored.filter((e) => e.rank.state !== "APPROVED" && !e.sent_at).length,
+      rejected: monitored.filter((e) => e.rank.state === "REJECTED").length,
+      monitored: monitored.length,
+      sent: evaluated.filter((e) => e.sent_at).length
     },
+    capacity: vertical.monitor_capacity,
     coverage: checked2(await client.rpc("commercial_coverage")),
     lastCollection: runs?.[0] ?? null,
     checkedAt: new Date(now).toISOString(),
     historyPolicy: "20 dias observados em 30, janela mínima de 27 dias, 2 vendedores; desconto mínimo de 10%."
   };
+}
+async function markCommercialSent(client, id, type, sent) {
+  const row = checked2(await client.from("commercial_watchlist").select("identity_key").eq("source_key", type + ":" + id).maybeSingle());
+  if (!row) throw new Error("COMMERCIAL_PRODUCT_NOT_FOUND");
+  const sentAt = sent ? (/* @__PURE__ */ new Date()).toISOString() : null;
+  checked2(await client.from("commercial_sent_products").upsert({
+    vertical_key: "AUTOMOTIVE",
+    identity_key: row.identity_key,
+    sent_at: sentAt,
+    updated_at: (/* @__PURE__ */ new Date()).toISOString()
+  }, { onConflict: "vertical_key,identity_key" }));
+  return { saved: true, sent_at: sentAt };
 }
 async function saveCommercialFeedback(client, id, type, action) {
   return checked2(await client.rpc("save_automotive_commercial_feedback", {
@@ -24836,26 +24850,25 @@ function dashboardPage(props) {
 <div class="card">Oportunidades no Banco<strong id="count">—</strong><small>Registros em public.highlight_snapshots</small></div>
 <div class="card">Última Sincronização<strong id="synced">—</strong><small>Atualização automática a cada 30 segundos</small></div></section>
 <section class="panel"><h2>Matriz de Expansão (10 Verticais Estratégicas)</h2><ol class="matrix">${verticals.map(([name, id], i) => `<li><button id="vertical-${i}" class="vertical-button" aria-controls="vertical-products" aria-pressed="${i === 0}">${i + 1}. ${name}<span>${id} · ${i === 0 ? "ATIVO (144 Cats)" : "PLANEJADO"}</span></button></li>`).join("")}</ol></section>
-<section class="panel"><h2>Painel de Controle</h2><div class="controls"><button id="sweep">🚀 Executar Varredura Persistida (0B3D-C)</button><button id="smoke">⚡ Teste Smoke (2 cats)</button><button id="refresh">🔄 Atualizar Dados</button></div><p id="message" role="status" aria-live="polite"></p></section>
-<section class="panel" id="vertical-products"><h2 id="vertical-title" tabindex="-1">Automotivo — produtos e ofertas</h2><p>Desconto histórico + demanda recorrente + confiança. Uma oferta só entra após cumprir todos os requisitos. Máximo de 20 ofertas, até 3 por grupo.</p><div class="controls"><button id="collect-evidence">📊 Coletar evidências agora</button><button id="rank-APPROVED" aria-pressed="true">Aprovadas</button><button id="rank-OBSERVING" aria-pressed="false">Em observação</button><button id="rank-REJECTED" aria-pressed="false">Não aprovadas</button></div><p id="commercial-status" role="status" aria-live="polite"></p><p id="copy-status" role="status" aria-live="polite"></p><textarea id="manual-copy" hidden readonly aria-label="Texto para copiar manualmente"></textarea><p>Para copiar a divulgação, cole no produto o link criado pelo gerador oficial de afiliados.</p><p id="commercial-summary"></p><div id="commercial-results" class="results"></div><button id="commercial-more" hidden>Mostrar mais desta seleção</button></section><details id="raw-products" class="panel"><summary>Explorar todos os registros minerados (sem aprovação comercial)</summary><section><h2>Produtos encontrados</h2><p>Prévia dos destaques minerados: foto, descrição e preço informado pelo Mercado Livre. Preço e disponibilidade podem mudar; os destaques ainda não representam descontos validados.</p><h2>Central de Cupons Ativos</h2><div id="coupons" class="coupon-bar" aria-live="polite">Consultando campanhas verificadas…</div><p>Cupons sugeridos conforme categoria e valor. Confira as restrições e a aplicação no checkout. Para divulgar com comissão, cole em cada produto o link criado no gerador oficial de afiliados do Mercado Livre. Os links ficam salvos somente neste navegador.</p><div class="filters" aria-label="Filtrar produtos"><button id="filter-all" aria-pressed="true">Todas as ofertas completas</button><button id="filter-discount" aria-pressed="false">🔥 Desconto anunciado ≥ 5%</button><button id="filter-tier" aria-pressed="false">⚡ Prioridade Tier A</button><button id="filter-coupon" aria-pressed="false">🏷️ Cupom sugerido</button><button id="filter-incomplete" aria-pressed="false">Registros incompletos</button></div><p id="results-summary"></p><div id="snapshots" class="results" aria-label="Produtos minerados"></div><button id="more" hidden>Mostrar mais produtos</button></section></details></main>
+<section class="panel" id="vertical-products"><h2 id="vertical-title" tabindex="-1">Automotivo — produtos e ofertas</h2><p>Todos os produtos monitorados nesta categoria. Use os filtros para escolher o que divulgar e acompanhar os envios.</p><div class="controls filters"><button id="rank-ALL" aria-pressed="true">Todos</button><button id="rank-APPROVED" aria-pressed="false">🔥 Prontos para divulgar</button><button id="rank-OBSERVING" aria-pressed="false">⏳ Em acompanhamento</button><button id="rank-SENT" aria-pressed="false">✅ Enviados</button><button id="refresh">🔄 Atualizar</button></div><p id="message" role="status" aria-live="polite"></p><p id="commercial-status" role="status" aria-live="polite"></p><p id="copy-status" role="status" aria-live="polite"></p><textarea id="manual-copy" hidden readonly aria-label="Texto para copiar manualmente"></textarea><p>Para copiar a divulgação, cole no produto o link criado pelo gerador oficial de afiliados.</p><p id="commercial-summary"></p><div id="commercial-results" class="results"></div><button id="commercial-more" hidden>Mostrar mais desta seleção</button></section><details id="robot-admin" class="panel"><summary>Administração do robô</summary><p>Ferramentas técnicas de coleta e diagnóstico — Automotivo.</p><div class="controls"><button id="sweep">🚀 Executar varredura</button><button id="smoke">⚡ Teste de coleta (2 categorias)</button><button id="collect-evidence">📊 Coletar evidências agora</button></div><p id="admin-summary"></p><details id="raw-products" class="panel"><summary>Explorar todos os registros minerados (sem aprovação comercial)</summary><section><h2>Produtos encontrados</h2><p>Prévia dos destaques minerados: foto, descrição e preço informado pelo Mercado Livre. Preço e disponibilidade podem mudar; os destaques ainda não representam descontos validados.</p><h2>Central de Cupons Ativos</h2><div id="coupons" class="coupon-bar" aria-live="polite">Consultando campanhas verificadas…</div><p>Cupons sugeridos conforme categoria e valor. Confira as restrições e a aplicação no checkout. Para divulgar com comissão, cole em cada produto o link criado no gerador oficial de afiliados do Mercado Livre. Os links ficam salvos somente neste navegador.</p><div class="filters" aria-label="Filtrar produtos"><button id="filter-all" aria-pressed="true">Todas as ofertas completas</button><button id="filter-discount" aria-pressed="false">🔥 Desconto anunciado ≥ 5%</button><button id="filter-tier" aria-pressed="false">⚡ Prioridade Tier A</button><button id="filter-coupon" aria-pressed="false">🏷️ Cupom sugerido</button><button id="filter-incomplete" aria-pressed="false">Registros incompletos</button></div><p id="results-summary"></p><div id="snapshots" class="results" aria-label="Produtos minerados"></div><button id="more" hidden>Mostrar mais produtos</button></section></details></details></main>
 <script>
 const el = id => document.getElementById(id);
 let busy = false;
 const verticalNames = ["Automotivo","Casa, utilidades e organização","Eletrodomésticos","Moda","Beleza e cuidado pessoal","Eletrônicos, celulares e acessórios","Infantil — bebês, brinquedos e moda infantil","Games","Esportes e fitness","Pet"];
 let selectedVertical = 0;
-let commercialView = 'APPROVED', commercialOffset = 0, commercialRevision = 0, collecting = false;
+let commercialView = 'ALL', commercialOffset = 0, commercialRevision = 0, collecting = false;
 function updateVerticalControls() {
   const inactive=selectedVertical!==0;
   el('raw-products').hidden=inactive;
-  for(const id of ['collect-evidence','rank-APPROVED','rank-OBSERVING','rank-REJECTED']) el(id).disabled=inactive||busy||(id==='collect-evidence'&&collecting);
+  for(const id of ['collect-evidence','rank-ALL','rank-APPROVED','rank-OBSERVING','rank-SENT']) el(id).disabled=inactive||busy||(id==='collect-evidence'&&collecting);
 }
 for(let index=0;index<verticalNames.length;index++) el('vertical-'+index).addEventListener('click',async()=>{
   selectedVertical=index;
   commercialRevision++;
   commercialOffset=0;
-  commercialView='OBSERVING';
+  commercialView='ALL';
   for(let other=0;other<verticalNames.length;other++) el('vertical-'+other).setAttribute('aria-pressed',String(other===index));
-  for(const view of ['APPROVED','OBSERVING','REJECTED']) el('rank-'+view).setAttribute('aria-pressed',String(view===commercialView));
+  for(const view of ['ALL','APPROVED','OBSERVING','SENT']) el('rank-'+view).setAttribute('aria-pressed',String(view===commercialView));
   el('vertical-title').textContent=verticalNames[index]+' — produtos e ofertas';
   el('commercial-results').replaceChildren();
   el('commercial-summary').textContent='';
@@ -24880,12 +24893,12 @@ async function loadCommercial(append = false) {
   try {
     const data=await request('/api/commercial/opportunities?view='+view+'&offset='+offset);
     if(version!==commercialRevision) return;
+    el('commercial-status').textContent='';
     if(!append) el('commercial-results').replaceChildren();
     commercialOffset=offset+data.entries.length;
     el('commercial-more').hidden=!data.hasMore;
-    el('commercial-summary').textContent=data.counts.approved+' aprovadas · '+data.counts.observing+' em observação · '+data.counts.rejected+' não aprovadas · '+data.counts.monitored+' monitoradas. '+(data.lastCollection?'Última coleta: '+date(data.lastCollection.started_at)+' · '+data.lastCollection.status+' · '+data.lastCollection.collected+' consultados.':'A coleta de histórico ainda não começou.');
-    if(data.coverage) el('commercial-summary').textContent+=' Novidades: '+data.coverage.pending+' aguardando avaliação · '+data.coverage.evaluated+' avaliadas · '+data.coverage.waiting+' aguardando vaga de histórico. '+data.coverage.fresh+' monitoradas consultadas nas últimas 24h.';
-    if(data.coverage) el('commercial-summary').textContent+=' Categorias: '+data.coverage.categories_failed+' com falha · '+data.coverage.categories_without_ranking+' sem ranking disponível. '+data.coverage.priority_active+' produtos em acompanhamento prioritário.';
+    el('commercial-summary').textContent=data.counts.monitored+' de '+data.capacity+' produtos monitorados · '+data.counts.approved+' prontos para divulgar · '+data.counts.observing+' em acompanhamento · '+data.counts.sent+' enviados.';
+    el('admin-summary').textContent=data.lastCollection?'Última coleta: '+date(data.lastCollection.started_at)+' · '+data.lastCollection.status+' · '+data.lastCollection.collected+' consultados.':'';
     for(const entry of data.entries) {
       const card=textNode('article','','product-card');
       entry.preview.commercial=entry.rank;
@@ -24897,7 +24910,7 @@ async function loadCommercial(append = false) {
       for(const reason of entry.rank.reasons) body.append(textNode('p','• '+reason));
       for(const reason of entry.rank.evidence) body.append(textNode('p',reason,'product-meta'));
       const feedback=textNode('div','','controls');
-      for(const [action,label] of [['INTERESTED','Interessante'],['SHARED','Divulguei'],['NOT_RELEVANT','Não serve para meu público'],['RESET','Limpar avaliação']]) {
+      for(const [action,label] of [['INTERESTED','Interessante'],['NOT_RELEVANT','Não serve para meu público'],['RESET','Limpar avaliação']]) {
         const button=textNode('button',(entry.feedback===action?'✓ ':'')+label);
         button.addEventListener('click',async()=>{
           button.disabled=true;
@@ -24905,14 +24918,24 @@ async function loadCommercial(append = false) {
           catch(error){el('commercial-status').textContent=error.message;} finally{button.disabled=false;}
         });feedback.append(button);
       }
-      body.append(feedback);card.append(body);el('commercial-results').append(card);
+      if(entry.sent_at) body.append(textNode('p','✅ Enviado · '+verticalNames[0]+' · '+date(entry.sent_at),'badge'));
+      const sentButton=textNode('button',entry.sent_at?'Desfazer enviado':'✅ Marcar como enviado');
+      sentButton.addEventListener('click',async()=>{
+        sentButton.disabled=true;
+        try {
+          await request('/api/commercial/sent?id='+encodeURIComponent(entry.snapshot.product_id)+'&type='+encodeURIComponent(entry.snapshot.type)+'&sent='+String(!entry.sent_at),'POST');
+          await loadCommercial();
+        } catch(error) {el('commercial-status').textContent=error.message;}
+        finally {sentButton.disabled=false;}
+      });
+      body.append(sentButton);body.append(feedback);card.append(body);el('commercial-results').append(card);
     }
-    if(!data.total) el('commercial-results').append(textNode('p',view==='APPROVED'?'Ainda não há ofertas com todas as evidências exigidas. Consulte Em observação para acompanhar o histórico.':'Nenhum produto nesta seleção.'));
-  } catch {if(version!==commercialRevision) return;el('commercial-status').textContent='Não foi possível carregar o ranking comercial. Tente atualizar os dados.';}
+    if(!data.total) el('commercial-results').append(textNode('p',view==='APPROVED'?'Ainda não há ofertas com todas as evidências exigidas. Consulte Em acompanhamento para acompanhar o histórico.':'Nenhum produto nesta seleção.'));
+  } catch(error) {if(version!==commercialRevision) return;el('commercial-status').textContent=error.message;}
 }
-for(const view of ['APPROVED','OBSERVING','REJECTED']) el('rank-'+view).addEventListener('click',()=>{
+for(const view of ['ALL','APPROVED','OBSERVING','SENT']) el('rank-'+view).addEventListener('click',()=>{
   commercialView=view;
-  for(const other of ['APPROVED','OBSERVING','REJECTED']) el('rank-'+other).setAttribute('aria-pressed',String(view===other));
+  for(const other of ['ALL','APPROVED','OBSERVING','SENT']) el('rank-'+other).setAttribute('aria-pressed',String(view===other));
   loadCommercial();
 });
 el('commercial-more').addEventListener('click',()=>loadCommercial(true));
@@ -25361,12 +25384,13 @@ async function handleRequest(request, response, overrides = {}) {
       const revalidating = url.pathname === "/api/commercial/revalidate";
       const cron = discovering || probing || priority || url.pathname === "/api/commercial/cron";
       const feedback = url.pathname === "/api/commercial/feedback";
+      const publication = url.pathname === "/api/commercial/sent";
       const listing = url.pathname === "/api/commercial/opportunities";
-      if (!collecting && !cron && !feedback && !listing && !revalidating) {
+      if (!collecting && !cron && !feedback && !publication && !listing && !revalidating) {
         sendJson(response, 404, { errorCode: "NOT_FOUND" });
         return;
       }
-      if (method !== (collecting || feedback || probing || revalidating ? "POST" : "GET")) {
+      if (method !== (collecting || feedback || publication || probing || revalidating ? "POST" : "GET")) {
         sendJson(response, 405, { errorCode: "METHOD_NOT_ALLOWED" });
         return;
       }
@@ -25383,7 +25407,7 @@ async function handleRequest(request, response, overrides = {}) {
           sendJson(response, 401, { errorCode: "AUTHORIZATION_REQUIRED" });
           return;
         }
-        if ((collecting || feedback || revalidating) && request.headers.origin !== new URL(config.redirectUri).origin) {
+        if ((collecting || feedback || publication || revalidating) && request.headers.origin !== new URL(config.redirectUri).origin) {
           sendJson(response, 403, { errorCode: "ORIGIN_NOT_ALLOWED" });
           return;
         }
@@ -25420,6 +25444,15 @@ async function handleRequest(request, response, overrides = {}) {
         return;
       }
       const service = await Promise.resolve().then(() => (init_service(), service_exports));
+      if (publication) {
+        const id = url.searchParams.get("id") ?? "", type = url.searchParams.get("type") ?? "", sent = url.searchParams.get("sent");
+        if (!(type === "USER_PRODUCT" ? /^MLBU[0-9]{1,20}$/.test(id) : ["ITEM", "PRODUCT"].includes(type) && /^MLB[0-9]{1,20}$/.test(id)) || !["true", "false"].includes(sent ?? "")) {
+          sendJson(response, 400, { errorCode: "INVALID_PUBLICATION" });
+          return;
+        }
+        sendJson(response, 200, await service.markCommercialSent(client, id, type, sent === "true"));
+        return;
+      }
       if (collecting || cron) {
         sendJson(response, 200, await service.collectCommercialEvidence(client));
         return;
@@ -25433,8 +25466,8 @@ async function handleRequest(request, response, overrides = {}) {
         sendJson(response, 200, await service.saveCommercialFeedback(client, id, type, action));
         return;
       }
-      const view = url.searchParams.get("view") ?? "APPROVED", offset = Number(url.searchParams.get("offset") ?? 0);
-      if (!["APPROVED", "OBSERVING", "REJECTED"].includes(view) || !Number.isSafeInteger(offset) || offset < 0 || offset > 1e4) {
+      const view = url.searchParams.get("view") ?? "ALL", offset = Number(url.searchParams.get("offset") ?? 0);
+      if (!["ALL", "SENT", "APPROVED", "OBSERVING", "REJECTED"].includes(view) || !Number.isSafeInteger(offset) || offset < 0 || offset > 1e4) {
         sendJson(response, 400, { errorCode: "INVALID_VIEW" });
         return;
       }

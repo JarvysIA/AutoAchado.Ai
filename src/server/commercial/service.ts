@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { catalogOfferPreview, configuredMeliReader, configuredProductPreview, type ProductPreview } from "../discovery/product-preview.js";
 import { affiliateIntelligence } from "../affiliate/coupon-service.js";
-import { commercialProfile, rankProduct, selectDiverse, type Observation } from "./ranking.js";
+import { commercialProfile, rankProduct, type Observation } from "./ranking.js";
 import {exploreCandidates} from './admission.js';
 
 type Watch = {source_key:string; product_id:string; type:string; category_id:string; snapshot:Record<string,unknown>;
@@ -103,10 +103,20 @@ export async function collectCommercialEvidence(client:SupabaseClient) {
 }
 
 export async function commercialOpportunities(client:SupabaseClient, view:string, offset=0) {
+  const sentByIdentity=new Map<string,string>();
+  for(let page=0;;page++) {
+    const rows=checked(await client.from('commercial_sent_products').select('identity_key,sent_at')
+      .eq('vertical_key','AUTOMOTIVE').not('sent_at','is',null).order('identity_key').range(page*500,page*500+499));
+    for(const row of rows??[]) sentByIdentity.set(row.identity_key,row.sent_at);
+    if(!rows||rows.length<500) break;
+    if(page>=19) throw new Error('COMMERCIAL_SENT_LIMIT');
+  }
+  const vertical=checked(await client.from('commercial_verticals').select('monitor_capacity').eq('vertical_key','AUTOMOTIVE').single());
+  if(!vertical) throw new Error('COMMERCIAL_VERTICAL_NOT_FOUND');
   const watches:Watch[]=[];
   for(let page=0;;page++) {
     const rows=checked(await client.from('commercial_watchlist').select('*').order('source_key').range(page*500,page*500+499)) as Watch[];
-    watches.push(...rows);if(rows.length<500) break;
+    watches.push(...rows.filter(row=>row.monitor || sentByIdentity.has(row.identity_key)));if(rows.length<500) break;
     if(page>=19) throw new Error('COMMERCIAL_WATCHLIST_LIMIT');
   }
   const feedback:{identity_key:string;action:string}[]=[];
@@ -140,23 +150,33 @@ export async function commercialOpportunities(client:SupabaseClient, view:string
   const feedbackByIdentity=new Map(feedback.map(f=>[f.identity_key,f.action]));
   const allEvaluated=watches.filter(w=>w.preview?.title).map(w=>{
     const action=feedbackByIdentity.get(w.identity_key) ?? null;
-    return {identity_key:w.identity_key,snapshot:w.snapshot,preview:{...w.preview,...affiliateIntelligence(w.preview)},
+    return {identity_key:w.identity_key,monitor:w.monitor,sent_at:sentByIdentity.get(w.identity_key)??null,snapshot:w.snapshot,preview:{...w.preview,...affiliateIntelligence(w.preview)},
       feedback:action,rank:rankProduct(w.preview,historyByIdentity.get(w.identity_key)??[],action,now)};
   });
   const order={APPROVED:0,OBSERVING:1,REJECTED:2};
-  const sorted=allEvaluated.sort((a,b)=>order[a.rank.state]-order[b.rank.state] || b.rank.score-a.rank.score || (a.preview.price??Infinity)-(b.preview.price??Infinity));
+  const sorted=allEvaluated.sort((a,b)=>Number(b.monitor)-Number(a.monitor) || order[a.rank.state]-order[b.rank.state] || b.rank.score-a.rank.score || (a.preview.price??Infinity)-(b.preview.price??Infinity));
   const evaluated=sorted.filter((entry,index,rows)=>rows.findIndex(e=>e.identity_key===entry.identity_key)===index);
-  const approved=selectDiverse(evaluated);
-  const eligible=evaluated.filter(e=>e.rank.state===view).sort((a,b)=>b.rank.score-a.rank.score || a.identity_key.localeCompare(b.identity_key));
-  const unique=eligible.filter((e,i,rows)=>rows.findIndex(r=>r.identity_key===e.identity_key)===i);
-  const selected=view==='APPROVED'?approved:unique;
+  const monitored=evaluated.filter(e=>e.monitor);
+  const approved=monitored.filter(e=>e.rank.state==='APPROVED'&&!e.sent_at);
+  const selected=view==='ALL'?monitored:view==='SENT'?evaluated.filter(e=>e.sent_at).sort((a,b)=>b.sent_at!.localeCompare(a.sent_at!)):
+    view==='APPROVED'?approved:view==='OBSERVING'?monitored.filter(e=>e.rank.state!=='APPROVED'&&!e.sent_at):monitored.filter(e=>e.rank.state===view);
   const runs=checked(await client.from('commercial_collection_runs').select('status,started_at,finished_at,collected,failed,explored,exploration_failed')
     .eq('kind','HISTORY').order('started_at',{ascending:false}).limit(1));
   return {entries:selected.slice(offset,offset+12),total:selected.length,offset,hasMore:offset+12<selected.length,
-    counts:{approved:approved.length,observing:new Set(evaluated.filter(e=>e.rank.state==='OBSERVING').map(e=>e.identity_key)).size,
-      rejected:new Set(evaluated.filter(e=>e.rank.state==='REJECTED').map(e=>e.identity_key)).size,monitored:watches.filter(w=>w.monitor).length},
+    counts:{approved:approved.length,observing:monitored.filter(e=>e.rank.state!=='APPROVED'&&!e.sent_at).length,
+      rejected:monitored.filter(e=>e.rank.state==='REJECTED').length,monitored:monitored.length,sent:evaluated.filter(e=>e.sent_at).length},
+    capacity:vertical.monitor_capacity,
     coverage:checked(await client.rpc('commercial_coverage')),
     lastCollection:runs?.[0] ?? null,checkedAt:new Date(now).toISOString(),historyPolicy:'20 dias observados em 30, janela mínima de 27 dias, 2 vendedores; desconto mínimo de 10%.'};
+}
+
+export async function markCommercialSent(client:SupabaseClient,id:string,type:string,sent:boolean) {
+  const row=checked(await client.from('commercial_watchlist').select('identity_key').eq('source_key',type+':'+id).maybeSingle());
+  if(!row) throw new Error('COMMERCIAL_PRODUCT_NOT_FOUND');
+  const sentAt=sent?new Date().toISOString():null;
+  checked(await client.from('commercial_sent_products').upsert({vertical_key:'AUTOMOTIVE',identity_key:row.identity_key,
+    sent_at:sentAt,updated_at:new Date().toISOString()},{onConflict:'vertical_key,identity_key'}));
+  return {saved:true,sent_at:sentAt};
 }
 
 export async function saveCommercialFeedback(client:SupabaseClient,id:string,type:string,action:string) {

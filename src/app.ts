@@ -248,9 +248,10 @@ export async function handleRequest(
       const revalidating=url.pathname === '/api/commercial/revalidate';
       const cron=discovering || probing || priority || url.pathname === "/api/commercial/cron";
       const feedback=url.pathname === "/api/commercial/feedback";
+      const publication=url.pathname === '/api/commercial/sent';
       const listing=url.pathname === "/api/commercial/opportunities";
-      if(!collecting && !cron && !feedback && !listing && !revalidating) { sendJson(response,404,{errorCode:"NOT_FOUND"}); return; }
-      if(method !== (collecting || feedback || probing || revalidating ? "POST" : "GET")) {sendJson(response,405,{errorCode:"METHOD_NOT_ALLOWED"});return;}
+      if(!collecting && !cron && !feedback && !publication && !listing && !revalidating) { sendJson(response,404,{errorCode:"NOT_FOUND"}); return; }
+      if(method !== (collecting || feedback || publication || probing || revalidating ? "POST" : "GET")) {sendJson(response,405,{errorCode:"METHOD_NOT_ALLOWED"});return;}
       if(cron) {
         const secret=process.env.CRON_SECRET;
         if(!secret || request.headers.authorization !== "Bearer "+secret) {sendJson(response,401,{errorCode:"AUTHORIZATION_REQUIRED"});return;}
@@ -258,7 +259,7 @@ export async function handleRequest(
         const config=dependencies.loadAppConfig();
         const session=readAuthorizationSession(request.headers.cookie,config.sessionSecret);
         if(!session || session.userId!==296984475) {sendJson(response,401,{errorCode:"AUTHORIZATION_REQUIRED"});return;}
-        if((collecting || feedback || revalidating) && request.headers.origin!==new URL(config.redirectUri).origin) {sendJson(response,403,{errorCode:"ORIGIN_NOT_ALLOWED"});return;}
+        if((collecting || feedback || publication || revalidating) && request.headers.origin!==new URL(config.redirectUri).origin) {sendJson(response,403,{errorCode:"ORIGIN_NOT_ALLOWED"});return;}
       }
       // Until scoped executors are activated, never silently treat another public as Automotive.
       if(url.searchParams.has('vertical') && url.searchParams.get('vertical')!=='AUTOMOTIVE') {
@@ -275,6 +276,12 @@ export async function handleRequest(
         const {revalidateProduct}=await import('./server/commercial/revalidate.js');sendJson(response,200,await revalidateProduct(client,id,type));return;
       }
       const service=await import("./server/commercial/service.js");
+      if(publication) {
+        const id=url.searchParams.get('id')??'',type=url.searchParams.get('type')??'',sent=url.searchParams.get('sent');
+        if(!(type==='USER_PRODUCT'?/^MLBU[0-9]{1,20}$/.test(id):['ITEM','PRODUCT'].includes(type)&&/^MLB[0-9]{1,20}$/.test(id))
+          || !['true','false'].includes(sent??'')) {sendJson(response,400,{errorCode:'INVALID_PUBLICATION'});return;}
+        sendJson(response,200,await service.markCommercialSent(client,id,type,sent==='true'));return;
+      }
       if(collecting || cron) {sendJson(response,200,await service.collectCommercialEvidence(client));return;}
       if(feedback) {
         const id=url.searchParams.get('id')??'',type=url.searchParams.get('type')??'',action=url.searchParams.get('action')??'';
@@ -282,8 +289,8 @@ export async function handleRequest(
           || !['SHARED','INTERESTED','NOT_RELEVANT','RESET'].includes(action)) {sendJson(response,400,{errorCode:'INVALID_FEEDBACK'});return;}
         sendJson(response,200,await service.saveCommercialFeedback(client,id,type,action));return;
       }
-      const view=url.searchParams.get('view')??'APPROVED',offset=Number(url.searchParams.get('offset')??0);
-      if(!['APPROVED','OBSERVING','REJECTED'].includes(view) || !Number.isSafeInteger(offset) || offset<0 || offset>10000) {sendJson(response,400,{errorCode:'INVALID_VIEW'});return;}
+      const view=url.searchParams.get('view')??'ALL',offset=Number(url.searchParams.get('offset')??0);
+      if(!['ALL','SENT','APPROVED','OBSERVING','REJECTED'].includes(view) || !Number.isSafeInteger(offset) || offset<0 || offset>10000) {sendJson(response,400,{errorCode:'INVALID_VIEW'});return;}
       sendJson(response,200,await service.commercialOpportunities(client,view,offset));
     } catch {sendJson(response,503,{errorCode:'COMMERCIAL_UNAVAILABLE'});}
     return;

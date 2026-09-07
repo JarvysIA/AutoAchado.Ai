@@ -8,7 +8,7 @@ describe("operational dashboard browser script", () => {
     const node = () => ({ textContent: "", disabled: false, children: [] as any[], handlers: {} as any, value: "", hidden:false, open:true, focus() {}, scrollIntoView() {}, select() {}, attributes:{} as any, setAttribute(key:string,value:string) {this.attributes[key]=value;},
       append(child: any) { this.children.push(child); }, replaceChildren(...children:any[]) { this.children = children; },
       addEventListener(event: string, handler: any) { this.handlers[event] = handler; } });
-    for (const id of ["vertical-title", "vertical-products", ...Array.from({length:10},(_,i)=>"vertical-"+i), "count", "synced", "snapshots", "message", "sweep", "smoke", "refresh", "more", "results-summary", "raw-products", "commercial-results", "commercial-status", "commercial-summary", "commercial-more", "collect-evidence", "rank-APPROVED", "rank-OBSERVING", "rank-REJECTED", "coupons", "copy-status", "manual-copy", ...["all","discount","tier","coupon","incomplete"].map(f => "filter-" + f)]) elements.set(id, node());
+    for (const id of ["vertical-title", "vertical-products", ...Array.from({length:10},(_,i)=>"vertical-"+i), "count", "synced", "snapshots", "message", "sweep", "smoke", "refresh", "more", "results-summary", "raw-products", "commercial-results", "commercial-status", "commercial-summary", "commercial-more", "collect-evidence", "rank-APPROVED", "rank-OBSERVING", "rank-ALL", "rank-SENT", "admin-summary", "coupons", "copy-status", "manual-copy", ...["all","discount","tier","coupon","incomplete"].map(f => "filter-" + f)]) elements.set(id, node());
     const calls: any[] = [];
     const copied: string[] = [];
     let revalidationReady=true, revalidationPrice=123;
@@ -24,7 +24,11 @@ describe("operational dashboard browser script", () => {
     const html = dashboardPage({authorized: true, userId: "296984475"});
     new Script(html.match(/<script>([\s\S]*?)<\/script>/)![1]!).runInContext(context);
     await new Promise(resolve => setImmediate(resolve));
-    expect(elements.get("commercial-results").children[0].textContent).toContain("Ainda não há ofertas");
+    expect(elements.get("commercial-results").children[0].textContent).toContain("Nenhum produto nesta seleção");
+    expect(html).not.toContain("Painel de Controle");
+    expect(html).not.toContain("Máximo de 20 ofertas");
+    expect(html).toContain("Administração do robô");
+    expect(html.indexOf('id="robot-admin"')).toBeLessThan(html.indexOf('id="sweep"'));
     expect(elements.get("count").textContent).toBe("345");
     expect(elements.get("snapshots").children[0].children[1].children[0].textContent).toBe("<script>alert(1)</script>");
     expect(elements.get("results-summary").textContent).toContain("1 completos · 1 incompletos");
@@ -67,7 +71,7 @@ describe("operational dashboard browser script", () => {
       expect(elements.get('vertical-'+i).attributes['aria-pressed']).toBe('true');
     }
     await elements.get('vertical-0').handlers.click();
-    expect(calls.at(-1).path).toContain('view=OBSERVING&offset=0');
+    expect(calls.at(-1).path).toContain('view=ALL&offset=0');
     expect(elements.get('raw-products').hidden).toBe(false);
     expect(elements.get('vertical-title').textContent).toContain('Automotivo');
     // A pending Automotive response must never populate a newly selected vertical.
@@ -80,6 +84,24 @@ describe("operational dashboard browser script", () => {
     await pending;
     expect(elements.get('commercial-results').children[0].textContent).toContain('Casa');
     expect(elements.get('commercial-summary').textContent).toContain('Vertical planejada');
+    let sentAt:string|null=null;
+    context.fetch=async(path:string,options:any)=>{
+      if(path.includes('/commercial/sent?')) {
+        calls.push({path,options});sentAt=path.endsWith('sent=true')?'2026-09-07T10:00:00Z':null;
+        return {ok:true,json:async()=>({saved:true})};
+      }
+      if(path.includes('/commercial/opportunities')) return {ok:true,json:async()=>({entries:[{
+        snapshot:{product_id:'MLB123',type:'ITEM'},preview:{title:'Compressor portátil',price:123,currency:'BRL'},sent_at:sentAt,
+        rank:{state:'OBSERVING',score:20,history_days:1,seller_count:1,demand_days:1,historical_discount_percent:null,reasons:[],evidence:[]}
+      }],counts:{approved:0,observing:1,sent:sentAt?1:0,monitored:1},capacity:100,total:1,hasMore:false})};
+      return originalFetch(path,options);
+    };
+    await elements.get('vertical-0').handlers.click();
+    const sentAction=()=>elements.get('commercial-results').children[0].children.at(-1).children.find((n:any)=>n.textContent.includes('Marcar como enviado')||n.textContent==='Desfazer enviado');
+    expect(sentAt).toBeNull();
+    await sentAction().handlers.click();
+    expect(sentAt).not.toBeNull();expect(sentAction().textContent).toBe('Desfazer enviado');
+    await sentAction().handlers.click();expect(sentAt).toBeNull();
     context.fetch=originalFetch;
   });
 });
