@@ -72,6 +72,7 @@ async function loadCommercial(append = false) {
     commercialOffset=offset+data.entries.length;
     el('commercial-more').hidden=!data.hasMore;
     el('commercial-summary').textContent=data.counts.monitored+' de '+data.capacity+' produtos monitorados · '+data.counts.approved+' prontos para divulgar · '+data.counts.observing+' em acompanhamento · '+data.counts.sent+' enviados.';
+    if(data.monitoringHealth) el('commercial-summary').textContent+=' Preço comparável nas últimas 24h: '+data.monitoringHealth.fresh+'/'+data.monitoringHealth.monitored+' · Histórico suficiente: '+data.matureHistory+' · Aguardando nova tentativa: '+data.monitoringHealth.retrying+'.';
     el('admin-summary').textContent=data.lastCollection?'Última coleta: '+date(data.lastCollection.started_at)+' · '+data.lastCollection.status+' · '+data.lastCollection.collected+' consultados.':'';
     for(const entry of data.entries) {
       const card=textNode('article','','product-card');

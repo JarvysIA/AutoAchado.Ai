@@ -29,14 +29,6 @@
     {
       "path": "/api/commercial/discover",
       "schedule": "0 6 * * *"
-    },
-    {
-      "path": "/api/commercial/cron",
-      "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/commercial/cron",
-      "schedule": "0 21 * * *"
     }
   ]
 }

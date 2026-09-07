@@ -23,6 +23,7 @@ export interface CommercialRank {
   reference_price: number | null;
   historical_discount_percent: number | null;
   history_days: number;
+  history_sufficient?: boolean;
   seller_count: number;
   demand_days: number;
   checked_at: string;
@@ -114,7 +115,7 @@ export function rankProduct(preview: ProductPreview, history: Observation[], fee
     + profile.ease * .15 + (preview.seller_trusted ? 100 : 0) * .10 + commercial * .05);
   return {version:RANKING_VERSION,state:rejected ? "REJECTED" : reasons.length ? "OBSERVING" : "APPROVED",score,
     group:profile.group,reasons,evidence,reference_price:reference,historical_discount_percent:sufficient && discount !== null ? Math.round(discount) : null,
-    history_days:daily.size,seller_count:sellers.size,demand_days:demand.size,checked_at:new Date(now).toISOString()};
+    history_days:daily.size,history_sufficient:sufficient,seller_count:sellers.size,demand_days:demand.size,checked_at:new Date(now).toISOString()};
 }
 
 export function selectDiverse<T extends {identity_key:string; rank:CommercialRank}>(entries: T[], limit = 20): T[] {

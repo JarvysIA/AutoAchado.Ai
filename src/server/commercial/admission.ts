@@ -14,12 +14,12 @@ export function admissionDecision(p:ProductPreview, attempts:number) {
 function checked<T>(r:{data:T;error:unknown}):T {if(r.error) throw new Error('ADMISSION_STORAGE_FAILED');return r.data;}
 
 // Called under the collector's database lock, after its reserved history budget.
-export async function exploreCandidates(client:SupabaseClient, deadline:number) {
+export async function exploreCandidates(client:SupabaseClient, deadline:number, compact=false) {
  const due=()=>client.from('commercial_candidate_queue').select('*')
   .in('state',['PENDING','RETRY']).lte('next_check_at',new Date().toISOString());
  const order=(query:ReturnType<typeof due>)=>query.order('next_check_at').order('best_position').order('first_seen_at').order('source_key');
  // Retain exploration of other types without allowing restricted USER_PRODUCTs to consume the whole budget.
- const [catalog,others]=await Promise.all([order(due().eq('type','PRODUCT')).limit(20),order(due().neq('type','PRODUCT')).limit(4)]);
+ const [catalog,others]=await Promise.all([order(due().eq('type','PRODUCT')).limit(compact?6:20),order(due().neq('type','PRODUCT')).limit(compact?2:4)]);
  const rows=[...(checked(catalog)??[]),...(checked(others)??[])];
  let evaluated=0,failed=0;
  const queue=[...(rows??[])];

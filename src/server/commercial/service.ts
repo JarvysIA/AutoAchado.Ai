@@ -3,9 +3,11 @@ import { catalogOfferPreview, configuredMeliReader, configuredProductPreview, ty
 import { affiliateIntelligence } from "../affiliate/coupon-service.js";
 import { commercialProfile, rankProduct, type Observation } from "./ranking.js";
 import {exploreCandidates} from './admission.js';
+import {HISTORY_BATCH_SIZE,nextEvidenceCheck,validEvidenceAt} from './collection-policy.js';
 
 type Watch = {source_key:string; product_id:string; type:string; category_id:string; snapshot:Record<string,unknown>;
-  identity_key:string; preview:ProductPreview; last_collected_at:string|null; monitor:boolean; unavailable_attempts:number};
+  identity_key:string; preview:ProductPreview; last_collected_at:string|null; monitor:boolean; unavailable_attempts:number;
+  evidence_failures:number};
 function checked<T>(result: {data:T; error:unknown}): T {
   if (result.error) throw new Error("COMMERCIAL_STORAGE_UNAVAILABLE");
   return result.data;
@@ -32,7 +34,7 @@ export async function collectCommercialEvidence(client:SupabaseClient) {
   try {
     checked(await client.rpc("seed_commercial_watchlist"));
     const candidates = checked(await client.from("commercial_watchlist").select("*").eq("monitor",true)
-      .order("last_collected_at",{ascending:true,nullsFirst:true}).order("source_key").limit(48)) as Watch[];
+      .lte('next_evidence_check',new Date().toISOString()).order('next_evidence_check').order("source_key").limit(HISTORY_BATCH_SIZE)) as Watch[];
     const liveRankings = new Map<string,Promise<Map<string,number>>>();
     const memberships=checked(await client.rpc('commercial_candidate_categories',{keys:candidates.map(c=>c.source_key)})) as {source_key:string;category_id:string}[];
     const positions = (category:string) => {
@@ -55,7 +57,10 @@ export async function collectCommercialEvidence(client:SupabaseClient) {
       while(queue.length && Date.now()-started < 120000) {
         const row=queue.shift()!;
         try {
-          const preview=await configuredProductPreview(client,row.product_id,row.type);
+          // A killed invocation leaves a short persisted retry lease, not a lost task.
+          checked(await client.from('commercial_watchlist').update({last_evidence_attempt:new Date().toISOString(),
+            next_evidence_check:new Date(Date.now()+6*60000).toISOString()}).eq('source_key',row.source_key));
+          const preview=await configuredProductPreview(client,row.product_id,row.type,true);
           const position=(await positions(row.category_id)).get(row.source_key) ?? null;
           await saveObservation(client,row.product_id,row.type,preview,position);
           const dimensions=[...new Set([row.category_id,...memberships.filter(m=>m.source_key===row.source_key).map(m=>m.category_id)])];
@@ -83,19 +88,27 @@ export async function collectCommercialEvidence(client:SupabaseClient) {
             &&preview.price!==null&&row.preview.price!==null&&preview.price<=row.preview.price*.95;
           if(priceDrop) checked(await client.rpc('request_commercial_priority',{candidate_key:row.source_key,request_reason:'OBSERVED_PRICE_DROP'}));
           const unavailable = !preview.price && preview.title === row.product_id ? (row.unavailable_attempts ?? 0) + 1 : 0;
+          const validAt=validEvidenceAt(preview);
+          const failures=validAt?0:(row.evidence_failures??0)+1;
           checked(await client.from('commercial_watchlist').update({preview,identity_key:productIdentity(row.product_id,row.type,preview),
+            ...(validAt?{last_valid_price_at:validAt}:{}),evidence_failures:failures,next_evidence_check:nextEvidenceCheck(!!validAt,failures),
             last_collected_at:new Date().toISOString(),unavailable_attempts:unavailable,monitor:profile.group !== 'especializado' && unavailable < 3}).eq('source_key',row.source_key));
-          collected++;
-        } catch { failed++; }
+          if(validAt) collected++;else failed++;
+        } catch {
+          failed++;
+          const failures=(row.evidence_failures??0)+1;
+          checked(await client.from('commercial_watchlist').update({evidence_failures:failures,
+            next_evidence_check:nextEvidenceCheck(false,failures)}).eq('source_key',row.source_key));
+        }
       }
     }
     await Promise.all([worker(),worker(),worker()]);
-    failed+=queue.length;
-    const exploration=await exploreCandidates(client,started+210000);
-    const status=failed || exploration.failed || exploration.deferred ? 'PARTIAL' : 'COMPLETED';
+    const deferred=queue.length;
+    const exploration=await exploreCandidates(client,started+210000,true);
+    const status=failed || deferred || exploration.failed || exploration.deferred ? 'PARTIAL' : 'COMPLETED';
     checked(await client.from('commercial_collection_runs').update({status,collected,failed,explored:exploration.evaluated,
-      exploration_failed:exploration.failed,finished_at:new Date().toISOString()}).eq('id',runId));
-    return {status,collected,failed,exploration};
+      exploration_failed:exploration.failed,deferred,finished_at:new Date().toISOString()}).eq('id',runId));
+    return {status,collected,failed,deferred,exploration};
   } catch(error) {
     await client.from('commercial_collection_runs').update({status:'FAILED',collected,failed,finished_at:new Date().toISOString()}).eq('id',runId);
     throw error;
@@ -166,6 +179,8 @@ export async function commercialOpportunities(client:SupabaseClient, view:string
     counts:{approved:approved.length,observing:monitored.filter(e=>e.rank.state!=='APPROVED'&&!e.sent_at).length,
       rejected:monitored.filter(e=>e.rank.state==='REJECTED').length,monitored:monitored.length,sent:evaluated.filter(e=>e.sent_at).length},
     capacity:vertical.monitor_capacity,
+    monitoringHealth:checked(await client.rpc('commercial_monitoring_health')),
+    matureHistory:monitored.filter(e=>e.rank.history_sufficient).length,
     coverage:checked(await client.rpc('commercial_coverage')),
     lastCollection:runs?.[0] ?? null,checkedAt:new Date(now).toISOString(),historyPolicy:'20 dias observados em 30, janela mínima de 27 dias, 2 vendedores; desconto mínimo de 10%.'};
 }
