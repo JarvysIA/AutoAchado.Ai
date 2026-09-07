@@ -5,10 +5,10 @@ import { dashboardPage } from "../src/ui/dashboard.js";
 describe("operational dashboard browser script", () => {
   it("renders persisted rows as text, refreshes count and posts both actions", async () => {
     const elements = new Map<string, any>();
-    const node = () => ({ textContent: "", disabled: false, children: [] as any[], handlers: {} as any, value: "", hidden:false, open:true, focus() {}, select() {}, setAttribute() {},
-      append(child: any) { this.children.push(child); }, replaceChildren() { this.children = []; },
+    const node = () => ({ textContent: "", disabled: false, children: [] as any[], handlers: {} as any, value: "", hidden:false, open:true, focus() {}, scrollIntoView() {}, select() {}, attributes:{} as any, setAttribute(key:string,value:string) {this.attributes[key]=value;},
+      append(child: any) { this.children.push(child); }, replaceChildren(...children:any[]) { this.children = children; },
       addEventListener(event: string, handler: any) { this.handlers[event] = handler; } });
-    for (const id of ["count", "synced", "snapshots", "message", "sweep", "smoke", "refresh", "more", "results-summary", "raw-products", "commercial-results", "commercial-status", "commercial-summary", "commercial-more", "collect-evidence", "rank-APPROVED", "rank-OBSERVING", "rank-REJECTED", "coupons", "copy-status", "manual-copy", ...["all","discount","tier","coupon","incomplete"].map(f => "filter-" + f)]) elements.set(id, node());
+    for (const id of ["vertical-title", "vertical-products", ...Array.from({length:10},(_,i)=>"vertical-"+i), "count", "synced", "snapshots", "message", "sweep", "smoke", "refresh", "more", "results-summary", "raw-products", "commercial-results", "commercial-status", "commercial-summary", "commercial-more", "collect-evidence", "rank-APPROVED", "rank-OBSERVING", "rank-REJECTED", "coupons", "copy-status", "manual-copy", ...["all","discount","tier","coupon","incomplete"].map(f => "filter-" + f)]) elements.set(id, node());
     const calls: any[] = [];
     const copied: string[] = [];
     let revalidationReady=true, revalidationPrice=123;
@@ -56,5 +56,30 @@ describe("operational dashboard browser script", () => {
     await elements.get("smoke").handlers.click();
     expect(calls.filter(call => call.options.method === "POST" && !call.path.includes("/revalidate?")).map(call => call.path)).toEqual(["/api/discovery/sweep", "/api/discovery/smoke"]);
     expect(calls.every(call => call.options.cache === "no-store")).toBe(true);
+    for(let i=1;i<10;i++) {
+      const before=calls.length;
+      await elements.get('vertical-'+i).handlers.click();
+      expect(calls.length).toBe(before);
+      expect(elements.get('commercial-results').children[0].textContent).toContain('ainda não foi ativada');
+      expect(elements.get('raw-products').hidden).toBe(true);
+      expect(elements.get('commercial-more').hidden).toBe(true);
+      expect(elements.get('collect-evidence').disabled).toBe(true);
+      expect(elements.get('vertical-'+i).attributes['aria-pressed']).toBe('true');
+    }
+    await elements.get('vertical-0').handlers.click();
+    expect(calls.at(-1).path).toContain('view=OBSERVING&offset=0');
+    expect(elements.get('raw-products').hidden).toBe(false);
+    expect(elements.get('vertical-title').textContent).toContain('Automotivo');
+    // A pending Automotive response must never populate a newly selected vertical.
+    const originalFetch=context.fetch;
+    let resolveRequest:any;
+    context.fetch=()=>new Promise(resolve=>{resolveRequest=resolve;});
+    const pending=elements.get('vertical-0').handlers.click();
+    await elements.get('vertical-1').handlers.click();
+    resolveRequest({ok:true,json:async()=>({entries:[],counts:{},total:0})});
+    await pending;
+    expect(elements.get('commercial-results').children[0].textContent).toContain('Casa');
+    expect(elements.get('commercial-summary').textContent).toContain('Vertical planejada');
+    context.fetch=originalFetch;
   });
 });
