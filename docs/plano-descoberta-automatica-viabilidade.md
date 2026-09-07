@@ -2,6 +2,8 @@
 
 Data da análise: 6 de setembro de 2026. Escopo: revisão do código, consultas de leitura ao banco de produção e pesquisa de documentação oficial. Este estudo não altera coletores, agendamentos, dados comerciais ou critérios de aprovação.
 
+Situação posterior: a implementação e os resultados reais estão no [relatório de execução de 6 de setembro](execucao-descoberta-automatica-2026-09-06.md). A lista abaixo é o plano original; o relatório distingue o que foi entregue, a configuração conservadora do piloto e a limitação confirmada no acesso promocional.
+
 ## Decisão recomendada
 
 É viável melhorar substancialmente a descoberta automática usando os destaques e as ofertas de catálogo já integrados. Há um gargalo comprovado entre descoberta e monitoramento: candidatos encontrados pelo próprio robô não conseguem entrar na coorte quando as 48 vagas estão ocupadas.

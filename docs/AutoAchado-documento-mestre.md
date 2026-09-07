@@ -4,6 +4,8 @@ Versão 1 — 6 de setembro de 2026. Base técnica revisada: commit `9cbb67e`. D
 
 Complemento de 6 de setembro de 2026: o [plano de descoberta automática e estudo de viabilidade](plano-descoberta-automatica-viabilidade.md) registra a auditoria de cobertura no banco, o caso do compressor encontrado mas não monitorado e a sequência de correções propostas. Esse estudo não representa implementação dessas correções.
 
+Atualização após execução: os commits `05bbecf` e `22f9d3d` implementaram a fila de novidades, a retomada por categoria, a separação das dimensões de demanda, a revalidação antes da cópia e o piloto prioritário. Consulte o [relatório de execução](execucao-descoberta-automatica-2026-09-06.md) e [as regras operacionais atuais](commercial-ranking.md) para os limites e horários vigentes. A prova autenticada não confirmou acesso às promoções de terceiros. As seções abaixo preservam a linha de base analisada antes dessa implementação e devem ser lidas com esse complemento.
+
 ## 1 Propósito e critério de sucesso
 
 O AutoAchado.AI seleciona oportunidades de compra para divulgação como afiliado. O robô deve encontrar produtos desejáveis, fáceis de comprar e com sinais consistentes de demanda, oferecidos por vendedores confiáveis a preços inferiores ao histórico observado do mesmo produto. A dashboard entrega uma seleção curta, explicável e pronta para revisão e divulgação pelo operador.
