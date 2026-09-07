@@ -17,7 +17,7 @@ export async function revalidateProduct(client:SupabaseClient,id:string,type:str
   if(!data||data.length<1000) break;
   if(page>=99) throw new Error('REVALIDATION_HISTORY_LIMIT');
  }
- const feedback=checked(await client.from('commercial_feedback').select('action').eq('identity_key',identity).maybeSingle());
+ const feedback=checked(await client.from('commercial_vertical_feedback').select('action').eq('vertical_key','AUTOMOTIVE').eq('identity_key',identity).maybeSingle());
  const commercial=rankProduct(preview,rows,feedback?.action??null);
  checked(await client.from('commercial_watchlist').update({preview,identity_key:identity}).eq('source_key',type+':'+id));
  const ready=preview.status!=='UNAVAILABLE'&&!!preview.title&&preview.title!==id&&!!safePreviewUrl(preview.image,true)

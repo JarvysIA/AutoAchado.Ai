@@ -24410,7 +24410,7 @@ async function commercialOpportunities(client, view, offset = 0) {
   }
   const feedback = [];
   for (let page = 0; ; page++) {
-    const rows = checked2(await client.from("commercial_feedback").select("identity_key,action").order("identity_key").range(page * 500, page * 500 + 499));
+    const rows = checked2(await client.from("commercial_vertical_feedback").select("identity_key,action").eq("vertical_key", "AUTOMOTIVE").order("identity_key").range(page * 500, page * 500 + 499));
     feedback.push(...rows ?? []);
     if (!rows || rows.length < 500) break;
     if (page >= 19) throw new Error("COMMERCIAL_FEEDBACK_LIMIT");
@@ -24472,12 +24472,10 @@ async function commercialOpportunities(client, view, offset = 0) {
   };
 }
 async function saveCommercialFeedback(client, id, type, action) {
-  const row = checked2(await client.from("commercial_watchlist").select("identity_key").eq("source_key", type + ":" + id).maybeSingle());
-  if (!row) throw new Error("COMMERCIAL_PRODUCT_NOT_FOUND");
-  checked2(await client.from("commercial_feedback").upsert({ identity_key: row.identity_key, action, updated_at: (/* @__PURE__ */ new Date()).toISOString() }));
-  if (action === "INTERESTED" || action === "RESET") checked2(await client.from("commercial_watchlist").update({ monitor: true, unavailable_attempts: 0 }).eq("identity_key", row.identity_key));
-  if (action === "NOT_RELEVANT") checked2(await client.from("commercial_watchlist").update({ monitor: false }).eq("identity_key", row.identity_key));
-  return { saved: true };
+  return checked2(await client.rpc("save_automotive_commercial_feedback", {
+    candidate_key: type + ":" + id,
+    feedback_action: action
+  }));
 }
 var init_service = __esm({
   "src/server/commercial/service.ts"() {
@@ -24616,7 +24614,7 @@ async function revalidateProduct(client, id, type) {
     if (!data || data.length < 1e3) break;
     if (page >= 99) throw new Error("REVALIDATION_HISTORY_LIMIT");
   }
-  const feedback = checked4(await client.from("commercial_feedback").select("action").eq("identity_key", identity).maybeSingle());
+  const feedback = checked4(await client.from("commercial_vertical_feedback").select("action").eq("vertical_key", "AUTOMOTIVE").eq("identity_key", identity).maybeSingle());
   const commercial = rankProduct(preview, rows, feedback?.action ?? null);
   checked4(await client.from("commercial_watchlist").update({ preview, identity_key: identity }).eq("source_key", type + ":" + id));
   const ready = preview.status !== "UNAVAILABLE" && !!preview.title && preview.title !== id && !!safePreviewUrl(preview.image, true) && !!safePreviewUrl(preview.url) && !!preview.price && preview.currency === "BRL" && Date.parse(preview.priceCheckedAt ?? "") >= Date.now() - 6e4;
@@ -25356,6 +25354,10 @@ async function handleRequest(request, response, overrides = {}) {
           sendJson(response, 403, { errorCode: "ORIGIN_NOT_ALLOWED" });
           return;
         }
+      }
+      if (url.searchParams.has("vertical") && url.searchParams.get("vertical") !== "AUTOMOTIVE") {
+        sendJson(response, 400, { errorCode: "VERTICAL_NOT_ACTIVE" });
+        return;
       }
       if (discovering) {
         const { runConfiguredDiscoveryLiveSmoke: runConfiguredDiscoveryLiveSmoke3 } = await Promise.resolve().then(() => (init_operational(), operational_exports));

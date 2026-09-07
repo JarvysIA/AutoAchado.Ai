@@ -260,6 +260,10 @@ export async function handleRequest(
         if(!session || session.userId!==296984475) {sendJson(response,401,{errorCode:"AUTHORIZATION_REQUIRED"});return;}
         if((collecting || feedback || revalidating) && request.headers.origin!==new URL(config.redirectUri).origin) {sendJson(response,403,{errorCode:"ORIGIN_NOT_ALLOWED"});return;}
       }
+      // Until scoped executors are activated, never silently treat another public as Automotive.
+      if(url.searchParams.has('vertical') && url.searchParams.get('vertical')!=='AUTOMOTIVE') {
+        sendJson(response,400,{errorCode:'VERTICAL_NOT_ACTIVE'});return;
+      }
       if(discovering) { const {runConfiguredDiscoveryLiveSmoke}=await import("./server/discovery/operational.js");sendJson(response,200,await runConfiguredDiscoveryLiveSmoke("FULL_SWEEP"));return;}
       const {createOperationalDiscoveryAdapter}=await import("./server/discovery/operational.js");
       const client=createOperationalDiscoveryAdapter().client;

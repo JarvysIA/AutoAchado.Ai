@@ -111,7 +111,7 @@ export async function commercialOpportunities(client:SupabaseClient, view:string
   }
   const feedback:{identity_key:string;action:string}[]=[];
   for(let page=0;;page++) {
-    const rows=checked(await client.from('commercial_feedback').select('identity_key,action').order('identity_key').range(page*500,page*500+499));
+    const rows=checked(await client.from('commercial_vertical_feedback').select('identity_key,action').eq('vertical_key','AUTOMOTIVE').order('identity_key').range(page*500,page*500+499));
     feedback.push(...(rows??[]));if(!rows||rows.length<500) break;
     if(page>=19) throw new Error('COMMERCIAL_FEEDBACK_LIMIT');
   }
@@ -160,10 +160,7 @@ export async function commercialOpportunities(client:SupabaseClient, view:string
 }
 
 export async function saveCommercialFeedback(client:SupabaseClient,id:string,type:string,action:string) {
-  const row=checked(await client.from('commercial_watchlist').select('identity_key').eq('source_key',type+':'+id).maybeSingle());
-  if(!row) throw new Error('COMMERCIAL_PRODUCT_NOT_FOUND');
-  checked(await client.from('commercial_feedback').upsert({identity_key:row.identity_key,action,updated_at:new Date().toISOString()}));
-  if(action==='INTERESTED' || action==='RESET') checked(await client.from('commercial_watchlist').update({monitor:true,unavailable_attempts:0}).eq('identity_key',row.identity_key));
-  if(action==='NOT_RELEVANT') checked(await client.from('commercial_watchlist').update({monitor:false}).eq('identity_key',row.identity_key));
-  return {saved:true};
+  return checked(await client.rpc('save_automotive_commercial_feedback',{
+    candidate_key:type+':'+id,feedback_action:action,
+  }));
 }

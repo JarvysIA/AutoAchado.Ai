@@ -14,6 +14,13 @@ async function request(path:string,method='GET',headers:Record<string,string>={}
 const cookie=()=>createAuthorizationCookie({authorized:true,userId:296984475,authorizedAt:Date.now()},config.sessionSecret).split(';')[0]!;
 afterEach(()=>{vi.unstubAllEnvs();vi.clearAllMocks();});
 describe('commercial endpoint boundaries',()=>{
+ it('does not apply Automotive feedback or rankings to an inactive vertical',async()=>{
+  const headers={cookie:cookie(),origin:'https://autoachado-ai.vercel.app'};
+  const result=await request('/api/commercial/feedback?id=MLB123&type=ITEM&action=NOT_RELEVANT&vertical=HOME','POST',headers);
+  expect(result.status).toBe(400);expect(JSON.parse(result.body).errorCode).toBe('VERTICAL_NOT_ACTIVE');
+  expect((await request('/api/commercial/opportunities?vertical=PET','GET',headers)).status).toBe(400);
+  expect(calls.feedback).not.toHaveBeenCalled();expect(calls.list).not.toHaveBeenCalled();
+ });
  it('requires a configured cron secret, even for a user with a valid session',async()=>{
   vi.stubEnv('CRON_SECRET','');
   expect((await request('/api/commercial/cron','GET',{authorization:'Bearer undefined',cookie:cookie()})).status).toBe(401);
