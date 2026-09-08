@@ -1,7 +1,7 @@
 import type { ProductPreview } from "../discovery/product-preview.js";
 import { safePreviewUrl } from "../discovery/product-preview.js";
 
-export const RANKING_VERSION = "commercial-v1";
+export const RANKING_VERSION = "commercial-v2-editorial";
 const DAY = 86400000;
 export interface Observation {
   observed_at: string;
@@ -40,13 +40,32 @@ export function commercialProfile(title: string) {
   const text = title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   if (/rastreador|rack de teto|bagageiro|mensalidade|assinatura/.test(text))
     return {group:"especializado", appeal:20, ease:15, reason:"Uso específico ou possível instalação/recorrência; fora do perfil amplo inicial."};
+  // A key mentioned in an alarm is not a tool. Keep uncertain fit/installation in review.
+  if (/\balarme\b|\bstart stop\b|\bpartida remota\b|\bchaveiro\b/.test(text)
+    || (/\bkit macaco\b/.test(text) && /\bfiat\b|\bargo\b|\bcronos\b/.test(text)))
+    return {group:"avaliar",appeal:40,ease:30,reason:null};
   if (/aspirador/.test(text)) return {group:"aspiracao",appeal:90,ease:85,reason:null};
   if (/compressor|calibrador|inflador/.test(text)) return {group:"pneus",appeal:85,ease:75,reason:null};
+  if (/carregador.*bateria/.test(text)) return {group:"bateria",appeal:75,ease:60,reason:null};
   if (/carregador|suporte.*celular|cabo usb/.test(text)) return {group:"celular",appeal:85,ease:85,reason:null};
   if (/organizador|lixeira|protetor solar|quebra.sol/.test(text)) return {group:"organizacao",appeal:75,ease:85,reason:null};
   if (/microfibra|shampoo|cera|limpador|limpeza|vonixx|lavagem/.test(text)) return {group:"limpeza",appeal:65,ease:85,reason:null};
-  if (/ferramenta|chave|lanterna|kit.*reparo/.test(text)) return {group:"ferramentas",appeal:75,ease:75,reason:null};
+  if (/ferramenta|\bchave\b|lanterna|kit.*reparo/.test(text)) return {group:"ferramentas",appeal:75,ease:75,reason:null};
   return {group:"avaliar",appeal:40,ease:40,reason:null};
+}
+
+// Diversify the visible selection without hiding products or mixing approval states.
+export function orderCommercialFamilies<T extends {rank:Pick<CommercialRank,'state'|'group'>}>(entries:T[]):T[] {
+ const result:T[]=[];
+ for(const state of ['APPROVED','OBSERVING','REJECTED']) {
+  const groups=new Map<string,T[]>();
+  for(const entry of entries) if(entry.rank.state===state) {
+   const group=groups.get(entry.rank.group)??[];group.push(entry);groups.set(entry.rank.group,group);
+  }
+  while([...groups.values()].some(group=>group.length))
+   for(const group of groups.values()) {const next=group.shift();if(next) result.push(next);}
+ }
+ return result;
 }
 
 export function rankProduct(preview: ProductPreview, history: Observation[], feedback: string | null = null, now = Date.now()): CommercialRank {

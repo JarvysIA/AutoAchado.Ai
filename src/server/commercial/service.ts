@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { catalogOfferPreview, configuredMeliReader, configuredProductPreview, type ProductPreview } from "../discovery/product-preview.js";
 import { affiliateIntelligence } from "../affiliate/coupon-service.js";
-import { commercialProfile, rankProduct, type Observation } from "./ranking.js";
+import { commercialProfile, rankProduct, orderCommercialFamilies, type Observation } from "./ranking.js";
 import {exploreCandidates} from './admission.js';
 import {HISTORY_BATCH_SIZE,nextEvidenceCheck,validEvidenceAt} from './collection-policy.js';
 
@@ -169,7 +169,7 @@ export async function commercialOpportunities(client:SupabaseClient, view:string
   const order={APPROVED:0,OBSERVING:1,REJECTED:2};
   const sorted=allEvaluated.sort((a,b)=>Number(b.monitor)-Number(a.monitor) || order[a.rank.state]-order[b.rank.state] || b.rank.score-a.rank.score || (a.preview.price??Infinity)-(b.preview.price??Infinity));
   const evaluated=sorted.filter((entry,index,rows)=>rows.findIndex(e=>e.identity_key===entry.identity_key)===index);
-  const monitored=evaluated.filter(e=>e.monitor);
+  const monitored=orderCommercialFamilies(evaluated.filter(e=>e.monitor));
   const approved=monitored.filter(e=>e.rank.state==='APPROVED'&&!e.sent_at);
   const selected=view==='ALL'?monitored:view==='SENT'?evaluated.filter(e=>e.sent_at).sort((a,b)=>b.sent_at!.localeCompare(a.sent_at!)):
     view==='APPROVED'?approved:view==='OBSERVING'?monitored.filter(e=>e.rank.state!=='APPROVED'&&!e.sent_at):monitored.filter(e=>e.rank.state===view);

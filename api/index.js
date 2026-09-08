@@ -24096,13 +24096,33 @@ function commercialProfile(title) {
   const text3 = title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   if (/rastreador|rack de teto|bagageiro|mensalidade|assinatura/.test(text3))
     return { group: "especializado", appeal: 20, ease: 15, reason: "Uso específico ou possível instalação/recorrência; fora do perfil amplo inicial." };
+  if (/\balarme\b|\bstart stop\b|\bpartida remota\b|\bchaveiro\b/.test(text3) || /\bkit macaco\b/.test(text3) && /\bfiat\b|\bargo\b|\bcronos\b/.test(text3))
+    return { group: "avaliar", appeal: 40, ease: 30, reason: null };
   if (/aspirador/.test(text3)) return { group: "aspiracao", appeal: 90, ease: 85, reason: null };
   if (/compressor|calibrador|inflador/.test(text3)) return { group: "pneus", appeal: 85, ease: 75, reason: null };
+  if (/carregador.*bateria/.test(text3)) return { group: "bateria", appeal: 75, ease: 60, reason: null };
   if (/carregador|suporte.*celular|cabo usb/.test(text3)) return { group: "celular", appeal: 85, ease: 85, reason: null };
   if (/organizador|lixeira|protetor solar|quebra.sol/.test(text3)) return { group: "organizacao", appeal: 75, ease: 85, reason: null };
   if (/microfibra|shampoo|cera|limpador|limpeza|vonixx|lavagem/.test(text3)) return { group: "limpeza", appeal: 65, ease: 85, reason: null };
-  if (/ferramenta|chave|lanterna|kit.*reparo/.test(text3)) return { group: "ferramentas", appeal: 75, ease: 75, reason: null };
+  if (/ferramenta|\bchave\b|lanterna|kit.*reparo/.test(text3)) return { group: "ferramentas", appeal: 75, ease: 75, reason: null };
   return { group: "avaliar", appeal: 40, ease: 40, reason: null };
+}
+function orderCommercialFamilies(entries) {
+  const result = [];
+  for (const state of ["APPROVED", "OBSERVING", "REJECTED"]) {
+    const groups = /* @__PURE__ */ new Map();
+    for (const entry of entries) if (entry.rank.state === state) {
+      const group = groups.get(entry.rank.group) ?? [];
+      group.push(entry);
+      groups.set(entry.rank.group, group);
+    }
+    while ([...groups.values()].some((group) => group.length))
+      for (const group of groups.values()) {
+        const next = group.shift();
+        if (next) result.push(next);
+      }
+  }
+  return result;
 }
 function rankProduct(preview, history, feedback = null, now = Date.now()) {
   const profile = commercialProfile(preview.title);
@@ -24184,7 +24204,7 @@ var init_ranking = __esm({
   "src/server/commercial/ranking.ts"() {
     "use strict";
     init_product_preview();
-    RANKING_VERSION = "commercial-v1";
+    RANKING_VERSION = "commercial-v2-editorial";
     DAY = 864e5;
     median = (values) => {
       const sorted = [...values].sort((a, b) => a - b);
@@ -24484,7 +24504,7 @@ async function commercialOpportunities(client, view, offset = 0) {
   const order = { APPROVED: 0, OBSERVING: 1, REJECTED: 2 };
   const sorted = allEvaluated.sort((a, b) => Number(b.monitor) - Number(a.monitor) || order[a.rank.state] - order[b.rank.state] || b.rank.score - a.rank.score || (a.preview.price ?? Infinity) - (b.preview.price ?? Infinity));
   const evaluated = sorted.filter((entry, index, rows) => rows.findIndex((e) => e.identity_key === entry.identity_key) === index);
-  const monitored = evaluated.filter((e) => e.monitor);
+  const monitored = orderCommercialFamilies(evaluated.filter((e) => e.monitor));
   const approved = monitored.filter((e) => e.rank.state === "APPROVED" && !e.sent_at);
   const selected = view === "ALL" ? monitored : view === "SENT" ? evaluated.filter((e) => e.sent_at).sort((a, b) => b.sent_at.localeCompare(a.sent_at)) : view === "APPROVED" ? approved : view === "OBSERVING" ? monitored.filter((e) => e.rank.state !== "APPROVED" && !e.sent_at) : monitored.filter((e) => e.rank.state === view);
   const runs = checked2(await client.from("commercial_collection_runs").select("status,started_at,finished_at,collected,failed,explored,exploration_failed").eq("kind", "HISTORY").order("started_at", { ascending: false }).limit(1));
