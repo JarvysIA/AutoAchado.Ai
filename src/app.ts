@@ -245,14 +245,15 @@ export async function handleRequest(
       const discovering=url.pathname === "/api/commercial/discover";
       const probing=url.pathname === '/api/commercial/probe';
       const preparation=url.pathname === '/api/commercial/pre-home';
+      const simulation=url.pathname === '/api/commercial/selection-simulation';
       const priority=url.pathname === '/api/commercial/priority';
       const revalidating=url.pathname === '/api/commercial/revalidate';
-      const cron=discovering || probing || preparation || priority || url.pathname === "/api/commercial/cron";
+      const cron=discovering || probing || preparation || simulation || priority || url.pathname === "/api/commercial/cron";
       const feedback=url.pathname === "/api/commercial/feedback";
       const publication=url.pathname === '/api/commercial/sent';
       const listing=url.pathname === "/api/commercial/opportunities";
       if(!collecting && !cron && !feedback && !publication && !listing && !revalidating) { sendJson(response,404,{errorCode:"NOT_FOUND"}); return; }
-      if(method !== (collecting || feedback || publication || probing || preparation || revalidating ? "POST" : "GET")) {sendJson(response,405,{errorCode:"METHOD_NOT_ALLOWED"});return;}
+      if(method !== (collecting || feedback || publication || probing || preparation || simulation || revalidating ? "POST" : "GET")) {sendJson(response,405,{errorCode:"METHOD_NOT_ALLOWED"});return;}
       if(cron) {
         const secret=process.env.CRON_SECRET;
         if(!secret || request.headers.authorization !== "Bearer "+secret) {sendJson(response,401,{errorCode:"AUTHORIZATION_REQUIRED"});return;}
@@ -269,6 +270,10 @@ export async function handleRequest(
       if(discovering) { const {runConfiguredDiscoveryLiveSmoke}=await import("./server/discovery/operational.js");sendJson(response,200,await runConfiguredDiscoveryLiveSmoke("FULL_SWEEP"));return;}
       const {createOperationalDiscoveryAdapter}=await import("./server/discovery/operational.js");
       const client=createOperationalDiscoveryAdapter().client;
+      if(simulation) {
+        const {runSelectionSimulation}=await import('./server/commercial/selection-simulation.js');
+        sendJson(response,200,await runSelectionSimulation(client));return;
+      }
       if(preparation) {
         const {reviewAutomotiveCohort}=await import('./server/commercial/cohort-review.js');
         const review=await reviewAutomotiveCohort(client);

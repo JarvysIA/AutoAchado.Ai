@@ -48,6 +48,8 @@ describe('commercial endpoint boundaries',()=>{
   expect((await request('/api/commercial/probe','POST',{cookie:cookie()})).status).toBe(401);
   expect((await request('/api/commercial/pre-home','POST',{cookie:cookie()})).status).toBe(401);
   expect((await request('/api/commercial/pre-home','GET')).status).toBe(405);
+  expect((await request('/api/commercial/selection-simulation','POST',{cookie:cookie()})).status).toBe(401);
+  expect((await request('/api/commercial/selection-simulation','GET')).status).toBe(405);
   expect((await request('/api/commercial/collect','POST')).status).toBe(401);
   expect((await request('/api/commercial/collect','POST',{cookie:cookie(),origin:'https://evil.test'})).status).toBe(403);
   expect((await request('/api/commercial/feedback?id=MLB123&type=ITEM&action=SHARED','POST',{cookie:cookie()})).status).toBe(403);

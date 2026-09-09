@@ -23790,62 +23790,6 @@ var init_operational = __esm({
   }
 });
 
-// src/server/commercial/profile.ts
-function commercialProfile(title) {
-  const text3 = title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  if (/rastreador|rack de teto|bagageiro|mensalidade|assinatura/.test(text3))
-    return { group: "especializado", appeal: 20, ease: 15, reason: "Uso específico ou possível instalação/recorrência; fora do perfil amplo inicial." };
-  if (/\balarme\b|\bstart stop\b|\bpartida remota\b|\bchaveiro\b/.test(text3) || /\bkit macaco\b/.test(text3) && /\bfiat\b|\bargo\b|\bcronos\b/.test(text3))
-    return { group: "avaliar", appeal: 40, ease: 30, reason: null };
-  if (/aspirador/.test(text3)) return { group: "aspiracao", appeal: 90, ease: 85, reason: null };
-  if (/compressor|calibrador|inflador/.test(text3)) return { group: "pneus", appeal: 85, ease: 75, reason: null };
-  if (/carregador.*bateria/.test(text3)) return { group: "bateria", appeal: 75, ease: 60, reason: null };
-  if (/carregador|suporte.*celular|cabo usb/.test(text3)) return { group: "celular", appeal: 85, ease: 85, reason: null };
-  if (/organizador|lixeira|protetor solar|quebra.sol/.test(text3)) return { group: "organizacao", appeal: 75, ease: 85, reason: null };
-  if (/microfibra|shampoo|cera|limpador|limpeza|vonixx|lavagem/.test(text3)) return { group: "limpeza", appeal: 65, ease: 85, reason: null };
-  if (/ferramenta|\bchave\b|lanterna|kit.*reparo/.test(text3)) return { group: "ferramentas", appeal: 75, ease: 75, reason: null };
-  return { group: "avaliar", appeal: 40, ease: 40, reason: null };
-}
-var init_profile = __esm({
-  "src/server/commercial/profile.ts"() {
-    "use strict";
-  }
-});
-
-// src/server/commercial/editorial.ts
-function assessAutomotive(p) {
-  const text3 = normalize(p.title), profile = commercialProfile(p.title);
-  let state = profile.group === "avaliar" ? "REVIEW" : profile.group === "especializado" ? "EXCLUDE" : "ELIGIBLE";
-  let reason = state === "ELIGIBLE" ? "Utilidade reconhecida; confirmar condições atuais antes de divulgar." : state === "REVIEW" ? "Dados insuficientes para validar instalação, compatibilidade ou utilidade ampla." : "Uso especializado fora do público amplo inicial.";
-  if (/\balarme\b|\bstart stop\b|partida remota|chaveiro|\broda (ferro|traseira)\b|\bpneu \d|\bmodulo\b|\bamplificador\b|\bdriver fenolico\b|alto falantes|\bbateria de moto\b|sensor de estacionamento|camera de re\b|\boleo motor\b|\boleo 5w|\boleo \d+w|\bradiador|arrefecimento|valvulas e injetores/.test(text3) || /kit macaco.*(fiat|argo|cronos)/.test(text3)) {
-    state = "EXCLUDE";
-    reason = "Exige aplicação veicular, instalação ou manutenção específica; fora da seleção para público amplo.";
-  }
-  const simpleBluetooth = /adaptador bluetooth|adaptador.*bluetooth/.test(text3) && /usb|p2/.test(text3) && !/(modulo|instalacao|central)/.test(text3);
-  return {
-    state,
-    reason,
-    family: simpleBluetooth ? "celular" : profile.group,
-    ...simpleBluetooth && state === "REVIEW" ? { state: "ELIGIBLE", reason: "Adaptador USB/P2; conferir a entrada compatível no aparelho." } : {},
-    version: EDITORIAL_VERSION
-  };
-}
-function possibleVariantKey(description) {
-  const brand = description?.match(/(?:^| · )Marca: ([^·]+)/)?.[1]?.trim();
-  const model = description?.match(/(?:^| · )Modelo: ([^·]+)/)?.[1]?.trim();
-  if (!brand || !model || model.length < 4 || /generico|universal|nao|bolsa de moto|adaptador/i.test(model)) return null;
-  return normalize(brand + ":" + model);
-}
-var EDITORIAL_VERSION, normalize;
-var init_editorial = __esm({
-  "src/server/commercial/editorial.ts"() {
-    "use strict";
-    init_profile();
-    EDITORIAL_VERSION = "automotive-pre-home-v1";
-    normalize = (value) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  }
-});
-
 // src/server/discovery/product-preview.ts
 var product_preview_exports = {};
 __export(product_preview_exports, {
@@ -24101,6 +24045,353 @@ var init_product_preview = __esm({
   }
 });
 
+// src/server/commercial/profile.ts
+function commercialProfile(title) {
+  const text3 = title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (/rastreador|rack de teto|bagageiro|mensalidade|assinatura/.test(text3))
+    return { group: "especializado", appeal: 20, ease: 15, reason: "Uso específico ou possível instalação/recorrência; fora do perfil amplo inicial." };
+  if (/\balarme\b|\bstart stop\b|\bpartida remota\b|\bchaveiro\b/.test(text3) || /\bkit macaco\b/.test(text3) && /\bfiat\b|\bargo\b|\bcronos\b/.test(text3))
+    return { group: "avaliar", appeal: 40, ease: 30, reason: null };
+  if (/aspirador/.test(text3)) return { group: "aspiracao", appeal: 90, ease: 85, reason: null };
+  if (/compressor|calibrador|inflador/.test(text3)) return { group: "pneus", appeal: 85, ease: 75, reason: null };
+  if (/carregador.*bateria/.test(text3)) return { group: "bateria", appeal: 75, ease: 60, reason: null };
+  if (/carregador|suporte.*celular|cabo usb/.test(text3)) return { group: "celular", appeal: 85, ease: 85, reason: null };
+  if (/organizador|lixeira|protetor solar|quebra.sol/.test(text3)) return { group: "organizacao", appeal: 75, ease: 85, reason: null };
+  if (/microfibra|shampoo|cera|limpador|limpeza|vonixx|lavagem/.test(text3)) return { group: "limpeza", appeal: 65, ease: 85, reason: null };
+  if (/ferramenta|\bchave\b|lanterna|kit.*reparo/.test(text3)) return { group: "ferramentas", appeal: 75, ease: 75, reason: null };
+  return { group: "avaliar", appeal: 40, ease: 40, reason: null };
+}
+var init_profile = __esm({
+  "src/server/commercial/profile.ts"() {
+    "use strict";
+  }
+});
+
+// src/server/commercial/editorial.ts
+function assessAutomotive(p) {
+  const text3 = normalize(p.title), profile = commercialProfile(p.title);
+  let state = profile.group === "avaliar" ? "REVIEW" : profile.group === "especializado" ? "EXCLUDE" : "ELIGIBLE";
+  let reason = state === "ELIGIBLE" ? "Utilidade reconhecida; confirmar condições atuais antes de divulgar." : state === "REVIEW" ? "Dados insuficientes para validar instalação, compatibilidade ou utilidade ampla." : "Uso especializado fora do público amplo inicial.";
+  if (/\balarme\b|\bstart stop\b|partida remota|chaveiro|\broda (ferro|traseira)\b|\bpneu \d|\bmodulo\b|\bamplificador\b|\bdriver fenolico\b|alto falantes|\bbateria de moto\b|sensor de estacionamento|camera de re\b|\boleo motor\b|\boleo 5w|\boleo \d+w|\bradiador|arrefecimento|valvulas e injetores/.test(text3) || /kit macaco.*(fiat|argo|cronos)/.test(text3)) {
+    state = "EXCLUDE";
+    reason = "Exige aplicação veicular, instalação ou manutenção específica; fora da seleção para público amplo.";
+  }
+  const simpleBluetooth = /adaptador bluetooth|adaptador.*bluetooth/.test(text3) && /usb|p2/.test(text3) && !/(modulo|instalacao|central)/.test(text3);
+  return {
+    state,
+    reason,
+    family: simpleBluetooth ? "celular" : profile.group,
+    ...simpleBluetooth && state === "REVIEW" ? { state: "ELIGIBLE", reason: "Adaptador USB/P2; conferir a entrada compatível no aparelho." } : {},
+    version: EDITORIAL_VERSION
+  };
+}
+function possibleVariantKey(description) {
+  const brand = description?.match(/(?:^| · )Marca: ([^·]+)/)?.[1]?.trim();
+  const model = description?.match(/(?:^| · )Modelo: ([^·]+)/)?.[1]?.trim();
+  if (!brand || !model || model.length < 4 || /generico|universal|nao|bolsa de moto|adaptador/i.test(model)) return null;
+  return normalize(brand + ":" + model);
+}
+var EDITORIAL_VERSION, normalize;
+var init_editorial = __esm({
+  "src/server/commercial/editorial.ts"() {
+    "use strict";
+    init_profile();
+    EDITORIAL_VERSION = "automotive-pre-home-v1";
+    normalize = (value) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  }
+});
+
+// src/server/commercial/selection-algorithm.ts
+function demandPotential(signals, now = Date.now()) {
+  const dimensions = /* @__PURE__ */ new Map();
+  for (const r of signals) {
+    const time = Date.parse(r.observed_at);
+    if (!Number.isFinite(time) || time > now || time < now - 14 * DAY || !Number.isInteger(r.position) || r.position < 1 || r.position > 20) continue;
+    const days = dimensions.get(r.category) ?? /* @__PURE__ */ new Map();
+    const day = new Date(time).toISOString().slice(0, 10);
+    days.set(day, Math.min(days.get(day) ?? 21, r.position));
+    dimensions.set(r.category, days);
+  }
+  const results = [...dimensions].map(([category, days]) => {
+    const ordered = [...days].sort(([a], [b]) => a.localeCompare(b)), values = ordered.map(([, p]) => p), mid = median(values);
+    const recurrence = 25 * Math.min(1, days.size / 14), position = 15 * (21 - mid) / 20;
+    const spread = median(values.map((v) => Math.abs(v - mid)));
+    const stability = days.size >= 3 ? 5 * Math.max(0, 1 - spread / 10) : 0;
+    const half = Math.floor(values.length / 2);
+    const improvement = values.length >= 6 ? median(values.slice(0, half)) - median(values.slice(half)) : 0;
+    const trend = values.length >= 6 ? 5 * Math.max(0, Math.min(1, improvement / 5)) : 0;
+    return { category, days: days.size, median_position: mid, improvement, score: recurrence + position + stability + trend };
+  }).sort((a, b) => b.score - a.score || a.category.localeCompare(b.category));
+  return results[0] ?? { category: null, days: 0, median_position: null, improvement: 0, score: 0 };
+}
+function scoreCandidate(c, now = Date.now()) {
+  const p = c.preview, demand = demandPotential(c.ranks, now), profile = commercialProfile(p?.title ?? ""), editorial = assessAutomotive({ title: p?.title ?? "", description: p?.description ?? null });
+  const checked5 = Date.parse(p?.priceCheckedAt ?? "");
+  const complete = !!p && !!p.title.trim() && !/^MLBU?\d+$/.test(p.title.trim()) && !!safePreviewUrl(p.image, true) && !!safePreviewUrl(p.url) && typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0 && p.currency === "BRL" && p.comparable === true && p.seller_trusted === true && !!p.seller_id && p.status !== "UNAVAILABLE" && checked5 <= now && checked5 >= now - DAY;
+  const components = {
+    demand: Math.round(demand.score * 100) / 100,
+    utility: profile.appeal * 0.2,
+    ease: profile.ease * 0.15,
+    seller: p?.seller_trusted ? 10 : 0,
+    ticket: p?.price && p.price > 0 && p.price <= 150 ? 5 : p?.price && p.price <= 300 ? 3 : 0
+  };
+  const score = Math.round(Object.values(components).reduce((a, b) => a + b, 0));
+  const reasons = [];
+  if (!complete) reasons.push("Faltam dados atuais completos e comparáveis.");
+  if (editorial.state !== "ELIGIBLE") reasons.push(editorial.reason);
+  if (demand.days < 3) reasons.push("Menos de três dias de presença no mesmo ranking.");
+  if (c.feedback === "NOT_RELEVANT") reasons.push("Produto marcado como inadequado pelo operador.");
+  if (score < 60) reasons.push("Potencial abaixo do mínimo experimental de 60 pontos.");
+  return {
+    ...c,
+    score,
+    components,
+    family: editorial.family,
+    demand,
+    eligible: reasons.length === 0,
+    reasons,
+    confidence: demand.days >= 10 ? "MEDIUM" : demand.days >= 3 ? "LOW" : "INSUFFICIENT",
+    explanation: `${demand.days} dias no mesmo ranking; posição mediana ${demand.median_position ?? "indisponível"}. Utilidade e facilidade são hipóteses editoriais, não conversões medidas.`
+  };
+}
+function simulateSelection(candidates, now = Date.now(), capacity = 100, familyLimit = 25) {
+  const identities = /* @__PURE__ */ new Map();
+  for (const c of candidates) {
+    const list = identities.get(c.identity_key) ?? [];
+    list.push(c);
+    identities.set(c.identity_key, list);
+  }
+  const evaluated = candidates.map((c) => {
+    const siblings = identities.get(c.identity_key);
+    return scoreCandidate({
+      ...c,
+      ranks: siblings.flatMap((s) => s.ranks),
+      monitor: siblings.some((s) => s.monitor),
+      protected: siblings.some((s) => s.protected),
+      ...siblings.some((s) => s.feedback === "NOT_RELEVANT") ? { feedback: "NOT_RELEVANT" } : {}
+    }, now);
+  }).sort((a, b) => Number(b.eligible) - Number(a.eligible) || b.score - a.score || a.identity_key.localeCompare(b.identity_key) || a.source_key.localeCompare(b.source_key));
+  const unique = evaluated.filter((c, i, all) => all.findIndex((x) => x.identity_key === c.identity_key) === i);
+  const protectedIds = new Set(candidates.filter((c) => c.monitor && c.protected).map((c) => c.identity_key));
+  const currentIds = new Set(candidates.filter((c) => c.monitor).map((c) => c.identity_key));
+  const selected = unique.filter((c) => protectedIds.has(c.identity_key));
+  const families = /* @__PURE__ */ new Map();
+  for (const c of selected) families.set(c.family, (families.get(c.family) ?? 0) + 1);
+  for (const c of unique) {
+    if (selected.length >= capacity) break;
+    if (!c.eligible || protectedIds.has(c.identity_key) || (families.get(c.family) ?? 0) >= familyLimit) continue;
+    selected.push(c);
+    families.set(c.family, (families.get(c.family) ?? 0) + 1);
+  }
+  const selectedIds = new Set(selected.map((c) => c.identity_key));
+  const reserve = unique.filter((c) => c.eligible && !selectedIds.has(c.identity_key));
+  const newcomers = selected.filter((c) => !currentIds.has(c.identity_key));
+  const displaced = unique.filter((c) => currentIds.has(c.identity_key) && !selectedIds.has(c.identity_key) && !protectedIds.has(c.identity_key)).sort((a, b) => a.score - b.score);
+  const replacements = [];
+  for (const next of newcomers) {
+    if (replacements.length >= 5 || next.demand.days < 7) continue;
+    const victim = displaced.find((c) => !replacements.some((r) => r.from === c.identity_key) && next.score - c.score >= 10 && Number.isFinite(Date.parse(c.monitor_since ?? "")) && Date.parse(c.monitor_since) <= now - 7 * DAY);
+    if (victim) replacements.push({ from: victim.identity_key, to: next.identity_key, advantage: next.score - victim.score });
+  }
+  return {
+    version: SELECTION_VERSION,
+    mode: "SIMULATION_ONLY",
+    applied: false,
+    capacity,
+    familyLimit,
+    current: currentIds.size,
+    selectedCount: selected.length,
+    protectedRetained: protectedIds.size,
+    unfilled: Math.max(0, capacity - selected.length),
+    overlap: selected.filter((c) => currentIds.has(c.identity_key)).length,
+    newcomers: newcomers.length,
+    proposedReplacements: replacements,
+    selected,
+    reserve,
+    evaluated: unique,
+    warning: "As notas não estimam unidades vendidas ou probabilidade de conversão. Não são ofertas aprovadas nem substituições executadas."
+  };
+}
+var SELECTION_VERSION, DAY, median;
+var init_selection_algorithm = __esm({
+  "src/server/commercial/selection-algorithm.ts"() {
+    "use strict";
+    init_product_preview();
+    init_profile();
+    init_editorial();
+    SELECTION_VERSION = "automotive-potential-v1-simulation";
+    DAY = 864e5;
+    median = (v) => {
+      const a = [...v].sort((a2, b) => a2 - b);
+      return a.length % 2 ? a[Math.floor(a.length / 2)] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2;
+    };
+  }
+});
+
+// src/server/commercial/price-truth.ts
+function priceHistoryStart(now) {
+  const d = new Date(now);
+  return d.getUTCMonth() >= 8 ? Math.min(now - 30 * DAY2, Date.UTC(d.getUTCFullYear(), 8, 1)) : now - 30 * DAY2;
+}
+function reference(history, start, end) {
+  const days = /* @__PURE__ */ new Map(), sellers = /* @__PURE__ */ new Set();
+  for (const o of history) {
+    const t = Date.parse(o.observed_at);
+    if (t < start || t >= end || !Number.isFinite(t) || !o.comparable || !o.trusted || o.currency !== "BRL" || !o.seller_id || typeof o.price !== "number" || !Number.isFinite(o.price) || o.price <= 0) continue;
+    const day = new Date(t).toISOString().slice(0, 10);
+    days.set(day, Math.min(days.get(day) ?? Infinity, o.price));
+    sellers.add(o.seller_id);
+  }
+  const first = days.size ? Math.min(...[...days.keys()].map(Date.parse)) : end;
+  return { price: days.size ? median2([...days.values()]) : null, days: days.size, sellers: sellers.size, sufficient: days.size >= 20 && end - first >= 27 * DAY2 && sellers.size >= 2 };
+}
+function analyzePriceTruth(p, history, now = Date.now()) {
+  const date = new Date(now), today = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  const rolling = reference(history, now - 30 * DAY2, today);
+  const campaignStart = Date.UTC(date.getUTCFullYear(), 8, 1), campaignEnd = Date.UTC(date.getUTCFullYear(), 9, 1);
+  const campaign = date.getUTCMonth() >= 9 ? reference(history, campaignStart, campaignEnd) : null;
+  const usable = [rolling, ...campaign ? [campaign] : []].filter((r) => r.sufficient && r.price !== null);
+  const baseline = usable.length ? Math.min(...usable.map((r) => r.price)) : null;
+  const checked5 = Date.parse(p.priceCheckedAt ?? "");
+  const valid = p.comparable && p.seller_trusted && p.status !== "UNAVAILABLE" && p.currency === "BRL" && typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0 && checked5 <= now && checked5 >= now - DAY2;
+  const actual = valid && baseline !== null ? (baseline - p.price) / baseline * 100 : null;
+  const advertised = valid && typeof p.original_price === "number" && Number.isFinite(p.original_price) && p.original_price > p.price ? (p.original_price - p.price) / p.original_price * 100 : null;
+  const inflated = actual !== null && advertised !== null && advertised >= 5 && advertised - actual > 5;
+  const state = !valid ? "CURRENT_PRICE_UNVERIFIED" : actual === null ? "INSUFFICIENT_HISTORY" : inflated ? "ANNOUNCED_NOT_CONFIRMED" : actual >= 10 ? "HISTORICAL_DISCOUNT" : "USUAL_OR_HIGHER_PRICE";
+  return {
+    version: "price-truth-v1",
+    state,
+    reference_price: baseline,
+    historical_discount_percent: actual === null ? null : Math.round(actual),
+    advertised_discount_percent: advertised === null ? null : Math.round(advertised),
+    historical_discount_confirmed: actual !== null && actual >= 10,
+    rolling,
+    campaign: campaign ? { ...campaign, start: new Date(campaignStart).toISOString(), endExclusive: new Date(campaignEnd).toISOString() } : null,
+    policy: "Mediana dos mínimos diários observados. Quando suficiente, setembro fixa a janela pré-campanha; usamos a menor referência suficiente. Não inclui frete e não prova fraude."
+  };
+}
+var DAY2, median2;
+var init_price_truth = __esm({
+  "src/server/commercial/price-truth.ts"() {
+    "use strict";
+    DAY2 = 864e5;
+    median2 = (v) => {
+      const a = [...v].sort((a2, b) => a2 - b);
+      return a.length % 2 ? a[Math.floor(a.length / 2)] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2;
+    };
+  }
+});
+
+// src/server/commercial/selection-simulation.ts
+var selection_simulation_exports = {};
+__export(selection_simulation_exports, {
+  runSelectionSimulation: () => runSelectionSimulation
+});
+async function pages2(query, maximum = 200) {
+  const rows = [];
+  for (let page = 0; page < maximum; page++) {
+    const { data, error } = await query(page * 500, page * 500 + 499);
+    if (error) throw new Error("SELECTION_SIMULATION_READ_FAILED");
+    rows.push(...data ?? []);
+    if (!data || data.length < 500) return rows;
+  }
+  throw new Error("SELECTION_SIMULATION_INCOMPLETE_DATA");
+}
+async function runSelectionSimulation(client, now = Date.now()) {
+  const [snapshots, watches, memberships, feedback, sent, changes] = await Promise.all([
+    pages2((a, b) => client.from("highlight_snapshots").select("type,product_id,marketplace_category_id,position,observed_at,scan_runs!inner(vertical_key)").eq("scan_runs.vertical_key", "AUTOMOTIVE").gte("observed_at", new Date(now - 14 * 864e5).toISOString()).lte("observed_at", new Date(now).toISOString()).order("observed_at").order("marketplace_category_id").order("type").order("product_id").range(a, b)),
+    pages2((a, b) => client.from("commercial_watchlist").select("source_key,identity_key,preview,monitor").order("source_key").range(a, b)),
+    pages2((a, b) => client.from("commercial_vertical_memberships").select("source_key,identity_key,monitor").eq("vertical_key", "AUTOMOTIVE").order("identity_key").range(a, b)),
+    pages2((a, b) => client.from("commercial_vertical_feedback").select("identity_key,action").eq("vertical_key", "AUTOMOTIVE").order("identity_key").range(a, b)),
+    pages2((a, b) => client.from("commercial_sent_products").select("identity_key,sent_at").eq("vertical_key", "AUTOMOTIVE").not("sent_at", "is", null).order("identity_key").range(a, b)),
+    pages2((a, b) => client.from("commercial_cohort_changes").select("added_source,changed_at").eq("vertical_key", "AUTOMOTIVE").order("changed_at").order("id").range(a, b))
+  ]);
+  const ranks = /* @__PURE__ */ new Map();
+  for (const r of snapshots) {
+    const key = r.type + ":" + r.product_id, list = ranks.get(key) ?? [];
+    list.push({ category: r.marketplace_category_id, observed_at: r.observed_at, position: r.position });
+    ranks.set(key, list);
+  }
+  const bySource = new Map(watches.map((w) => [w.source_key, w]));
+  const active = new Set(memberships.filter((m) => m.monitor).map((m) => m.identity_key));
+  const protectedIds = /* @__PURE__ */ new Set([...sent.map((s) => s.identity_key), ...feedback.filter((f) => ["SHARED", "INTERESTED"].includes(f.action)).map((f) => f.identity_key)]);
+  const actions = new Map(feedback.map((f) => [f.identity_key, f.action]));
+  const monitoringStarts = new Map(changes.map((c) => [c.added_source, c.changed_at]));
+  const candidates = [.../* @__PURE__ */ new Set([...ranks.keys(), ...memberships.map((m) => m.source_key)])].map((key) => {
+    const w = bySource.get(key), identity = w?.identity_key ?? key;
+    return {
+      source_key: key,
+      identity_key: identity,
+      preview: w?.preview,
+      monitor: active.has(identity),
+      protected: protectedIds.has(identity),
+      feedback: actions.get(identity),
+      monitor_since: monitoringStarts.get(key),
+      ranks: ranks.get(key) ?? []
+    };
+  });
+  const result = simulateSelection(candidates, now);
+  const identities = [...new Set(result.evaluated.filter((c) => c.preview).map((c) => c.identity_key))];
+  const historyByIdentity = /* @__PURE__ */ new Map();
+  for (let i = 0; i < identities.length; i += 100) {
+    const rows = await pages2((a, b) => client.from("commercial_observations").select("identity_key,observed_at,price,currency,seller_id,comparable,trusted,position").in("identity_key", identities.slice(i, i + 100)).gte("observed_at", new Date(priceHistoryStart(now)).toISOString()).lte("observed_at", new Date(now).toISOString()).order("source_key").order("observed_at").range(a, b));
+    for (const row of rows) {
+      const list = historyByIdentity.get(row.identity_key) ?? [];
+      list.push(row);
+      historyByIdentity.set(row.identity_key, list);
+    }
+  }
+  const summary = (c) => ({
+    source_key: c.source_key,
+    identity_key: c.identity_key,
+    title: c.preview?.title ?? c.source_key,
+    monitor: c.monitor,
+    protected: c.protected,
+    score: c.score,
+    components: c.components,
+    family: c.family,
+    demand: c.demand,
+    confidence: c.confidence,
+    eligible: c.eligible,
+    reasons: c.reasons,
+    explanation: c.explanation,
+    price_analysis: c.preview ? analyzePriceTruth(c.preview, historyByIdentity.get(c.identity_key) ?? [], now) : null
+  });
+  const current = result.evaluated.filter((c) => c.monitor);
+  const familyCounts = (entries) => entries.reduce((totals, c) => {
+    totals[c.family] = (totals[c.family] ?? 0) + 1;
+    return totals;
+  }, {});
+  return {
+    ...result,
+    selected: result.selected.map(summary),
+    reserve: result.reserve.slice(0, 100).map(summary),
+    reserveCount: result.reserve.length,
+    evaluated: result.evaluated.slice(0, 500).map(summary),
+    evaluatedTotal: result.evaluated.length,
+    evaluatedPreviewLimit: 500,
+    currentEvaluated: current.map(summary),
+    comparison: {
+      currentFamilies: familyCounts(current),
+      selectedFamilies: familyCounts(result.selected),
+      eligible: result.evaluated.filter((c) => c.eligible).length,
+      insufficientDemand: result.evaluated.filter((c) => c.demand.days < 3).length
+    },
+    discoveryPriority: candidates.filter((c) => !c.preview).map((c) => ({ source_key: c.source_key, ...demandPotential(c.ranks, now) })).sort((a, b) => b.score - a.score || a.source_key.localeCompare(b.source_key)).slice(0, 30),
+    checkedAt: new Date(now).toISOString(),
+    snapshotOccurrences: snapshots.length,
+    knownPreviews: watches.length,
+    limitation: "Usa presença nos rankings de descoberta para avaliar todos sob a mesma fonte. Sem volume recente comparável entre categorias. Tempo de permanência desconhecido bloqueia sugestão de troca."
+  };
+}
+var init_selection_simulation = __esm({
+  "src/server/commercial/selection-simulation.ts"() {
+    "use strict";
+    init_selection_algorithm();
+    init_price_truth();
+  }
+});
+
 // src/server/commercial/cohort-review.ts
 var cohort_review_exports = {};
 __export(cohort_review_exports, {
@@ -24302,7 +24593,7 @@ function rankProduct(preview, history, feedback = null, now = Date.now()) {
   const currentTime = Date.parse(preview.priceCheckedAt ?? "");
   const complete = !!preview.title.trim() && !/^MLBU?\d+$/.test(preview.title.trim()) && !!safePreviewUrl(preview.image, true) && !!safePreviewUrl(preview.url) && typeof preview.price === "number" && Number.isFinite(preview.price) && preview.price > 0 && preview.currency === "BRL";
   if (!complete) fail3("Faltam título, foto, preço em BRL ou link utilizável.");
-  if (!(currentTime <= now && currentTime >= now - DAY)) fail3("Preço precisa ser consultado novamente (validade de 24 horas).");
+  if (!(currentTime <= now && currentTime >= now - DAY3)) fail3("Preço precisa ser consultado novamente (validade de 24 horas).");
   if (preview.status === "UNAVAILABLE") fail3("Oferta indisponível.", true);
   if (!preview.comparable) fail3("Identidade, condição, variação ou contexto de preço ainda não confirmados.");
   if (!preview.seller_trusted) fail3("Reputação do vendedor ainda não confirmada.");
@@ -24313,7 +24604,7 @@ function rankProduct(preview, history, feedback = null, now = Date.now()) {
   const today = new Date(now).toISOString().slice(0, 10);
   const historical = history.filter((o) => {
     const time = Date.parse(o.observed_at);
-    return o.comparable && o.trusted && o.currency === preview.currency && o.seller_id && typeof o.price === "number" && Number.isFinite(o.price) && o.price > 0 && time >= now - 30 * DAY && time < Date.parse(today);
+    return o.comparable && o.trusted && o.currency === preview.currency && o.seller_id && typeof o.price === "number" && Number.isFinite(o.price) && o.price > 0 && time >= now - 30 * DAY3 && time < Date.parse(today);
   });
   const daily = /* @__PURE__ */ new Map();
   for (const observation of historical) {
@@ -24321,9 +24612,9 @@ function rankProduct(preview, history, feedback = null, now = Date.now()) {
     daily.set(day, Math.min(daily.get(day) ?? Infinity, observation.price));
   }
   const sellers = new Set(historical.map((o) => o.seller_id));
-  const span = historical.length ? (now - Math.min(...historical.map((o) => Date.parse(o.observed_at)))) / DAY : 0;
-  const reference = daily.size ? median([...daily.values()]) : null;
-  const discount = reference && preview.price ? (reference - preview.price) / reference * 100 : null;
+  const span = historical.length ? (now - Math.min(...historical.map((o) => Date.parse(o.observed_at)))) / DAY3 : 0;
+  const reference2 = daily.size ? median3([...daily.values()]) : null;
+  const discount = reference2 && preview.price ? (reference2 - preview.price) / reference2 * 100 : null;
   const sufficient = daily.size >= 20 && span >= 27 && sellers.size >= 2;
   if (!sufficient) fail3("Histórico insuficiente: exigimos 20 dias observados, janela de 27 dias e 2 vendedores em até 30 dias.");
   else if (discount === null || discount < 10) fail3("Desconto histórico inferior a 10%.", true);
@@ -24331,7 +24622,7 @@ function rankProduct(preview, history, feedback = null, now = Date.now()) {
   const dimensions = /* @__PURE__ */ new Map();
   for (const observation of history) {
     const time = Date.parse(observation.observed_at);
-    if (time <= now && time >= now - 14 * DAY && Number.isInteger(observation.position) && observation.position >= 1 && observation.position <= 20) {
+    if (time <= now && time >= now - 14 * DAY3 && Number.isInteger(observation.position) && observation.position >= 1 && observation.position <= 20) {
       const day = observation.observed_at.slice(0, 10);
       const dimension = observation.demand_category ?? "legacy";
       const demand2 = dimensions.get(dimension) ?? /* @__PURE__ */ new Map();
@@ -24339,8 +24630,8 @@ function rankProduct(preview, history, feedback = null, now = Date.now()) {
       dimensions.set(dimension, demand2);
     }
   }
-  const demand = [...dimensions.values()].sort((a, b) => Number(b.size >= 7 && median([...b.values()]) <= 10) - Number(a.size >= 7 && median([...a.values()]) <= 10) || b.size - a.size)[0] ?? /* @__PURE__ */ new Map();
-  const strongDemand = demand.size >= 7 && median([...demand.values()]) <= 10;
+  const demand = [...dimensions.values()].sort((a, b) => Number(b.size >= 7 && median3([...b.values()]) <= 10) - Number(a.size >= 7 && median3([...a.values()]) <= 10) || b.size - a.size)[0] ?? /* @__PURE__ */ new Map();
+  const strongDemand = demand.size >= 7 && median3([...demand.values()]) <= 10;
   if (!strongDemand) fail3("Demanda não confirmada: exigimos presença em 7 dias de ranking em 14 dias, com posição mediana até 10.");
   else evidence.push("Presença recorrente entre mais vendidos em " + demand.size + " dias; indício de demanda, sem volume de vendas comprovado.");
   if (Number.isSafeInteger(preview.sales_total_reported) && preview.sales_total_reported >= 0) evidence.push("Vendas acumuladas informadas pela API: " + preview.sales_total_reported + (preview.sales_source === "CATALOG" ? " (produto de catálogo)." : " (anúncio).") + " Não representa vendas recentes.");
@@ -24357,7 +24648,7 @@ function rankProduct(preview, history, feedback = null, now = Date.now()) {
     group: editorial.family,
     reasons,
     evidence,
-    reference_price: reference,
+    reference_price: reference2,
     historical_discount_percent: sufficient && discount !== null ? Math.round(discount) : null,
     history_days: daily.size,
     history_sufficient: sufficient,
@@ -24366,7 +24657,7 @@ function rankProduct(preview, history, feedback = null, now = Date.now()) {
     checked_at: new Date(now).toISOString()
   };
 }
-var RANKING_VERSION, DAY, median;
+var RANKING_VERSION, DAY3, median3;
 var init_ranking = __esm({
   "src/server/commercial/ranking.ts"() {
     "use strict";
@@ -24375,8 +24666,8 @@ var init_ranking = __esm({
     init_editorial();
     init_product_preview();
     RANKING_VERSION = "commercial-v3-pre-home";
-    DAY = 864e5;
-    median = (values) => {
+    DAY3 = 864e5;
+    median3 = (values) => {
       const sorted = [...values].sort((a, b) => a - b);
       const half = Math.floor(sorted.length / 2);
       return sorted.length % 2 ? sorted[half] : (sorted[half - 1] + sorted[half]) / 2;
@@ -25626,9 +25917,10 @@ async function handleRequest(request, response, overrides = {}) {
       const discovering = url.pathname === "/api/commercial/discover";
       const probing = url.pathname === "/api/commercial/probe";
       const preparation = url.pathname === "/api/commercial/pre-home";
+      const simulation = url.pathname === "/api/commercial/selection-simulation";
       const priority = url.pathname === "/api/commercial/priority";
       const revalidating = url.pathname === "/api/commercial/revalidate";
-      const cron = discovering || probing || preparation || priority || url.pathname === "/api/commercial/cron";
+      const cron = discovering || probing || preparation || simulation || priority || url.pathname === "/api/commercial/cron";
       const feedback = url.pathname === "/api/commercial/feedback";
       const publication = url.pathname === "/api/commercial/sent";
       const listing = url.pathname === "/api/commercial/opportunities";
@@ -25636,7 +25928,7 @@ async function handleRequest(request, response, overrides = {}) {
         sendJson(response, 404, { errorCode: "NOT_FOUND" });
         return;
       }
-      if (method !== (collecting || feedback || publication || probing || preparation || revalidating ? "POST" : "GET")) {
+      if (method !== (collecting || feedback || publication || probing || preparation || simulation || revalidating ? "POST" : "GET")) {
         sendJson(response, 405, { errorCode: "METHOD_NOT_ALLOWED" });
         return;
       }
@@ -25669,6 +25961,11 @@ async function handleRequest(request, response, overrides = {}) {
       }
       const { createOperationalDiscoveryAdapter: createOperationalDiscoveryAdapter2 } = await Promise.resolve().then(() => (init_operational(), operational_exports));
       const client = createOperationalDiscoveryAdapter2().client;
+      if (simulation) {
+        const { runSelectionSimulation: runSelectionSimulation2 } = await Promise.resolve().then(() => (init_selection_simulation(), selection_simulation_exports));
+        sendJson(response, 200, await runSelectionSimulation2(client));
+        return;
+      }
       if (preparation) {
         const { reviewAutomotiveCohort: reviewAutomotiveCohort2 } = await Promise.resolve().then(() => (init_cohort_review(), cohort_review_exports));
         const review = await reviewAutomotiveCohort2(client);
