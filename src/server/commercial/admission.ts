@@ -1,12 +1,13 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
 import {configuredProductPreview,safePreviewUrl,type ProductPreview} from '../discovery/product-preview.js';
-import {commercialProfile} from './ranking.js';
+import {assessAutomotive} from './editorial.js';
+import {reviewAutomotiveCohort} from './cohort-review.js';
 
 export function admissionDecision(p:ProductPreview, attempts:number) {
- const group=commercialProfile(p.title).group;
- if(group==='especializado' || p.status==='UNAVAILABLE') return {state:'REJECTED',reason:'UNSUITABLE_OR_UNAVAILABLE'};
+ const editorial=assessAutomotive(p);
+ if(editorial.state==='EXCLUDE' || p.status==='UNAVAILABLE') return {state:'REJECTED',reason:'UNSUITABLE_OR_UNAVAILABLE'};
  if(p.comparable && p.seller_trusted && p.currency==='BRL' && typeof p.price==='number' && Number.isFinite(p.price) && p.price>0
-  && safePreviewUrl(p.image,true) && safePreviewUrl(p.url) && group!=='avaliar')
+  && safePreviewUrl(p.image,true) && safePreviewUrl(p.url) && editorial.state==='ELIGIBLE')
   return {state:'QUALIFIED',reason:null};
  return attempts>=3 ? {state:'REJECTED',reason:'INSUFFICIENT_ACCESS_OR_COMMERCIAL_PROFILE'}
   : {state:'RETRY',reason:'INCOMPLETE_EVIDENCE'};
@@ -47,6 +48,7 @@ export async function exploreCandidates(client:SupabaseClient, deadline:number, 
   }
  }
  await Promise.all([worker(),worker()]);
+ await reviewAutomotiveCohort(client);
  const promoted=checked(await client.rpc('promote_commercial_candidates'));
  return {evaluated,failed,promoted,deferred:queue.length};
 }

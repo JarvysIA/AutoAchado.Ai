@@ -1,7 +1,10 @@
+import {commercialProfile} from './profile.js';
+export {commercialProfile} from './profile.js';
+import {assessAutomotive} from './editorial.js';
 import type { ProductPreview } from "../discovery/product-preview.js";
 import { safePreviewUrl } from "../discovery/product-preview.js";
 
-export const RANKING_VERSION = "commercial-v2-editorial";
+export const RANKING_VERSION = "commercial-v3-pre-home";
 const DAY = 86400000;
 export interface Observation {
   observed_at: string;
@@ -35,25 +38,6 @@ const median = (values: number[]) => {
   return sorted.length % 2 ? sorted[half]! : (sorted[half-1]! + sorted[half]!) / 2;
 };
 
-// Explicit, versioned editorial hypotheses; these are not measured conversion rates.
-export function commercialProfile(title: string) {
-  const text = title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  if (/rastreador|rack de teto|bagageiro|mensalidade|assinatura/.test(text))
-    return {group:"especializado", appeal:20, ease:15, reason:"Uso específico ou possível instalação/recorrência; fora do perfil amplo inicial."};
-  // A key mentioned in an alarm is not a tool. Keep uncertain fit/installation in review.
-  if (/\balarme\b|\bstart stop\b|\bpartida remota\b|\bchaveiro\b/.test(text)
-    || (/\bkit macaco\b/.test(text) && /\bfiat\b|\bargo\b|\bcronos\b/.test(text)))
-    return {group:"avaliar",appeal:40,ease:30,reason:null};
-  if (/aspirador/.test(text)) return {group:"aspiracao",appeal:90,ease:85,reason:null};
-  if (/compressor|calibrador|inflador/.test(text)) return {group:"pneus",appeal:85,ease:75,reason:null};
-  if (/carregador.*bateria/.test(text)) return {group:"bateria",appeal:75,ease:60,reason:null};
-  if (/carregador|suporte.*celular|cabo usb/.test(text)) return {group:"celular",appeal:85,ease:85,reason:null};
-  if (/organizador|lixeira|protetor solar|quebra.sol/.test(text)) return {group:"organizacao",appeal:75,ease:85,reason:null};
-  if (/microfibra|shampoo|cera|limpador|limpeza|vonixx|lavagem/.test(text)) return {group:"limpeza",appeal:65,ease:85,reason:null};
-  if (/ferramenta|\bchave\b|lanterna|kit.*reparo/.test(text)) return {group:"ferramentas",appeal:75,ease:75,reason:null};
-  return {group:"avaliar",appeal:40,ease:40,reason:null};
-}
-
 // Diversify the visible selection without hiding products or mixing approval states.
 export function orderCommercialFamilies<T extends {rank:Pick<CommercialRank,'state'|'group'>}>(entries:T[]):T[] {
  const result:T[]=[];
@@ -70,6 +54,7 @@ export function orderCommercialFamilies<T extends {rank:Pick<CommercialRank,'sta
 
 export function rankProduct(preview: ProductPreview, history: Observation[], feedback: string | null = null, now = Date.now()): CommercialRank {
   const profile = commercialProfile(preview.title);
+  const editorial=assessAutomotive(preview);
   const reasons: string[] = [], evidence: string[] = [];
   let rejected = false;
   const fail = (text: string, hard = false) => { reasons.push(text); rejected ||= hard; };
@@ -83,8 +68,8 @@ export function rankProduct(preview: ProductPreview, history: Observation[], fee
   if (!preview.comparable) fail("Identidade, condição, variação ou contexto de preço ainda não confirmados.");
   if (!preview.seller_trusted) fail("Reputação do vendedor ainda não confirmada.");
   if (preview.seller_level && !["5_green", "4_light_green"].includes(preview.seller_level)) fail("Reputação do vendedor abaixo do mínimo.", true);
+  if(editorial.state!=='ELIGIBLE') fail(editorial.reason,editorial.state==='EXCLUDE');
   if (profile.reason) fail(profile.reason, true);
-  if (profile.group === "avaliar") fail("Utilidade e compatibilidade ampla precisam de avaliação editorial.");
   if (feedback === "NOT_RELEVANT") fail("Você marcou este produto como inadequado para o público.", true);
 
   const today = new Date(now).toISOString().slice(0,10);
@@ -133,7 +118,7 @@ export function rankProduct(preview: ProductPreview, history: Observation[], fee
   const score = Math.round(demandScore * .30 + discountScore * .25 + profile.appeal * .15
     + profile.ease * .15 + (preview.seller_trusted ? 100 : 0) * .10 + commercial * .05);
   return {version:RANKING_VERSION,state:rejected ? "REJECTED" : reasons.length ? "OBSERVING" : "APPROVED",score,
-    group:profile.group,reasons,evidence,reference_price:reference,historical_discount_percent:sufficient && discount !== null ? Math.round(discount) : null,
+    group:editorial.family,reasons,evidence,reference_price:reference,historical_discount_percent:sufficient && discount !== null ? Math.round(discount) : null,
     history_days:daily.size,history_sufficient:sufficient,seller_count:sellers.size,demand_days:demand.size,checked_at:new Date(now).toISOString()};
 }
 

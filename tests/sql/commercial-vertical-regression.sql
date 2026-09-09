@@ -18,7 +18,7 @@ begin
  exception when raise_exception then
   if sqlerrm<>'COMMERCIAL_VERTICAL_CAPACITY_OR_DISABLED' then raise; end if;
  end;
- update commercial_verticals set enabled=true,rules_version='TEST_ONLY',monitor_capacity=1 where vertical_key='HOME';
+ update commercial_verticals set enabled=true,executor_ready=true,rules_version='TEST_ONLY',monitor_capacity=1 where vertical_key='HOME';
  insert into commercial_vertical_memberships(vertical_key,identity_key,source_key,monitor) values('HOME',identity,source,true);
  insert into commercial_vertical_feedback values('HOME',identity,'INTERESTED',now());
  result:=save_automotive_commercial_feedback(source,'NOT_RELEVANT');

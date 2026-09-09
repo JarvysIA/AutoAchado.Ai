@@ -3,7 +3,8 @@ import { catalogOfferPreview, configuredMeliReader, configuredProductPreview, ty
 import { affiliateIntelligence } from "../affiliate/coupon-service.js";
 import { commercialProfile, rankProduct, orderCommercialFamilies, type Observation } from "./ranking.js";
 import {exploreCandidates} from './admission.js';
-import {HISTORY_BATCH_SIZE,nextEvidenceCheck,validEvidenceAt} from './collection-policy.js';
+import {nextEvidenceCheck,validEvidenceAt} from './collection-policy.js';
+import {automotiveCollectionScope} from './collection-scope.js';
 
 type Watch = {source_key:string; product_id:string; type:string; category_id:string; snapshot:Record<string,unknown>;
   identity_key:string; preview:ProductPreview; last_collected_at:string|null; monitor:boolean; unavailable_attempts:number;
@@ -27,6 +28,7 @@ export async function saveObservation(client:SupabaseClient, id:string, type:str
 }
 
 export async function collectCommercialEvidence(client:SupabaseClient) {
+  const scope=await automotiveCollectionScope(client);
   const runId = checked(await client.rpc("begin_commercial_collection")) as string|null;
   if (!runId) return {status:"BUSY",collected:0,failed:0};
   let collected=0,failed=0;
@@ -34,7 +36,7 @@ export async function collectCommercialEvidence(client:SupabaseClient) {
   try {
     checked(await client.rpc("seed_commercial_watchlist"));
     const candidates = checked(await client.from("commercial_watchlist").select("*").eq("monitor",true)
-      .lte('next_evidence_check',new Date().toISOString()).order('next_evidence_check').order("source_key").limit(HISTORY_BATCH_SIZE)) as Watch[];
+      .lte('next_evidence_check',new Date().toISOString()).order('next_evidence_check').order("source_key").limit(scope.historyBatch)) as Watch[];
     const liveRankings = new Map<string,Promise<Map<string,number>>>();
     const memberships=checked(await client.rpc('commercial_candidate_categories',{keys:candidates.map(c=>c.source_key)})) as {source_key:string;category_id:string}[];
     const positions = (category:string) => {
@@ -92,7 +94,9 @@ export async function collectCommercialEvidence(client:SupabaseClient) {
           const failures=validAt?0:(row.evidence_failures??0)+1;
           checked(await client.from('commercial_watchlist').update({preview,identity_key:productIdentity(row.product_id,row.type,preview),
             ...(validAt?{last_valid_price_at:validAt}:{}),evidence_failures:failures,next_evidence_check:nextEvidenceCheck(!!validAt,failures),
-            last_collected_at:new Date().toISOString(),unavailable_attempts:unavailable,monitor:profile.group !== 'especializado' && unavailable < 3}).eq('source_key',row.source_key));
+            last_collected_at:new Date().toISOString(),unavailable_attempts:unavailable,
+            // Never restore a monitor stopped by user feedback during this request.
+            ...(profile.group === 'especializado' || unavailable >= 3?{monitor:false}:{})}).eq('source_key',row.source_key));
           if(validAt) collected++;else failed++;
         } catch {
           failed++;
@@ -180,6 +184,7 @@ export async function commercialOpportunities(client:SupabaseClient, view:string
       rejected:monitored.filter(e=>e.rank.state==='REJECTED').length,monitored:monitored.length,sent:evaluated.filter(e=>e.sent_at).length},
     capacity:vertical.monitor_capacity,
     monitoringHealth:checked(await client.rpc('commercial_monitoring_health')),
+    preparation:checked(await client.rpc('commercial_pre_home_readiness')),
     matureHistory:monitored.filter(e=>e.rank.history_sufficient).length,
     coverage:checked(await client.rpc('commercial_coverage')),
     lastCollection:runs?.[0] ?? null,checkedAt:new Date(now).toISOString(),historyPolicy:'20 dias observados em 30, janela mínima de 27 dias, 2 vendedores; desconto mínimo de 10%.'};

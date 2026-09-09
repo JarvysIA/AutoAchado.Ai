@@ -244,14 +244,15 @@ export async function handleRequest(
       const collecting=url.pathname === "/api/commercial/collect";
       const discovering=url.pathname === "/api/commercial/discover";
       const probing=url.pathname === '/api/commercial/probe';
+      const preparation=url.pathname === '/api/commercial/pre-home';
       const priority=url.pathname === '/api/commercial/priority';
       const revalidating=url.pathname === '/api/commercial/revalidate';
-      const cron=discovering || probing || priority || url.pathname === "/api/commercial/cron";
+      const cron=discovering || probing || preparation || priority || url.pathname === "/api/commercial/cron";
       const feedback=url.pathname === "/api/commercial/feedback";
       const publication=url.pathname === '/api/commercial/sent';
       const listing=url.pathname === "/api/commercial/opportunities";
       if(!collecting && !cron && !feedback && !publication && !listing && !revalidating) { sendJson(response,404,{errorCode:"NOT_FOUND"}); return; }
-      if(method !== (collecting || feedback || publication || probing || revalidating ? "POST" : "GET")) {sendJson(response,405,{errorCode:"METHOD_NOT_ALLOWED"});return;}
+      if(method !== (collecting || feedback || publication || probing || preparation || revalidating ? "POST" : "GET")) {sendJson(response,405,{errorCode:"METHOD_NOT_ALLOWED"});return;}
       if(cron) {
         const secret=process.env.CRON_SECRET;
         if(!secret || request.headers.authorization !== "Bearer "+secret) {sendJson(response,401,{errorCode:"AUTHORIZATION_REQUIRED"});return;}
@@ -268,6 +269,16 @@ export async function handleRequest(
       if(discovering) { const {runConfiguredDiscoveryLiveSmoke}=await import("./server/discovery/operational.js");sendJson(response,200,await runConfiguredDiscoveryLiveSmoke("FULL_SWEEP"));return;}
       const {createOperationalDiscoveryAdapter}=await import("./server/discovery/operational.js");
       const client=createOperationalDiscoveryAdapter().client;
+      if(preparation) {
+        const {reviewAutomotiveCohort}=await import('./server/commercial/cohort-review.js');
+        const review=await reviewAutomotiveCohort(client);
+        const {probeHomeAccess,inspectKnownVariants}=await import('./server/commercial/home-probe.js');
+        const variants=await inspectKnownVariants(client);
+        const home=await probeHomeAccess(client);
+        const readiness=await client.rpc('commercial_pre_home_readiness');
+        if(readiness.error) throw new Error('READINESS_UNAVAILABLE');
+        sendJson(response,200,{review,variants,home,readiness:readiness.data});return;
+      }
       if(priority) {const {collectPriority}=await import('./server/commercial/priority.js');sendJson(response,200,await collectPriority(client));return;}
       if(probing) {const {probeOfficialSources}=await import('./server/commercial/feasibility-probe.js');sendJson(response,200,await probeOfficialSources(client));return;}
       if(revalidating) {

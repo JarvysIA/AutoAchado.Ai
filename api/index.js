@@ -23790,6 +23790,62 @@ var init_operational = __esm({
   }
 });
 
+// src/server/commercial/profile.ts
+function commercialProfile(title) {
+  const text3 = title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (/rastreador|rack de teto|bagageiro|mensalidade|assinatura/.test(text3))
+    return { group: "especializado", appeal: 20, ease: 15, reason: "Uso específico ou possível instalação/recorrência; fora do perfil amplo inicial." };
+  if (/\balarme\b|\bstart stop\b|\bpartida remota\b|\bchaveiro\b/.test(text3) || /\bkit macaco\b/.test(text3) && /\bfiat\b|\bargo\b|\bcronos\b/.test(text3))
+    return { group: "avaliar", appeal: 40, ease: 30, reason: null };
+  if (/aspirador/.test(text3)) return { group: "aspiracao", appeal: 90, ease: 85, reason: null };
+  if (/compressor|calibrador|inflador/.test(text3)) return { group: "pneus", appeal: 85, ease: 75, reason: null };
+  if (/carregador.*bateria/.test(text3)) return { group: "bateria", appeal: 75, ease: 60, reason: null };
+  if (/carregador|suporte.*celular|cabo usb/.test(text3)) return { group: "celular", appeal: 85, ease: 85, reason: null };
+  if (/organizador|lixeira|protetor solar|quebra.sol/.test(text3)) return { group: "organizacao", appeal: 75, ease: 85, reason: null };
+  if (/microfibra|shampoo|cera|limpador|limpeza|vonixx|lavagem/.test(text3)) return { group: "limpeza", appeal: 65, ease: 85, reason: null };
+  if (/ferramenta|\bchave\b|lanterna|kit.*reparo/.test(text3)) return { group: "ferramentas", appeal: 75, ease: 75, reason: null };
+  return { group: "avaliar", appeal: 40, ease: 40, reason: null };
+}
+var init_profile = __esm({
+  "src/server/commercial/profile.ts"() {
+    "use strict";
+  }
+});
+
+// src/server/commercial/editorial.ts
+function assessAutomotive(p) {
+  const text3 = normalize(p.title), profile = commercialProfile(p.title);
+  let state = profile.group === "avaliar" ? "REVIEW" : profile.group === "especializado" ? "EXCLUDE" : "ELIGIBLE";
+  let reason = state === "ELIGIBLE" ? "Utilidade reconhecida; confirmar condições atuais antes de divulgar." : state === "REVIEW" ? "Dados insuficientes para validar instalação, compatibilidade ou utilidade ampla." : "Uso especializado fora do público amplo inicial.";
+  if (/\balarme\b|\bstart stop\b|partida remota|chaveiro|\broda (ferro|traseira)\b|\bpneu \d|\bmodulo\b|\bamplificador\b|\bdriver fenolico\b|alto falantes|\bbateria de moto\b|sensor de estacionamento|camera de re\b|\boleo motor\b|\boleo 5w|\boleo \d+w|\bradiador|arrefecimento|valvulas e injetores/.test(text3) || /kit macaco.*(fiat|argo|cronos)/.test(text3)) {
+    state = "EXCLUDE";
+    reason = "Exige aplicação veicular, instalação ou manutenção específica; fora da seleção para público amplo.";
+  }
+  const simpleBluetooth = /adaptador bluetooth|adaptador.*bluetooth/.test(text3) && /usb|p2/.test(text3) && !/(modulo|instalacao|central)/.test(text3);
+  return {
+    state,
+    reason,
+    family: simpleBluetooth ? "celular" : profile.group,
+    ...simpleBluetooth && state === "REVIEW" ? { state: "ELIGIBLE", reason: "Adaptador USB/P2; conferir a entrada compatível no aparelho." } : {},
+    version: EDITORIAL_VERSION
+  };
+}
+function possibleVariantKey(description) {
+  const brand = description?.match(/(?:^| · )Marca: ([^·]+)/)?.[1]?.trim();
+  const model = description?.match(/(?:^| · )Modelo: ([^·]+)/)?.[1]?.trim();
+  if (!brand || !model || model.length < 4 || /generico|universal|nao|bolsa de moto|adaptador/i.test(model)) return null;
+  return normalize(brand + ":" + model);
+}
+var EDITORIAL_VERSION, normalize;
+var init_editorial = __esm({
+  "src/server/commercial/editorial.ts"() {
+    "use strict";
+    init_profile();
+    EDITORIAL_VERSION = "automotive-pre-home-v1";
+    normalize = (value) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  }
+});
+
 // src/server/discovery/product-preview.ts
 var product_preview_exports = {};
 __export(product_preview_exports, {
@@ -24045,6 +24101,131 @@ var init_product_preview = __esm({
   }
 });
 
+// src/server/commercial/cohort-review.ts
+var cohort_review_exports = {};
+__export(cohort_review_exports, {
+  reviewAutomotiveCohort: () => reviewAutomotiveCohort
+});
+async function reviewAutomotiveCohort(client) {
+  const rows = [];
+  for (let page = 0; ; page++) {
+    const result = await client.from("commercial_watchlist").select("source_key,identity_key,preview,monitor").order("source_key").range(page * 500, page * 500 + 499);
+    if (result.error) throw new Error("COHORT_REVIEW_UNAVAILABLE");
+    rows.push(...result.data ?? []);
+    if (!result.data || result.data.length < 500) break;
+    if (page >= 99) throw new Error("COHORT_REVIEW_LIMIT");
+  }
+  const assessments = rows.map((row) => {
+    const p = row.preview ?? {}, assessment = assessAutomotive({ title: p.title ?? "", description: p.description ?? null });
+    const eligible = assessment.state === "ELIGIBLE" && p.comparable && p.seller_trusted && p.currency === "BRL" && typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0 && safePreviewUrl(p.image, true) && safePreviewUrl(p.url) && p.status !== "UNAVAILABLE" && Date.parse(p.priceCheckedAt ?? "") >= Date.now() - 864e5 && Date.parse(p.priceCheckedAt ?? "") <= Date.now();
+    return {
+      source_key: row.source_key,
+      vertical_key: "AUTOMOTIVE",
+      identity_key: row.identity_key,
+      family: assessment.family,
+      state: assessment.state === "ELIGIBLE" && !eligible ? "REVIEW" : assessment.state,
+      reason: assessment.state === "ELIGIBLE" && !eligible ? "Preço, imagem, identidade ou vendedor precisam de nova validação." : assessment.reason,
+      version: assessment.version,
+      possible_variant_key: possibleVariantKey(p.description ?? null),
+      assessed_at: (/* @__PURE__ */ new Date()).toISOString(),
+      preview_checked_at: p.priceCheckedAt ?? null,
+      valid_until: eligible ? new Date(Date.parse(p.priceCheckedAt) + 864e5).toISOString() : null
+    };
+  });
+  for (let start = 0; start < assessments.length; start += 500) {
+    const saved = await client.from("commercial_editorial_assessments").upsert(assessments.slice(start, start + 500), { onConflict: "vertical_key,source_key" });
+    if (saved.error) throw new Error("COHORT_REVIEW_WRITE_FAILED");
+  }
+  return { reviewed: assessments.length };
+}
+var init_cohort_review = __esm({
+  "src/server/commercial/cohort-review.ts"() {
+    "use strict";
+    init_editorial();
+    init_product_preview();
+  }
+});
+
+// src/server/commercial/home-probe.ts
+var home_probe_exports = {};
+__export(home_probe_exports, {
+  inspectKnownVariants: () => inspectKnownVariants,
+  probeHome: () => probeHome,
+  probeHomeAccess: () => probeHomeAccess
+});
+async function probeHome(read, deadline = Date.now() + 15e4) {
+  const categories = [];
+  const rankings = [];
+  const products = [];
+  const pending = ["MLB1574"], seen = /* @__PURE__ */ new Set(), productIds = /* @__PURE__ */ new Set();
+  while (pending.length && categories.length < 20 && Date.now() < deadline) {
+    const id = pending.shift();
+    if (seen.has(id)) continue;
+    seen.add(id);
+    try {
+      const data = await read("/categories/" + id);
+      const children = (Array.isArray(data.children_categories) ? data.children_categories : []).filter((c) => typeof c.id === "string" && /^MLB\d+$/.test(c.id) && typeof c.name === "string").map((c) => ({ id: c.id, name: c.name }));
+      categories.push({ id, name: String(data.name ?? id), children, status: 200 });
+      for (const c of children) if (/cozinha|utens[ií]lio|organiza|limpeza|lavanderia|banheiro|conserva|armazen|potes|gaveta/i.test(c.name)) pending.push(c.id);
+      if (id === "MLB1574") continue;
+      try {
+        const ranking = await read("/highlights/MLB/category/" + id);
+        const entries = Array.isArray(ranking.content) ? ranking.content : [];
+        rankings.push({ category: id, status: 200, count: entries.length });
+        for (const entry of entries) {
+          if (products.length >= 30 || Date.now() >= deadline) break;
+          if (entry.type !== "PRODUCT" || typeof entry.id !== "string" || !/^MLB\d+$/.test(entry.id) || productIds.has(entry.id)) continue;
+          productIds.add(entry.id);
+          try {
+            const p = await resolveProductPreview(entry.id, "PRODUCT", read);
+            const complete = !!p.title.trim() && !/^MLB\d+$/.test(p.title) && !!safePreviewUrl(p.image, true) && !!safePreviewUrl(p.url) && p.currency === "BRL" && typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0 && p.status !== "UNAVAILABLE";
+            products.push({ id: entry.id, category: id, title: p.title, complete, comparable: p.comparable === true, trusted: p.seller_trusted === true, price: p.price, status: p.status });
+          } catch {
+            products.push({ id: entry.id, category: id, title: entry.id, complete: false, comparable: false, trusted: false, price: null, status: "FAILED" });
+          }
+          if (products.filter((p) => p.category === id).length >= 3) break;
+        }
+      } catch (error) {
+        rankings.push({ category: id, status: error instanceof PreviewUpstreamError ? error.status : 0, count: 0 });
+      }
+    } catch (error) {
+      categories.push({ id, name: id, children: [], status: error instanceof PreviewUpstreamError ? error.status : 0 });
+    }
+  }
+  return {
+    checkedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    activation: false,
+    scope: "BOUNDED_READ_ONLY_SAMPLE",
+    categories,
+    rankings,
+    products,
+    resolved: products.filter((p) => p.complete && p.comparable && p.trusted).length,
+    hundredCandidatesProven: false,
+    remainingCategories: pending.length
+  };
+}
+async function probeHomeAccess(client) {
+  return probeHome(await configuredMeliReader(client));
+}
+async function inspectKnownVariants(client) {
+  const read = await configuredMeliReader(client), results = [];
+  for (const id of ["MLB6339793", "MLB6339794"]) {
+    try {
+      const data = await read("/products/" + id);
+      results.push({ id, status: 200, attributes: (Array.isArray(data.attributes) ? data.attributes : []).filter((a) => typeof a.id === "string" && /BRAND|MODEL|VOLTAGE|CAPACITY|UNITS|GTIN/.test(a.id)).map((a) => ({ id: a.id, value: typeof a.value_name === "string" ? a.value_name.slice(0, 200) : null })) });
+    } catch (error) {
+      results.push({ id, status: error instanceof PreviewUpstreamError ? error.status : 0, attributes: [] });
+    }
+  }
+  return { results, identitiesMerged: false };
+}
+var init_home_probe = __esm({
+  "src/server/commercial/home-probe.ts"() {
+    "use strict";
+    init_product_preview();
+  }
+});
+
 // src/server/affiliate/coupon-service.ts
 var coupon_service_exports = {};
 __export(coupon_service_exports, {
@@ -24092,21 +24273,6 @@ var init_coupon_service = __esm({
 });
 
 // src/server/commercial/ranking.ts
-function commercialProfile(title) {
-  const text3 = title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  if (/rastreador|rack de teto|bagageiro|mensalidade|assinatura/.test(text3))
-    return { group: "especializado", appeal: 20, ease: 15, reason: "Uso específico ou possível instalação/recorrência; fora do perfil amplo inicial." };
-  if (/\balarme\b|\bstart stop\b|\bpartida remota\b|\bchaveiro\b/.test(text3) || /\bkit macaco\b/.test(text3) && /\bfiat\b|\bargo\b|\bcronos\b/.test(text3))
-    return { group: "avaliar", appeal: 40, ease: 30, reason: null };
-  if (/aspirador/.test(text3)) return { group: "aspiracao", appeal: 90, ease: 85, reason: null };
-  if (/compressor|calibrador|inflador/.test(text3)) return { group: "pneus", appeal: 85, ease: 75, reason: null };
-  if (/carregador.*bateria/.test(text3)) return { group: "bateria", appeal: 75, ease: 60, reason: null };
-  if (/carregador|suporte.*celular|cabo usb/.test(text3)) return { group: "celular", appeal: 85, ease: 85, reason: null };
-  if (/organizador|lixeira|protetor solar|quebra.sol/.test(text3)) return { group: "organizacao", appeal: 75, ease: 85, reason: null };
-  if (/microfibra|shampoo|cera|limpador|limpeza|vonixx|lavagem/.test(text3)) return { group: "limpeza", appeal: 65, ease: 85, reason: null };
-  if (/ferramenta|\bchave\b|lanterna|kit.*reparo/.test(text3)) return { group: "ferramentas", appeal: 75, ease: 75, reason: null };
-  return { group: "avaliar", appeal: 40, ease: 40, reason: null };
-}
 function orderCommercialFamilies(entries) {
   const result = [];
   for (const state of ["APPROVED", "OBSERVING", "REJECTED"]) {
@@ -24126,6 +24292,7 @@ function orderCommercialFamilies(entries) {
 }
 function rankProduct(preview, history, feedback = null, now = Date.now()) {
   const profile = commercialProfile(preview.title);
+  const editorial = assessAutomotive(preview);
   const reasons = [], evidence = [];
   let rejected = false;
   const fail3 = (text3, hard = false) => {
@@ -24140,8 +24307,8 @@ function rankProduct(preview, history, feedback = null, now = Date.now()) {
   if (!preview.comparable) fail3("Identidade, condição, variação ou contexto de preço ainda não confirmados.");
   if (!preview.seller_trusted) fail3("Reputação do vendedor ainda não confirmada.");
   if (preview.seller_level && !["5_green", "4_light_green"].includes(preview.seller_level)) fail3("Reputação do vendedor abaixo do mínimo.", true);
+  if (editorial.state !== "ELIGIBLE") fail3(editorial.reason, editorial.state === "EXCLUDE");
   if (profile.reason) fail3(profile.reason, true);
-  if (profile.group === "avaliar") fail3("Utilidade e compatibilidade ampla precisam de avaliação editorial.");
   if (feedback === "NOT_RELEVANT") fail3("Você marcou este produto como inadequado para o público.", true);
   const today = new Date(now).toISOString().slice(0, 10);
   const historical = history.filter((o) => {
@@ -24187,7 +24354,7 @@ function rankProduct(preview, history, feedback = null, now = Date.now()) {
     version: RANKING_VERSION,
     state: rejected ? "REJECTED" : reasons.length ? "OBSERVING" : "APPROVED",
     score,
-    group: profile.group,
+    group: editorial.family,
     reasons,
     evidence,
     reference_price: reference,
@@ -24203,8 +24370,11 @@ var RANKING_VERSION, DAY, median;
 var init_ranking = __esm({
   "src/server/commercial/ranking.ts"() {
     "use strict";
+    init_profile();
+    init_profile();
+    init_editorial();
     init_product_preview();
-    RANKING_VERSION = "commercial-v2-editorial";
+    RANKING_VERSION = "commercial-v3-pre-home";
     DAY = 864e5;
     median = (values) => {
       const sorted = [...values].sort((a, b) => a - b);
@@ -24216,9 +24386,9 @@ var init_ranking = __esm({
 
 // src/server/commercial/admission.ts
 function admissionDecision(p, attempts) {
-  const group = commercialProfile(p.title).group;
-  if (group === "especializado" || p.status === "UNAVAILABLE") return { state: "REJECTED", reason: "UNSUITABLE_OR_UNAVAILABLE" };
-  if (p.comparable && p.seller_trusted && p.currency === "BRL" && typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0 && safePreviewUrl(p.image, true) && safePreviewUrl(p.url) && group !== "avaliar")
+  const editorial = assessAutomotive(p);
+  if (editorial.state === "EXCLUDE" || p.status === "UNAVAILABLE") return { state: "REJECTED", reason: "UNSUITABLE_OR_UNAVAILABLE" };
+  if (p.comparable && p.seller_trusted && p.currency === "BRL" && typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0 && safePreviewUrl(p.image, true) && safePreviewUrl(p.url) && editorial.state === "ELIGIBLE")
     return { state: "QUALIFIED", reason: null };
   return attempts >= 3 ? { state: "REJECTED", reason: "INSUFFICIENT_ACCESS_OR_COMMERCIAL_PROFILE" } : { state: "RETRY", reason: "INCOMPLETE_EVIDENCE" };
 }
@@ -24274,6 +24444,7 @@ async function exploreCandidates(client, deadline, compact = false) {
     }
   }
   await Promise.all([worker(), worker()]);
+  await reviewAutomotiveCohort(client);
   const promoted = checked(await client.rpc("promote_commercial_candidates"));
   return { evaluated, failed, promoted, deferred: queue.length };
 }
@@ -24281,7 +24452,8 @@ var init_admission = __esm({
   "src/server/commercial/admission.ts"() {
     "use strict";
     init_product_preview();
-    init_ranking();
+    init_editorial();
+    init_cohort_review();
   }
 });
 
@@ -24294,11 +24466,22 @@ function nextEvidenceCheck(success, failures, now = Date.now()) {
   const minutes = success ? 720 : Math.min(360, 30 * 2 ** Math.min(Math.max(failures - 1, 0), 4));
   return new Date(now + minutes * 6e4).toISOString();
 }
-var HISTORY_BATCH_SIZE;
 var init_collection_policy = __esm({
   "src/server/commercial/collection-policy.ts"() {
     "use strict";
-    HISTORY_BATCH_SIZE = 25;
+  }
+});
+
+// src/server/commercial/collection-scope.ts
+async function automotiveCollectionScope(client) {
+  const { data, error } = await client.from("commercial_verticals").select("enabled,executor_ready,history_batch_size").eq("vertical_key", "AUTOMOTIVE").single();
+  if (error || !data?.enabled || !data.executor_ready || !Number.isInteger(data.history_batch_size) || data.history_batch_size < 1 || data.history_batch_size > 25)
+    throw new Error("COMMERCIAL_EXECUTOR_NOT_READY");
+  return { vertical: "AUTOMOTIVE", historyBatch: data.history_batch_size };
+}
+var init_collection_scope = __esm({
+  "src/server/commercial/collection-scope.ts"() {
+    "use strict";
   }
 });
 
@@ -24335,13 +24518,14 @@ async function saveObservation(client, id, type, preview, position) {
   }, { onConflict: "source_key,observed_at", ignoreDuplicates: true }));
 }
 async function collectCommercialEvidence(client) {
+  const scope = await automotiveCollectionScope(client);
   const runId = checked2(await client.rpc("begin_commercial_collection"));
   if (!runId) return { status: "BUSY", collected: 0, failed: 0 };
   let collected = 0, failed = 0;
   const started = Date.now();
   try {
     checked2(await client.rpc("seed_commercial_watchlist"));
-    const candidates = checked2(await client.from("commercial_watchlist").select("*").eq("monitor", true).lte("next_evidence_check", (/* @__PURE__ */ new Date()).toISOString()).order("next_evidence_check").order("source_key").limit(HISTORY_BATCH_SIZE));
+    const candidates = checked2(await client.from("commercial_watchlist").select("*").eq("monitor", true).lte("next_evidence_check", (/* @__PURE__ */ new Date()).toISOString()).order("next_evidence_check").order("source_key").limit(scope.historyBatch));
     const liveRankings = /* @__PURE__ */ new Map();
     const memberships = checked2(await client.rpc("commercial_candidate_categories", { keys: candidates.map((c) => c.source_key) }));
     const positions = (category) => {
@@ -24411,7 +24595,8 @@ async function collectCommercialEvidence(client) {
             next_evidence_check: nextEvidenceCheck(!!validAt, failures),
             last_collected_at: (/* @__PURE__ */ new Date()).toISOString(),
             unavailable_attempts: unavailable,
-            monitor: profile.group !== "especializado" && unavailable < 3
+            // Never restore a monitor stopped by user feedback during this request.
+            ...profile.group === "especializado" || unavailable >= 3 ? { monitor: false } : {}
           }).eq("source_key", row.source_key));
           if (validAt) collected++;
           else failed++;
@@ -24522,6 +24707,7 @@ async function commercialOpportunities(client, view, offset = 0) {
     },
     capacity: vertical.monitor_capacity,
     monitoringHealth: checked2(await client.rpc("commercial_monitoring_health")),
+    preparation: checked2(await client.rpc("commercial_pre_home_readiness")),
     matureHistory: monitored.filter((e) => e.rank.history_sufficient).length,
     coverage: checked2(await client.rpc("commercial_coverage")),
     lastCollection: runs?.[0] ?? null,
@@ -24555,6 +24741,7 @@ var init_service = __esm({
     init_ranking();
     init_admission();
     init_collection_policy();
+    init_collection_scope();
   }
 });
 
@@ -25438,9 +25625,10 @@ async function handleRequest(request, response, overrides = {}) {
       const collecting = url.pathname === "/api/commercial/collect";
       const discovering = url.pathname === "/api/commercial/discover";
       const probing = url.pathname === "/api/commercial/probe";
+      const preparation = url.pathname === "/api/commercial/pre-home";
       const priority = url.pathname === "/api/commercial/priority";
       const revalidating = url.pathname === "/api/commercial/revalidate";
-      const cron = discovering || probing || priority || url.pathname === "/api/commercial/cron";
+      const cron = discovering || probing || preparation || priority || url.pathname === "/api/commercial/cron";
       const feedback = url.pathname === "/api/commercial/feedback";
       const publication = url.pathname === "/api/commercial/sent";
       const listing = url.pathname === "/api/commercial/opportunities";
@@ -25448,7 +25636,7 @@ async function handleRequest(request, response, overrides = {}) {
         sendJson(response, 404, { errorCode: "NOT_FOUND" });
         return;
       }
-      if (method !== (collecting || feedback || publication || probing || revalidating ? "POST" : "GET")) {
+      if (method !== (collecting || feedback || publication || probing || preparation || revalidating ? "POST" : "GET")) {
         sendJson(response, 405, { errorCode: "METHOD_NOT_ALLOWED" });
         return;
       }
@@ -25481,6 +25669,17 @@ async function handleRequest(request, response, overrides = {}) {
       }
       const { createOperationalDiscoveryAdapter: createOperationalDiscoveryAdapter2 } = await Promise.resolve().then(() => (init_operational(), operational_exports));
       const client = createOperationalDiscoveryAdapter2().client;
+      if (preparation) {
+        const { reviewAutomotiveCohort: reviewAutomotiveCohort2 } = await Promise.resolve().then(() => (init_cohort_review(), cohort_review_exports));
+        const review = await reviewAutomotiveCohort2(client);
+        const { probeHomeAccess: probeHomeAccess2, inspectKnownVariants: inspectKnownVariants2 } = await Promise.resolve().then(() => (init_home_probe(), home_probe_exports));
+        const variants = await inspectKnownVariants2(client);
+        const home = await probeHomeAccess2(client);
+        const readiness = await client.rpc("commercial_pre_home_readiness");
+        if (readiness.error) throw new Error("READINESS_UNAVAILABLE");
+        sendJson(response, 200, { review, variants, home, readiness: readiness.data });
+        return;
+      }
       if (priority) {
         const { collectPriority: collectPriority2 } = await Promise.resolve().then(() => (init_priority(), priority_exports));
         sendJson(response, 200, await collectPriority2(client));
