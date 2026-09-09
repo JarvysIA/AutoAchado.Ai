@@ -23,6 +23,14 @@ function fixture() {
  return {client,tables,writes};
 }
 describe('monitored product navigation and explicit sent state',()=>{
+ it('orders the entire monitored pool by potential before pagination when approval is equal',async()=>{
+  const {client,tables}=fixture();
+  tables.commercial_selection_assessments=[{identity_key:'id:24',evidence:{score:90},assessed_at:new Date().toISOString()},
+   {identity_key:'id:12',evidence:{score:80},assessed_at:new Date().toISOString()}];
+  const result=await commercialOpportunities(client,'ALL');
+  expect(result.entries.slice(0,2).map(e=>e.identity_key)).toEqual(['id:24','id:12']);
+  expect(result.entries[0]!.price_timeline.months).toEqual([]);
+ });
  it('lists all monitored identities through pagination, including more than 20',async()=>{
   const {client}=fixture();
   const first=await commercialOpportunities(client,'ALL');

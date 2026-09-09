@@ -1,11 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { catalogOfferPreview, configuredMeliReader, configuredProductPreview, type ProductPreview } from "../discovery/product-preview.js";
 import { affiliateIntelligence } from "../affiliate/coupon-service.js";
-import { commercialProfile, rankProduct, orderCommercialFamilies, type Observation } from "./ranking.js";
+import { commercialProfile, rankProduct, type Observation } from "./ranking.js";
 import {exploreCandidates} from './admission.js';
 import {nextEvidenceCheck,validEvidenceAt} from './collection-policy.js';
 import {automotiveCollectionScope} from './collection-scope.js';
 import {analyzePriceTruth,priceHistoryStart} from './price-truth.js';
+import {priceTimeline,timelineStart} from './price-timeline.js';
 
 type Watch = {source_key:string; product_id:string; type:string; category_id:string; snapshot:Record<string,unknown>;
   identity_key:string; preview:ProductPreview; last_collected_at:string|null; monitor:boolean; unavailable_attempts:number;
@@ -150,7 +151,7 @@ export async function commercialOpportunities(client:SupabaseClient, view:string
   const identities=[...new Set(watches.map(w=>w.identity_key))];
   for(let start=0;start<identities.length;start+=100) for(let page=0;;page++) {
     const rows=checked(await client.from('commercial_observations').select('identity_key,observed_at,price,currency,seller_id,comparable,trusted,position')
-      .in('identity_key',identities.slice(start,start+100)).gte('observed_at',new Date(priceHistoryStart(now)).toISOString())
+      .in('identity_key',identities.slice(start,start+100)).gte('observed_at',new Date(Math.min(priceHistoryStart(now),timelineStart(now))).toISOString())
       .order('source_key').order('observed_at').range(page*1000,page*1000+999)) as (Observation & {identity_key:string})[];
     history.push(...rows.map(row=>({...row,position:null}))); if(rows.length<1000) break;
     if(page>=99) throw new Error('COMMERCIAL_HISTORY_LIMIT');
@@ -179,12 +180,15 @@ export async function commercialOpportunities(client:SupabaseClient, view:string
     return {identity_key:w.identity_key,monitor:w.monitor,sent_at:sentByIdentity.get(w.identity_key)??null,snapshot:w.snapshot,preview:{...w.preview,...affiliateIntelligence(w.preview)},
       feedback:action,selection:selections.get(w.identity_key)??null,
       price_analysis:analyzePriceTruth(w.preview,historyByIdentity.get(w.identity_key)??[],now),
+      price_timeline:priceTimeline(w.preview,historyByIdentity.get(w.identity_key)??[],now),
       rank:rankProduct(w.preview,historyByIdentity.get(w.identity_key)??[],action,now)};
   });
   const order={APPROVED:0,OBSERVING:1,REJECTED:2};
   const sorted=allEvaluated.sort((a,b)=>Number(b.monitor)-Number(a.monitor) || order[a.rank.state]-order[b.rank.state] || b.rank.score-a.rank.score || (a.preview.price??Infinity)-(b.preview.price??Infinity));
   const evaluated=sorted.filter((entry,index,rows)=>rows.findIndex(e=>e.identity_key===entry.identity_key)===index);
-  const monitored=orderCommercialFamilies(evaluated.filter(e=>e.monitor));
+  const monitored=evaluated.filter(e=>e.monitor).sort((a,b)=>order[a.rank.state]-order[b.rank.state]
+    || (a.rank.state==='APPROVED'?b.rank.score-a.rank.score:(b.selection?.score??0)-(a.selection?.score??0))
+    || b.rank.score-a.rank.score || a.identity_key.localeCompare(b.identity_key));
   const approved=monitored.filter(e=>e.rank.state==='APPROVED'&&!e.sent_at);
   const selected=view==='ALL'?monitored:view==='SENT'?evaluated.filter(e=>e.sent_at).sort((a,b)=>b.sent_at!.localeCompare(a.sent_at!)):
     view==='APPROVED'?approved:view==='OBSERVING'?monitored.filter(e=>e.rank.state!=='APPROVED'&&!e.sent_at):monitored.filter(e=>e.rank.state===view);
