@@ -6,6 +6,8 @@ const calls=vi.hoisted(()=>({sent:vi.fn(async()=>({saved:true})),collect:vi.fn(a
 vi.mock('../src/server/discovery/operational.js',()=>({createOperationalDiscoveryAdapter:()=>({client:{}})}));
 vi.mock('../src/server/commercial/service.js',()=>({collectCommercialEvidence:calls.collect,commercialOpportunities:calls.list,saveCommercialFeedback:calls.feedback,markCommercialSent:calls.sent}));
 const config={clientId:'fake',clientSecret:'fake',redirectUri:'https://autoachado-ai.vercel.app/auth/mercadolivre/callback',sessionSecret:'fake-test-session-secret-123456789012345'};
+const simulation = vi.hoisted(()=>vi.fn<()=>Promise<unknown>>());
+vi.mock('../src/server/commercial/selection-simulation.js',()=>({runSelectionSimulation:simulation}));
 async function request(path:string,method='GET',headers:Record<string,string>={}) {
  const result={status:0,body:''};
  const response={writeHead(status:number){result.status=status;return this;},end(body:string){result.body=body;return this;}} as unknown as ServerResponse;
@@ -14,6 +16,20 @@ async function request(path:string,method='GET',headers:Record<string,string>={}
 const cookie=()=>createAuthorizationCookie({authorized:true,userId:296984475,authorizedAt:Date.now()},config.sessionSecret).split(';')[0]!;
 afterEach(()=>{vi.unstubAllEnvs();vi.clearAllMocks();});
 describe('commercial endpoint boundaries',()=>{
+ it('finishes simulation responses larger than the smoke contract limit',async()=>{
+  vi.stubEnv('CRON_SECRET','test-only');
+  const payload={mode:'SIMULATION_ONLY',details:'x'.repeat(100 * 1024)};
+  simulation.mockResolvedValueOnce(payload);
+  const result=await request('/api/commercial/selection-simulation','POST',{authorization:'Bearer test-only'});
+  expect(result.status).toBe(200);expect(JSON.parse(result.body)).toEqual(payload);
+ });
+ it('ends oversized simulations with an explicit bounded error',async()=>{
+  vi.stubEnv('CRON_SECRET','test-only');
+  simulation.mockResolvedValueOnce({details:'x'.repeat(2 * 1024 * 1024)});
+  const result=await request('/api/commercial/selection-simulation','POST',{authorization:'Bearer test-only'});
+  expect(result.status).toBe(503);
+  expect(JSON.parse(result.body).errorCode).toBe('SELECTION_SIMULATION_RESPONSE_TOO_LARGE');
+ });
  it('protects and validates explicit sent confirmations',async()=>{
   const path='/api/commercial/sent?id=MLB123&type=PRODUCT&sent=true';
   expect((await request(path,'POST')).status).toBe(401);

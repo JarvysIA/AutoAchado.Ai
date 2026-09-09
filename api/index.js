@@ -25710,9 +25710,9 @@ var DISCOVERY_LIVE_ROUTE = "/__internal/0b3d-b/live-smoke";
 var DISCOVERY_LIVE_HTTP_CONTRACT = "commerce-discovery-live-smoke-http/v1";
 var DISCOVERY_LIVE_BODY_LIMIT = 32;
 var DISCOVERY_LIVE_RESPONSE_LIMIT = 64 * 1024;
-function sendJson(response, status, value, correlationId) {
+function sendJson(response, status, value, correlationId, byteLimit = DISCOVERY_LIVE_RESPONSE_LIMIT) {
   const body = JSON.stringify(value);
-  if (Buffer.byteLength(body, "utf8") > DISCOVERY_LIVE_RESPONSE_LIMIT) return false;
+  if (Buffer.byteLength(body, "utf8") > byteLimit) return false;
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
@@ -25950,7 +25950,10 @@ async function handleRequest(request, response, overrides = {}) {
       const client = createOperationalDiscoveryAdapter2().client;
       if (simulation) {
         const { runSelectionSimulation: runSelectionSimulation2 } = await Promise.resolve().then(() => (init_selection_simulation(), selection_simulation_exports));
-        sendJson(response, 200, await runSelectionSimulation2(client));
+        const result = await runSelectionSimulation2(client);
+        if (!sendJson(response, 200, result, void 0, 2 * 1024 * 1024)) {
+          sendJson(response, 503, { errorCode: "SELECTION_SIMULATION_RESPONSE_TOO_LARGE" });
+        }
         return;
       }
       if (preparation) {

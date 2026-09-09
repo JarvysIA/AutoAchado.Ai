@@ -45,9 +45,9 @@ const DISCOVERY_LIVE_RESPONSE_LIMIT = 64 * 1024;
 
 type SafeScalar = string | number | boolean | null;
 
-function sendJson(response: ServerResponse, status: number, value: unknown, correlationId?: string): boolean {
+function sendJson(response: ServerResponse, status: number, value: unknown, correlationId?: string, byteLimit = DISCOVERY_LIVE_RESPONSE_LIMIT): boolean {
   const body = JSON.stringify(value);
-  if (Buffer.byteLength(body, "utf8") > DISCOVERY_LIVE_RESPONSE_LIMIT) return false;
+  if (Buffer.byteLength(body, "utf8") > byteLimit) return false;
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
@@ -272,7 +272,11 @@ export async function handleRequest(
       const client=createOperationalDiscoveryAdapter().client;
       if(simulation) {
         const {runSelectionSimulation}=await import('./server/commercial/selection-simulation.js');
-        sendJson(response,200,await runSelectionSimulation(client));return;
+        const result = await runSelectionSimulation(client);
+        if (!sendJson(response,200,result,undefined,2 * 1024 * 1024)) {
+          sendJson(response,503,{errorCode:'SELECTION_SIMULATION_RESPONSE_TOO_LARGE'});
+        }
+        return;
       }
       if(preparation) {
         const {reviewAutomotiveCohort}=await import('./server/commercial/cohort-review.js');
