@@ -115,6 +115,8 @@ export async function collectCommercialEvidence(client:SupabaseClient) {
       exploration_failed:exploration.failed,deferred,finished_at:new Date().toISOString()}).eq('id',runId));
     return {status,collected,failed,deferred,exploration};
   } catch(error) {
+    console.warn(JSON.stringify({event:'COMMERCIAL_COLLECTION_FAILED',
+      reason:error instanceof Error && /^[A-Z_]+$/.test(error.message)?error.message:'UNEXPECTED_FAILURE'}));
     await client.from('commercial_collection_runs').update({status:'FAILED',collected,failed,finished_at:new Date().toISOString()}).eq('id',runId);
     throw error;
   }

@@ -11,6 +11,9 @@ export async function renewAutomotiveSelection(client:SupabaseClient) {
   assessed_at:result.checkedAt,evidence:c,
  }));
  const {data,error}=await client.rpc('refresh_commercial_selection',{assessments});
- if(error) throw new Error('SELECTION_RENEWAL_FAILED');
+ if(error) {
+  console.warn(JSON.stringify({event:'SELECTION_RENEWAL_FAILED',code:error.code||'UNKNOWN'}));
+  throw new Error('SELECTION_RENEWAL_FAILED');
+ }
  return data as number;
 }
