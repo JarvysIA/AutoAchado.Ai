@@ -53,7 +53,7 @@ Resultados possíveis:
 
 ## Execução e validação
 
-`POST /api/commercial/selection-simulation`, autenticado por CRON_SECRET, lê snapshots dos últimos 14 dias, produtos conhecidos, vínculos, feedback, enviados, alterações e observações históricas. Paginação explícita; limite excedido ou erro aborta, sem apresentar comparação truncada como completa. Retorna seleção, reserva, razões, componentes, confiança, diagnóstico de desconto e prioridades de investigação. Não realiza escritas ou consultas adicionais ao Mercado Livre.
+`POST /api/commercial/selection-simulation`, autenticado por CRON_SECRET, lê snapshots dos últimos 14 dias, produtos conhecidos, vínculos, feedback, enviados, alterações e observações históricas. A função SQL `commercial_selection_inputs` entrega um snapshot consistente em uma consulta e agrega posições por fonte/categoria/dia antes da transferência. Limites explícitos de volume e janela abortam em caso de excesso, sem apresentar comparação truncada como completa. Retorna seleção, reserva, razões, componentes, confiança, diagnóstico de desconto e prioridades de investigação. Não realiza escritas ou consultas adicionais ao Mercado Livre.
 
 Relatórios contendo métricas e listas reais de produção ficam em `.vercel`, ignorado pelo Git. Código, especificação e testes podem ser versionados.
 

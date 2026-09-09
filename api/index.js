@@ -24285,27 +24285,18 @@ var init_price_truth = __esm({
 // src/server/commercial/selection-simulation.ts
 var selection_simulation_exports = {};
 __export(selection_simulation_exports, {
+  analyzeSelectionInputs: () => analyzeSelectionInputs,
   runSelectionSimulation: () => runSelectionSimulation
 });
-async function pages2(query, maximum = 200) {
-  const rows = [];
-  for (let page = 0; page < maximum; page++) {
-    const { data, error } = await query(page * 500, page * 500 + 499);
-    if (error) throw new Error("SELECTION_SIMULATION_READ_FAILED");
-    rows.push(...data ?? []);
-    if (!data || data.length < 500) return rows;
-  }
-  throw new Error("SELECTION_SIMULATION_INCOMPLETE_DATA");
-}
 async function runSelectionSimulation(client, now = Date.now()) {
-  const [snapshots, watches, memberships, feedback, sent, changes] = await Promise.all([
-    pages2((a, b) => client.from("highlight_snapshots").select("type,product_id,marketplace_category_id,position,observed_at,scan_runs!inner(vertical_key)").eq("scan_runs.vertical_key", "AUTOMOTIVE").gte("observed_at", new Date(now - 14 * 864e5).toISOString()).lte("observed_at", new Date(now).toISOString()).order("observed_at").order("marketplace_category_id").order("type").order("product_id").range(a, b)),
-    pages2((a, b) => client.from("commercial_watchlist").select("source_key,identity_key,preview,monitor").order("source_key").range(a, b)),
-    pages2((a, b) => client.from("commercial_vertical_memberships").select("source_key,identity_key,monitor").eq("vertical_key", "AUTOMOTIVE").order("identity_key").range(a, b)),
-    pages2((a, b) => client.from("commercial_vertical_feedback").select("identity_key,action").eq("vertical_key", "AUTOMOTIVE").order("identity_key").range(a, b)),
-    pages2((a, b) => client.from("commercial_sent_products").select("identity_key,sent_at").eq("vertical_key", "AUTOMOTIVE").not("sent_at", "is", null).order("identity_key").range(a, b)),
-    pages2((a, b) => client.from("commercial_cohort_changes").select("added_source,changed_at").eq("vertical_key", "AUTOMOTIVE").order("changed_at").order("id").range(a, b))
-  ]);
+  const { data, error } = await client.rpc("commercial_selection_inputs", { reference_time: new Date(now).toISOString(), history_start: new Date(priceHistoryStart(now)).toISOString() });
+  if (error) throw new Error("SELECTION_SIMULATION_READ_FAILED");
+  if (!data || !["snapshots", "watches", "memberships", "feedback", "sent", "changes", "observations"].every((k) => Array.isArray(data[k])))
+    throw new Error("SELECTION_SIMULATION_INVALID_DATA");
+  return analyzeSelectionInputs(data, now);
+}
+function analyzeSelectionInputs(input, now = Date.now()) {
+  const { snapshots, watches, memberships, feedback, sent, changes } = input;
   const ranks = /* @__PURE__ */ new Map();
   for (const r of snapshots) {
     const key = r.type + ":" + r.product_id, list = ranks.get(key) ?? [];
@@ -24331,15 +24322,11 @@ async function runSelectionSimulation(client, now = Date.now()) {
     };
   });
   const result = simulateSelection(candidates, now);
-  const identities = [...new Set(result.evaluated.filter((c) => c.preview).map((c) => c.identity_key))];
   const historyByIdentity = /* @__PURE__ */ new Map();
-  for (let i = 0; i < identities.length; i += 100) {
-    const rows = await pages2((a, b) => client.from("commercial_observations").select("identity_key,observed_at,price,currency,seller_id,comparable,trusted,position").in("identity_key", identities.slice(i, i + 100)).gte("observed_at", new Date(priceHistoryStart(now)).toISOString()).lte("observed_at", new Date(now).toISOString()).order("source_key").order("observed_at").range(a, b));
-    for (const row of rows) {
-      const list = historyByIdentity.get(row.identity_key) ?? [];
-      list.push(row);
-      historyByIdentity.set(row.identity_key, list);
-    }
+  for (const row of input.observations) {
+    const list = historyByIdentity.get(row.identity_key) ?? [];
+    list.push(row);
+    historyByIdentity.set(row.identity_key, list);
   }
   const summary = (c) => ({
     source_key: c.source_key,
@@ -24379,8 +24366,8 @@ async function runSelectionSimulation(client, now = Date.now()) {
     },
     discoveryPriority: candidates.filter((c) => !c.preview).map((c) => ({ source_key: c.source_key, ...demandPotential(c.ranks, now) })).sort((a, b) => b.score - a.score || a.source_key.localeCompare(b.source_key)).slice(0, 30),
     checkedAt: new Date(now).toISOString(),
-    snapshotOccurrences: snapshots.length,
-    knownPreviews: watches.length,
+    snapshotOccurrences: input.snapshot_occurrences,
+    knownPreviews: candidates.filter((c) => c.preview).length,
     limitation: "Usa presença nos rankings de descoberta para avaliar todos sob a mesma fonte. Sem volume recente comparável entre categorias. Tempo de permanência desconhecido bloqueia sugestão de troca."
   };
 }
