@@ -15,7 +15,7 @@ begin
  for n in 1..6 loop
   insert into commercial_watchlist(source_key,product_id,type,category_id,snapshot,identity_key,monitor,preview)
    values('PRODUCT:MLB98999000'||n,'MLB98999000'||n,'PRODUCT','MLB5672','{}','fixture:prehome:'||n,n<=3,
-    jsonb_build_object('priceCheckedAt',now()::text));
+    jsonb_build_object('priceCheckedAt',now()::text,'price',50,'seller_id','fixture-seller'));
   insert into commercial_editorial_assessments(vertical_key,source_key,identity_key,family,state,reason,version,assessed_at,preview_checked_at,valid_until)
    values('AUTOMOTIVE','PRODUCT:MLB98999000'||n,'fixture:prehome:'||n,
     case when n in(1,2) then 'avaliar' when n in(3,6) then 'limpeza' when n=4 then 'pneus' else 'celular' end,
@@ -36,7 +36,9 @@ begin
  if promote_commercial_candidates()<>1 then raise exception 'Empty slot should admit next eligible family'; end if;
  update commercial_watchlist set monitor=false where source_key='PRODUCT:MLB989990005';
  if promote_commercial_candidates()<>0 then raise exception 'Family ceiling bypassed'; end if;
- if (select count(*) from commercial_observations)<>before_prices then raise exception 'Price history changed'; end if;
+ if (select count(*) from commercial_observations)<>before_prices+2 then raise exception 'Admission prices missing or historical rows removed'; end if;
+ if not exists(select 1 from commercial_watchlist where source_key='PRODUCT:MLB989990005' and last_valid_price_at=now()) then
+  raise exception 'Admission price coverage missing'; end if;
  begin
   update commercial_verticals set enabled=true,rules_version='TEST' where vertical_key='HOME';
   raise exception 'HOME executor guard missing';
