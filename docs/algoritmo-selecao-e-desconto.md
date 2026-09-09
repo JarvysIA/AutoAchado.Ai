@@ -2,7 +2,13 @@
 
 ## Estado da entrega
 
-Implementado em modo de simulação, com endpoint técnico protegido. Não substitui o seletor operacional nem altera automaticamente vagas, feedback, categorias, cupons, cron ou aprovação de divulgação. Casa permanece desativada. O objetivo desta fase é comparar a proposta com a carteira atual e inspecionar seus erros antes de ativar mudanças.
+Integrado à renovação gradual de Automotivo após a coleta de evidências. O endpoint técnico de simulação continua somente para leitura. Casa permanece desativada. A nota de potencial escolhe candidatos ao acompanhamento; a aprovação para divulgação exige separadamente histórico, demanda e confiança.
+
+A cada coleta, uma geração completa de avaliações é persistida e aplicada em transação. Vagas livres exigem nota mínima de 60, três dias de ranking e conteúdo atual validado. Com a carteira cheia, a entrada exige sete dias no ranking, vantagem de pelo menos dez pontos e saída de um monitorado há pelo menos sete dias. O limite é de cinco substituições por dia de São Paulo, com até 25 por família. Interesse e envio impedem saída por renovação; histórico e motivos da troca são preservados. Para os monitorados antigos sem início comprovado, a contagem de permanência começa na ativação desta integração.
+
+A transação revalida vínculo, identidade, preço consultado, feedback e quota. Avaliações com mais de 15 minutos não autorizam admissões. Falha na geração completa impede renovação; não há retorno automático ao seletor antigo por posição isolada. A avaliação editorial e a seleção são requisitos cumulativos.
+
+Os cards exibem nota e componentes, dias no ranking, posição mediana, data da avaliação, razões pendentes, dias de preços comparáveis, vendedores e referência de setembro quando aplicável. A aprovação e a revalidação antes da copy usam a mesma referência de preço independente.
 
 ## Decisão 1: quem merece ser acompanhado
 
@@ -59,6 +65,6 @@ Relatórios contendo métricas e listas reais de produção ficam em `.vercel`, 
 
 O cálculo considera todo o conjunto carregado; a resposta detalha até 500 avaliações e 100 reservas para limitar o tamanho do JSON, informando os totais. Os atuais monitorados e a seleção proposta são retornados separadamente. Snapshots são restritos a execuções AUTOMOTIVE; candidatos conhecidos ficam restritos a seus vínculos nessa vertical.
 
-## Critérios para a próxima fase
+## Acompanhamento da ativação
 
-Revisar qualidade e diversidade dos primeiros colocados, medir quantos candidatos ficam bloqueados por informação ausente, conferir estabilidade em dias distintos e verificar exemplos negativos. Só então integrar prioridade à exploração e vantagens comprovadas à promoção automática. A nova nota não deve ser ativada apenas por aumentar a quantidade de aprovados.
+Revisar qualidade e diversidade dos primeiros colocados, medir bloqueios por informação ausente e acompanhar a estabilidade das trocas. A ordenação da exploração de candidatos ainda usa sua fila existente; a renovação da carteira já usa o novo potencial. A próxima evolução é priorizar a obtenção de conteúdo dos candidatos recorrentes ainda sem dados completos e calibrar a utilidade com resultados de divulgação.

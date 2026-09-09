@@ -24288,14 +24288,14 @@ __export(selection_simulation_exports, {
   analyzeSelectionInputs: () => analyzeSelectionInputs,
   runSelectionSimulation: () => runSelectionSimulation
 });
-async function runSelectionSimulation(client, now = Date.now()) {
+async function runSelectionSimulation(client, now = Date.now(), evaluationLimit = 500) {
   const { data, error } = await client.rpc("commercial_selection_inputs", { reference_time: new Date(now).toISOString(), history_start: new Date(priceHistoryStart(now)).toISOString() });
   if (error) throw new Error("SELECTION_SIMULATION_READ_FAILED");
   if (!data || !["snapshots", "watches", "memberships", "feedback", "sent", "changes", "observations"].every((k) => Array.isArray(data[k])))
     throw new Error("SELECTION_SIMULATION_INVALID_DATA");
-  return analyzeSelectionInputs(data, now);
+  return analyzeSelectionInputs(data, now, evaluationLimit);
 }
-function analyzeSelectionInputs(input, now = Date.now()) {
+function analyzeSelectionInputs(input, now = Date.now(), evaluationLimit = 500) {
   const { snapshots, watches, memberships, feedback, sent, changes } = input;
   const ranks = /* @__PURE__ */ new Map();
   for (const r of snapshots) {
@@ -24317,7 +24317,7 @@ function analyzeSelectionInputs(input, now = Date.now()) {
       monitor: active.has(identity),
       protected: protectedIds.has(identity),
       feedback: actions.get(identity),
-      monitor_since: monitoringStarts.get(key),
+      monitor_since: memberships.find((m) => m.identity_key === identity && m.monitor)?.monitor_since ?? monitoringStarts.get(key),
       ranks: ranks.get(key) ?? []
     };
   });
@@ -24334,6 +24334,7 @@ function analyzeSelectionInputs(input, now = Date.now()) {
     title: c.preview?.title ?? c.source_key,
     monitor: c.monitor,
     protected: c.protected,
+    price_checked_at: c.preview?.priceCheckedAt ?? null,
     score: c.score,
     components: c.components,
     family: c.family,
@@ -24354,9 +24355,9 @@ function analyzeSelectionInputs(input, now = Date.now()) {
     selected: result.selected.map(summary),
     reserve: result.reserve.slice(0, 100).map(summary),
     reserveCount: result.reserve.length,
-    evaluated: result.evaluated.slice(0, 500).map(summary),
+    evaluated: result.evaluated.slice(0, evaluationLimit).map(summary),
     evaluatedTotal: result.evaluated.length,
-    evaluatedPreviewLimit: 500,
+    evaluatedPreviewLimit: evaluationLimit,
     currentEvaluated: current.map(summary),
     comparison: {
       currentFamilies: familyCounts(current),
@@ -24588,22 +24589,12 @@ function rankProduct(preview, history, feedback = null, now = Date.now()) {
   if (editorial.state !== "ELIGIBLE") fail3(editorial.reason, editorial.state === "EXCLUDE");
   if (profile.reason) fail3(profile.reason, true);
   if (feedback === "NOT_RELEVANT") fail3("Você marcou este produto como inadequado para o público.", true);
-  const today = new Date(now).toISOString().slice(0, 10);
-  const historical = history.filter((o) => {
-    const time = Date.parse(o.observed_at);
-    return o.comparable && o.trusted && o.currency === preview.currency && o.seller_id && typeof o.price === "number" && Number.isFinite(o.price) && o.price > 0 && time >= now - 30 * DAY3 && time < Date.parse(today);
-  });
-  const daily = /* @__PURE__ */ new Map();
-  for (const observation of historical) {
-    const day = observation.observed_at.slice(0, 10);
-    daily.set(day, Math.min(daily.get(day) ?? Infinity, observation.price));
-  }
-  const sellers = new Set(historical.map((o) => o.seller_id));
-  const span = historical.length ? (now - Math.min(...historical.map((o) => Date.parse(o.observed_at)))) / DAY3 : 0;
-  const reference2 = daily.size ? median3([...daily.values()]) : null;
-  const discount = reference2 && preview.price ? (reference2 - preview.price) / reference2 * 100 : null;
-  const sufficient = daily.size >= 20 && span >= 27 && sellers.size >= 2;
-  if (!sufficient) fail3("Histórico insuficiente: exigimos 20 dias observados, janela de 27 dias e 2 vendedores em até 30 dias.");
+  const truth = analyzePriceTruth(preview, history, now);
+  const coverage = truth.campaign?.sufficient && (!truth.rolling.sufficient || truth.campaign.price <= truth.rolling.price) ? truth.campaign : truth.rolling;
+  const reference2 = truth.reference_price;
+  const discount = reference2 !== null && preview.price !== null ? (reference2 - preview.price) / reference2 * 100 : null;
+  const sufficient = truth.rolling.sufficient || truth.campaign?.sufficient === true;
+  if (!sufficient) fail3("Histórico insuficiente: exigimos 20 dias observados, janela de 27 dias e 2 vendedores na referência de 30 dias ou de setembro.");
   else if (discount === null || discount < 10) fail3("Desconto histórico inferior a 10%.", true);
   else evidence.push(Math.round(discount) + "% abaixo da mediana dos melhores preços diários observados.");
   const dimensions = /* @__PURE__ */ new Map();
@@ -24637,9 +24628,9 @@ function rankProduct(preview, history, feedback = null, now = Date.now()) {
     evidence,
     reference_price: reference2,
     historical_discount_percent: sufficient && discount !== null ? Math.round(discount) : null,
-    history_days: daily.size,
+    history_days: coverage.days,
     history_sufficient: sufficient,
-    seller_count: sellers.size,
+    seller_count: coverage.sellers,
     demand_days: demand.size,
     checked_at: new Date(now).toISOString()
   };
@@ -24652,6 +24643,7 @@ var init_ranking = __esm({
     init_profile();
     init_editorial();
     init_product_preview();
+    init_price_truth();
     RANKING_VERSION = "commercial-v3-pre-home";
     DAY3 = 864e5;
     median3 = (values) => {
@@ -24659,6 +24651,32 @@ var init_ranking = __esm({
       const half = Math.floor(sorted.length / 2);
       return sorted.length % 2 ? sorted[half] : (sorted[half - 1] + sorted[half]) / 2;
     };
+  }
+});
+
+// src/server/commercial/selection-renewal.ts
+async function renewAutomotiveSelection(client) {
+  const result = await runSelectionSimulation(client, Date.now(), 1e4);
+  if (result.evaluatedTotal > result.evaluated.length) throw new Error("SELECTION_INCOMPLETE_GENERATION");
+  const assessments = result.evaluated.filter((c) => c.price_analysis !== null).map((c) => ({
+    identity_key: c.identity_key,
+    source_key: c.source_key,
+    family: c.family,
+    score: c.score,
+    demand_days: c.demand.days,
+    eligible: c.eligible,
+    preview_checked_at: c.price_checked_at,
+    assessed_at: result.checkedAt,
+    evidence: c
+  }));
+  const { data, error } = await client.rpc("refresh_commercial_selection", { assessments });
+  if (error) throw new Error("SELECTION_RENEWAL_FAILED");
+  return data;
+}
+var init_selection_renewal = __esm({
+  "src/server/commercial/selection-renewal.ts"() {
+    "use strict";
+    init_selection_simulation();
   }
 });
 
@@ -24723,7 +24741,7 @@ async function exploreCandidates(client, deadline, compact = false) {
   }
   await Promise.all([worker(), worker()]);
   await reviewAutomotiveCohort(client);
-  const promoted = checked(await client.rpc("promote_commercial_candidates"));
+  const promoted = await renewAutomotiveSelection(client);
   return { evaluated, failed, promoted, deferred: queue.length };
 }
 var init_admission = __esm({
@@ -24732,6 +24750,7 @@ var init_admission = __esm({
     init_product_preview();
     init_editorial();
     init_cohort_review();
+    init_selection_renewal();
   }
 });
 
@@ -24934,7 +24953,7 @@ async function commercialOpportunities(client, view, offset = 0) {
   const now = Date.now(), history = [];
   const identities = [...new Set(watches.map((w) => w.identity_key))];
   for (let start = 0; start < identities.length; start += 100) for (let page = 0; ; page++) {
-    const rows = checked2(await client.from("commercial_observations").select("identity_key,observed_at,price,currency,seller_id,comparable,trusted,position").in("identity_key", identities.slice(start, start + 100)).gte("observed_at", new Date(now - 30 * 864e5).toISOString()).order("source_key").order("observed_at").range(page * 1e3, page * 1e3 + 999));
+    const rows = checked2(await client.from("commercial_observations").select("identity_key,observed_at,price,currency,seller_id,comparable,trusted,position").in("identity_key", identities.slice(start, start + 100)).gte("observed_at", new Date(priceHistoryStart(now)).toISOString()).order("source_key").order("observed_at").range(page * 1e3, page * 1e3 + 999));
     history.push(...rows.map((row) => ({ ...row, position: null })));
     if (rows.length < 1e3) break;
     if (page >= 99) throw new Error("COMMERCIAL_HISTORY_LIMIT");
@@ -24952,6 +24971,11 @@ async function commercialOpportunities(client, view, offset = 0) {
     historyByIdentity.set(observation.identity_key, list);
   }
   const feedbackByIdentity = new Map(feedback.map((f) => [f.identity_key, f.action]));
+  const selections = /* @__PURE__ */ new Map();
+  for (let start = 0; start < identities.length; start += 100) {
+    const rows = checked2(await client.from("commercial_selection_assessments").select("identity_key,evidence,assessed_at").in("identity_key", identities.slice(start, start + 100)));
+    for (const row of rows ?? []) selections.set(row.identity_key, { ...row.evidence, assessed_at: row.assessed_at });
+  }
   const allEvaluated = watches.filter((w) => w.preview?.title).map((w) => {
     const action = feedbackByIdentity.get(w.identity_key) ?? null;
     return {
@@ -24961,6 +24985,8 @@ async function commercialOpportunities(client, view, offset = 0) {
       snapshot: w.snapshot,
       preview: { ...w.preview, ...affiliateIntelligence(w.preview) },
       feedback: action,
+      selection: selections.get(w.identity_key) ?? null,
+      price_analysis: analyzePriceTruth(w.preview, historyByIdentity.get(w.identity_key) ?? [], now),
       rank: rankProduct(w.preview, historyByIdentity.get(w.identity_key) ?? [], action, now)
     };
   });
@@ -25020,6 +25046,7 @@ var init_service = __esm({
     init_admission();
     init_collection_policy();
     init_collection_scope();
+    init_price_truth();
   }
 });
 
@@ -25145,7 +25172,7 @@ async function revalidateProduct(client, id, type) {
   const identity = productIdentity(id, type, preview);
   const rows = [];
   for (const table of ["commercial_observations", "commercial_rank_observations"]) for (let page = 0; ; page++) {
-    const data = checked4(await client.from(table).select("*").eq("identity_key", identity).gte("observed_at", new Date(Date.now() - 30 * 864e5).toISOString()).order("observed_at").order(table === "commercial_observations" ? "source_key" : "category_id").range(page * 1e3, page * 1e3 + 999));
+    const data = checked4(await client.from(table).select("*").eq("identity_key", identity).gte("observed_at", new Date(priceHistoryStart(Date.now())).toISOString()).order("observed_at").order(table === "commercial_observations" ? "source_key" : "category_id").range(page * 1e3, page * 1e3 + 999));
     rows.push(...(data ?? []).map((row) => table === "commercial_observations" ? { ...row, position: null } : { ...row, demand_category: row.category_id, price: null, currency: "BRL", seller_id: null, comparable: false, trusted: false }));
     if (!data || data.length < 1e3) break;
     if (page >= 99) throw new Error("REVALIDATION_HISTORY_LIMIT");
@@ -25163,6 +25190,7 @@ var init_revalidate = __esm({
     init_coupon_service();
     init_service();
     init_ranking();
+    init_price_truth();
   }
 });
 
@@ -25427,6 +25455,23 @@ async function loadCommercial(append = false) {
       entry.preview.commercial=entry.rank;
       fillCard(card,entry.snapshot,entry.preview);
       const body=textNode('div','','product-body');
+      const selection=entry.selection, priceEvidence=entry.price_analysis;
+      if(selection) {
+        body.append(textNode('strong','Potencial de acompanhamento: '+selection.score+'/100','badge'));
+        body.append(textNode('p',selection.demand.days+' dias no mesmo ranking · posição mediana '+(selection.demand.median_position??'indisponível')+'.'));
+        body.append(textNode('p','Avaliado em '+date(selection.assessed_at)+'. '+(selection.eligible?'Atende aos critérios de seleção.':'Mantido em acompanhamento; ainda há critérios pendentes.')));
+        for(const reason of selection.reasons||[]) body.append(textNode('p',reason,'product-meta'));
+        body.append(textNode('p','Demanda '+selection.components.demand+'/50 · utilidade '+selection.components.utility+'/20 · facilidade '+selection.components.ease+'/15 · vendedor '+selection.components.seller+'/10 · faixa de preço '+selection.components.ticket+'/5.','product-meta'));
+        body.append(textNode('p','Potencial não é garantia de venda. Desconto anunciado não aumenta esta nota.','product-meta'));
+      } else body.append(textNode('p','Potencial: aguardando a próxima avaliação automática.'));
+      if(priceEvidence) {
+        body.append(textNode('strong',priceEvidence.historical_discount_confirmed?'Desconto histórico confirmado: '+priceEvidence.historical_discount_percent+'%':'Desconto histórico ainda não confirmado'));
+        body.append(textNode('p','Últimos 30 dias: '+priceEvidence.rolling.days+' dias observados · '+priceEvidence.rolling.sellers+' vendedores.'));
+        if(priceEvidence.reference_price!==null) body.append(textNode('p','Referência histórica: '+money(priceEvidence.reference_price)));
+        if(priceEvidence.campaign) body.append(textNode('p','Referência de setembro: '+priceEvidence.campaign.days+' dias · '+(priceEvidence.campaign.sufficient?'cobertura suficiente':'cobertura insuficiente')+'.'));
+        if(priceEvidence.state==='ANNOUNCED_NOT_CONFIRMED') body.append(textNode('p','O percentual anunciado supera o desconto sustentado pelo histórico.'));
+        if(priceEvidence.state==='CURRENT_PRICE_UNVERIFIED') body.append(textNode('p','O preço atual precisa de nova validação.'));
+      }
       body.append(textNode('strong',(entry.rank.state==='APPROVED'?'✅ Aprovada':entry.rank.state==='OBSERVING'?'⏳ Em observação':'Não aprovada')+' · Pontuação '+entry.rank.score+'/100','badge'));
       body.append(textNode('p',entry.rank.history_days+' dias de preços comparáveis · '+entry.rank.seller_count+' vendedores · '+entry.rank.demand_days+' dias entre mais vendidos.'));
       if(entry.rank.historical_discount_percent!==null) body.append(textNode('p',entry.rank.historical_discount_percent+'% de desconto histórico · Referência '+money(entry.rank.reference_price)));
@@ -26015,7 +26060,8 @@ async function handleRequest(request, response, overrides = {}) {
         sendJson(response, 400, { errorCode: "INVALID_VIEW" });
         return;
       }
-      sendJson(response, 200, await service.commercialOpportunities(client, view, offset));
+      if (!sendJson(response, 200, await service.commercialOpportunities(client, view, offset), void 0, 2 * 1024 * 1024))
+        sendJson(response, 503, { errorCode: "COMMERCIAL_RESPONSE_TOO_LARGE" });
     } catch {
       sendJson(response, 503, { errorCode: "COMMERCIAL_UNAVAILABLE" });
     }

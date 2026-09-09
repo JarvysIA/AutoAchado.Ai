@@ -92,11 +92,18 @@ describe("operational dashboard browser script", () => {
       }
       if(path.includes('/commercial/opportunities')) return {ok:true,json:async()=>({entries:[{
         snapshot:{product_id:'MLB123',type:'ITEM'},preview:{title:'Compressor portátil',price:123,currency:'BRL'},sent_at:sentAt,
+        selection:{score:72,demand:{days:7,median_position:3},assessed_at:'2026-09-09T12:00:00Z',eligible:true,reasons:[],components:{demand:30,utility:17,ease:12,seller:10,ticket:3}},
+        price_analysis:{historical_discount_confirmed:false,state:'INSUFFICIENT_HISTORY',rolling:{days:2,sellers:1},reference_price:null,campaign:null},
         rank:{state:'OBSERVING',score:20,history_days:1,seller_count:1,demand_days:1,historical_discount_percent:null,reasons:[],evidence:[]}
       }],counts:{approved:0,observing:1,sent:sentAt?1:0,monitored:1},capacity:100,total:1,hasMore:false})};
       return originalFetch(path,options);
     };
     await elements.get('vertical-0').handlers.click();
+    const evidence=elements.get('commercial-results').children[0].children.at(-1).children.map((n:any)=>n.textContent).join(' ');
+    expect(evidence).toContain('Potencial de acompanhamento: 72/100');
+    expect(evidence).toContain('7 dias no mesmo ranking');
+    expect(evidence).toContain('Desconto histórico ainda não confirmado');
+    expect(evidence).toContain('2 dias observados · 1 vendedores');
     const sentAction=()=>elements.get('commercial-results').children[0].children.at(-1).children.find((n:any)=>n.textContent.includes('Marcar como enviado')||n.textContent==='Desfazer enviado');
     expect(sentAt).toBeNull();
     await sentAction().handlers.click();

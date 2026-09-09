@@ -3,6 +3,7 @@ export {commercialProfile} from './profile.js';
 import {assessAutomotive} from './editorial.js';
 import type { ProductPreview } from "../discovery/product-preview.js";
 import { safePreviewUrl } from "../discovery/product-preview.js";
+import {analyzePriceTruth} from './price-truth.js';
 
 export const RANKING_VERSION = "commercial-v3-pre-home";
 const DAY = 86400000;
@@ -72,24 +73,12 @@ export function rankProduct(preview: ProductPreview, history: Observation[], fee
   if (profile.reason) fail(profile.reason, true);
   if (feedback === "NOT_RELEVANT") fail("Você marcou este produto como inadequado para o público.", true);
 
-  const today = new Date(now).toISOString().slice(0,10);
-  const historical = history.filter(o => {
-    const time = Date.parse(o.observed_at);
-    return o.comparable && o.trusted && o.currency === preview.currency && o.seller_id
-      && typeof o.price === "number" && Number.isFinite(o.price) && o.price > 0
-      && time >= now - 30 * DAY && time < Date.parse(today);
-  });
-  const daily = new Map<string, number>();
-  for (const observation of historical) {
-    const day = observation.observed_at.slice(0,10);
-    daily.set(day, Math.min(daily.get(day) ?? Infinity, observation.price!));
-  }
-  const sellers = new Set(historical.map(o => o.seller_id));
-  const span = historical.length ? (now - Math.min(...historical.map(o => Date.parse(o.observed_at)))) / DAY : 0;
-  const reference = daily.size ? median([...daily.values()]) : null;
-  const discount = reference && preview.price ? (reference - preview.price) / reference * 100 : null;
-  const sufficient = daily.size >= 20 && span >= 27 && sellers.size >= 2;
-  if (!sufficient) fail("Histórico insuficiente: exigimos 20 dias observados, janela de 27 dias e 2 vendedores em até 30 dias.");
+  const truth=analyzePriceTruth(preview,history,now);
+  const coverage=truth.campaign?.sufficient && (!truth.rolling.sufficient || truth.campaign.price! <= truth.rolling.price!) ? truth.campaign : truth.rolling;
+  const reference=truth.reference_price;
+  const discount=reference!==null&&preview.price!==null?(reference-preview.price)/reference*100:null;
+  const sufficient=truth.rolling.sufficient || truth.campaign?.sufficient===true;
+  if (!sufficient) fail("Histórico insuficiente: exigimos 20 dias observados, janela de 27 dias e 2 vendedores na referência de 30 dias ou de setembro.");
   else if (discount === null || discount < 10) fail("Desconto histórico inferior a 10%.", true);
   else evidence.push(Math.round(discount) + "% abaixo da mediana dos melhores preços diários observados.");
 
@@ -119,7 +108,7 @@ export function rankProduct(preview: ProductPreview, history: Observation[], fee
     + profile.ease * .15 + (preview.seller_trusted ? 100 : 0) * .10 + commercial * .05);
   return {version:RANKING_VERSION,state:rejected ? "REJECTED" : reasons.length ? "OBSERVING" : "APPROVED",score,
     group:editorial.family,reasons,evidence,reference_price:reference,historical_discount_percent:sufficient && discount !== null ? Math.round(discount) : null,
-    history_days:daily.size,history_sufficient:sufficient,seller_count:sellers.size,demand_days:demand.size,checked_at:new Date(now).toISOString()};
+    history_days:coverage.days,history_sufficient:sufficient,seller_count:coverage.sellers,demand_days:demand.size,checked_at:new Date(now).toISOString()};
 }
 
 export function selectDiverse<T extends {identity_key:string; rank:CommercialRank}>(entries: T[], limit = 20): T[] {

@@ -311,7 +311,8 @@ export async function handleRequest(
       }
       const view=url.searchParams.get('view')??'ALL',offset=Number(url.searchParams.get('offset')??0);
       if(!['ALL','SENT','APPROVED','OBSERVING','REJECTED'].includes(view) || !Number.isSafeInteger(offset) || offset<0 || offset>10000) {sendJson(response,400,{errorCode:'INVALID_VIEW'});return;}
-      sendJson(response,200,await service.commercialOpportunities(client,view,offset));
+      if(!sendJson(response,200,await service.commercialOpportunities(client,view,offset),undefined,2*1024*1024))
+        sendJson(response,503,{errorCode:'COMMERCIAL_RESPONSE_TOO_LARGE'});
     } catch {sendJson(response,503,{errorCode:'COMMERCIAL_UNAVAILABLE'});}
     return;
   }

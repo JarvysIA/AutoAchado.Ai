@@ -3,6 +3,7 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import {collectCommercialEvidence} from '../src/server/commercial/service.js';
 const mocks=vi.hoisted(()=>({preview:vi.fn()}));
 vi.mock('../src/server/commercial/cohort-review.js',()=>({reviewAutomotiveCohort:async()=>({reviewed:0})}));
+vi.mock('../src/server/commercial/selection-renewal.js',()=>({renewAutomotiveSelection:async()=>0}));
 vi.mock('../src/server/discovery/product-preview.js',async original=>({...await original<object>(),
  configuredProductPreview:mocks.preview,configuredMeliReader:async()=>async()=>({content:[],results:[]})}));
 it('persists retry times and continues other products when one source fails',async()=>{

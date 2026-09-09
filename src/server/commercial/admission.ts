@@ -2,6 +2,7 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import {configuredProductPreview,safePreviewUrl,type ProductPreview} from '../discovery/product-preview.js';
 import {assessAutomotive} from './editorial.js';
 import {reviewAutomotiveCohort} from './cohort-review.js';
+import {renewAutomotiveSelection} from './selection-renewal.js';
 
 export function admissionDecision(p:ProductPreview, attempts:number) {
  const editorial=assessAutomotive(p);
@@ -49,6 +50,6 @@ export async function exploreCandidates(client:SupabaseClient, deadline:number, 
  }
  await Promise.all([worker(),worker()]);
  await reviewAutomotiveCohort(client);
- const promoted=checked(await client.rpc('promote_commercial_candidates'));
+ const promoted=await renewAutomotiveSelection(client);
  return {evaluated,failed,promoted,deferred:queue.length};
 }

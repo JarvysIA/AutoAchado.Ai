@@ -3,6 +3,7 @@ import {configuredProductPreview,safePreviewUrl} from '../discovery/product-prev
 import {affiliateIntelligence} from '../affiliate/coupon-service.js';
 import {productIdentity} from './service.js';
 import {rankProduct,type Observation} from './ranking.js';
+import {priceHistoryStart} from './price-truth.js';
 function checked<T>(r:{data:T;error:unknown}):T {if(r.error) throw new Error('REVALIDATION_STORAGE_FAILED');return r.data;}
 export async function revalidateProduct(client:SupabaseClient,id:string,type:string) {
  const preview=await configuredProductPreview(client,id,type,true);
@@ -10,7 +11,7 @@ export async function revalidateProduct(client:SupabaseClient,id:string,type:str
  const rows:Observation[]=[];
  for(const table of ['commercial_observations','commercial_rank_observations']) for(let page=0;;page++) {
   const data=checked(await client.from(table).select('*').eq('identity_key',identity)
-   .gte('observed_at',new Date(Date.now()-30*86400000).toISOString())
+   .gte('observed_at',new Date(priceHistoryStart(Date.now())).toISOString())
    .order('observed_at').order(table==='commercial_observations'?'source_key':'category_id').range(page*1000,page*1000+999));
   rows.push(...(data??[]).map(row=>table==='commercial_observations'?{...row,position:null}:
    {...row,demand_category:row.category_id,price:null,currency:'BRL',seller_id:null,comparable:false,trusted:false}));

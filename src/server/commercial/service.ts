@@ -5,6 +5,7 @@ import { commercialProfile, rankProduct, orderCommercialFamilies, type Observati
 import {exploreCandidates} from './admission.js';
 import {nextEvidenceCheck,validEvidenceAt} from './collection-policy.js';
 import {automotiveCollectionScope} from './collection-scope.js';
+import {analyzePriceTruth,priceHistoryStart} from './price-truth.js';
 
 type Watch = {source_key:string; product_id:string; type:string; category_id:string; snapshot:Record<string,unknown>;
   identity_key:string; preview:ProductPreview; last_collected_at:string|null; monitor:boolean; unavailable_attempts:number;
@@ -147,7 +148,7 @@ export async function commercialOpportunities(client:SupabaseClient, view:string
   const identities=[...new Set(watches.map(w=>w.identity_key))];
   for(let start=0;start<identities.length;start+=100) for(let page=0;;page++) {
     const rows=checked(await client.from('commercial_observations').select('identity_key,observed_at,price,currency,seller_id,comparable,trusted,position')
-      .in('identity_key',identities.slice(start,start+100)).gte('observed_at',new Date(now-30*86400000).toISOString())
+      .in('identity_key',identities.slice(start,start+100)).gte('observed_at',new Date(priceHistoryStart(now)).toISOString())
       .order('source_key').order('observed_at').range(page*1000,page*1000+999)) as (Observation & {identity_key:string})[];
     history.push(...rows.map(row=>({...row,position:null}))); if(rows.length<1000) break;
     if(page>=99) throw new Error('COMMERCIAL_HISTORY_LIMIT');
@@ -165,10 +166,18 @@ export async function commercialOpportunities(client:SupabaseClient, view:string
     const list=historyByIdentity.get(observation.identity_key)??[];list.push(observation);historyByIdentity.set(observation.identity_key,list);
   }
   const feedbackByIdentity=new Map(feedback.map(f=>[f.identity_key,f.action]));
+  const selections=new Map<string,any>();
+  for(let start=0;start<identities.length;start+=100) {
+    const rows=checked(await client.from('commercial_selection_assessments').select('identity_key,evidence,assessed_at')
+      .in('identity_key',identities.slice(start,start+100)));
+    for(const row of rows??[]) selections.set(row.identity_key,{...row.evidence,assessed_at:row.assessed_at});
+  }
   const allEvaluated=watches.filter(w=>w.preview?.title).map(w=>{
     const action=feedbackByIdentity.get(w.identity_key) ?? null;
     return {identity_key:w.identity_key,monitor:w.monitor,sent_at:sentByIdentity.get(w.identity_key)??null,snapshot:w.snapshot,preview:{...w.preview,...affiliateIntelligence(w.preview)},
-      feedback:action,rank:rankProduct(w.preview,historyByIdentity.get(w.identity_key)??[],action,now)};
+      feedback:action,selection:selections.get(w.identity_key)??null,
+      price_analysis:analyzePriceTruth(w.preview,historyByIdentity.get(w.identity_key)??[],now),
+      rank:rankProduct(w.preview,historyByIdentity.get(w.identity_key)??[],action,now)};
   });
   const order={APPROVED:0,OBSERVING:1,REJECTED:2};
   const sorted=allEvaluated.sort((a,b)=>Number(b.monitor)-Number(a.monitor) || order[a.rank.state]-order[b.rank.state] || b.rank.score-a.rank.score || (a.preview.price??Infinity)-(b.preview.price??Infinity));

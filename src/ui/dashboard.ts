@@ -79,6 +79,23 @@ async function loadCommercial(append = false) {
       entry.preview.commercial=entry.rank;
       fillCard(card,entry.snapshot,entry.preview);
       const body=textNode('div','','product-body');
+      const selection=entry.selection, priceEvidence=entry.price_analysis;
+      if(selection) {
+        body.append(textNode('strong','Potencial de acompanhamento: '+selection.score+'/100','badge'));
+        body.append(textNode('p',selection.demand.days+' dias no mesmo ranking · posição mediana '+(selection.demand.median_position??'indisponível')+'.'));
+        body.append(textNode('p','Avaliado em '+date(selection.assessed_at)+'. '+(selection.eligible?'Atende aos critérios de seleção.':'Mantido em acompanhamento; ainda há critérios pendentes.')));
+        for(const reason of selection.reasons||[]) body.append(textNode('p',reason,'product-meta'));
+        body.append(textNode('p','Demanda '+selection.components.demand+'/50 · utilidade '+selection.components.utility+'/20 · facilidade '+selection.components.ease+'/15 · vendedor '+selection.components.seller+'/10 · faixa de preço '+selection.components.ticket+'/5.','product-meta'));
+        body.append(textNode('p','Potencial não é garantia de venda. Desconto anunciado não aumenta esta nota.','product-meta'));
+      } else body.append(textNode('p','Potencial: aguardando a próxima avaliação automática.'));
+      if(priceEvidence) {
+        body.append(textNode('strong',priceEvidence.historical_discount_confirmed?'Desconto histórico confirmado: '+priceEvidence.historical_discount_percent+'%':'Desconto histórico ainda não confirmado'));
+        body.append(textNode('p','Últimos 30 dias: '+priceEvidence.rolling.days+' dias observados · '+priceEvidence.rolling.sellers+' vendedores.'));
+        if(priceEvidence.reference_price!==null) body.append(textNode('p','Referência histórica: '+money(priceEvidence.reference_price)));
+        if(priceEvidence.campaign) body.append(textNode('p','Referência de setembro: '+priceEvidence.campaign.days+' dias · '+(priceEvidence.campaign.sufficient?'cobertura suficiente':'cobertura insuficiente')+'.'));
+        if(priceEvidence.state==='ANNOUNCED_NOT_CONFIRMED') body.append(textNode('p','O percentual anunciado supera o desconto sustentado pelo histórico.'));
+        if(priceEvidence.state==='CURRENT_PRICE_UNVERIFIED') body.append(textNode('p','O preço atual precisa de nova validação.'));
+      }
       body.append(textNode('strong',(entry.rank.state==='APPROVED'?'✅ Aprovada':entry.rank.state==='OBSERVING'?'⏳ Em observação':'Não aprovada')+' · Pontuação '+entry.rank.score+'/100','badge'));
       body.append(textNode('p',entry.rank.history_days+' dias de preços comparáveis · '+entry.rank.seller_count+' vendedores · '+entry.rank.demand_days+' dias entre mais vendidos.'));
       if(entry.rank.historical_discount_percent!==null) body.append(textNode('p',entry.rank.historical_discount_percent+'% de desconto histórico · Referência '+money(entry.rank.reference_price)));
