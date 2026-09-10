@@ -3,6 +3,8 @@
 !.env.example
 .vercel
 node_modules
+whatsapp-connector/.state
+whatsapp-connector/.wwebjs_cache
 .pnpm-store
 .pnpm-cache
 dist

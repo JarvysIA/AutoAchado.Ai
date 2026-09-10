@@ -1084,19 +1084,19 @@ var require_FunctionsClient = __commonJS({
               throw new types_1.FunctionsHttpError(response);
             }
             let responseType = ((_a = response.headers.get("Content-Type")) !== null && _a !== void 0 ? _a : "text/plain").split(";")[0].trim().toLowerCase();
-            let data;
+            let data2;
             if (responseType === "application/json") {
-              data = yield response.json();
+              data2 = yield response.json();
             } else if (responseType === "application/octet-stream" || responseType === "application/pdf") {
-              data = yield response.blob();
+              data2 = yield response.blob();
             } else if (responseType === "text/event-stream") {
-              data = response;
+              data2 = response;
             } else if (responseType === "multipart/form-data") {
-              data = yield response.formData();
+              data2 = yield response.formData();
             } else {
-              data = yield response.text();
+              data2 = yield response.text();
             }
-            return { data, error: null, response };
+            return { data: data2, error: null, response };
           } catch (error) {
             return {
               data: null,
@@ -1525,7 +1525,7 @@ ${cause.stack}`;
       async processResponse(res) {
         var _this2 = this;
         let error = null;
-        let data = null;
+        let data2 = null;
         let count = null;
         let status = res.status;
         let statusText = res.statusText;
@@ -1535,13 +1535,13 @@ ${cause.stack}`;
             var _this$headers$get;
             const body = await res.text();
             if (body === "") {
-            } else if (_this2.headers.get("Accept") === "text/csv") data = body;
-            else if (_this2.headers.get("Accept") && ((_this$headers$get = _this2.headers.get("Accept")) === null || _this$headers$get === void 0 ? void 0 : _this$headers$get.includes("application/vnd.pgrst.plan+text"))) data = body;
+            } else if (_this2.headers.get("Accept") === "text/csv") data2 = body;
+            else if (_this2.headers.get("Accept") && ((_this$headers$get = _this2.headers.get("Accept")) === null || _this$headers$get === void 0 ? void 0 : _this$headers$get.includes("application/vnd.pgrst.plan+text"))) data2 = body;
             else try {
-              data = JSON.parse(body);
+              data2 = JSON.parse(body);
             } catch (_unused) {
               error = { message: body };
-              data = null;
+              data2 = null;
               if (_this2.shouldThrowOnError) throw new PostgrestError({
                 message: body,
                 details: "",
@@ -1553,14 +1553,14 @@ ${cause.stack}`;
           const countHeader = (_this$headers$get2 = _this2.headers.get("Prefer")) === null || _this$headers$get2 === void 0 ? void 0 : _this$headers$get2.match(/count=(exact|planned|estimated)/);
           const contentRange = (_res$headers$get2 = res.headers.get("content-range")) === null || _res$headers$get2 === void 0 ? void 0 : _res$headers$get2.split("/");
           if (countHeader && contentRange && contentRange.length > 1) count = parseInt(contentRange[1]);
-          if (_this2.isMaybeSingle && Array.isArray(data)) if (data.length > 1) {
+          if (_this2.isMaybeSingle && Array.isArray(data2)) if (data2.length > 1) {
             error = {
               code: "PGRST116",
-              details: `Results contain ${data.length} rows, application/vnd.pgrst.object+json requires 1 row`,
+              details: `Results contain ${data2.length} rows, application/vnd.pgrst.object+json requires 1 row`,
               hint: null,
               message: "JSON object requested, multiple (or no) rows returned"
             };
-            data = null;
+            data2 = null;
             count = null;
             status = 406;
             statusText = "Not Acceptable";
@@ -1568,14 +1568,14 @@ ${cause.stack}`;
               var _error$hint;
               throw new PostgrestError(_objectSpread2(_objectSpread2({}, error), {}, { hint: (_error$hint = error.hint) !== null && _error$hint !== void 0 ? _error$hint : "" }));
             }
-          } else if (data.length === 1) data = data[0];
-          else data = null;
+          } else if (data2.length === 1) data2 = data2[0];
+          else data2 = null;
         } else {
           const body = await res.text();
           try {
             error = JSON.parse(body);
             if (Array.isArray(error) && res.status === 404) {
-              data = [];
+              data2 = [];
               error = null;
               status = 200;
               statusText = "OK";
@@ -1591,7 +1591,7 @@ ${cause.stack}`;
         return {
           success: error === null,
           error,
-          data,
+          data: data2,
           count,
           status,
           statusText
@@ -5232,15 +5232,15 @@ var require_serializer = __commonJS({
         offset = offset + metadataSize;
         const payload = buffer.slice(offset, buffer.byteLength);
         const parsedPayload = payloadEncoding === this.JSON_ENCODING ? JSON.parse(decoder.decode(payload)) : payload;
-        const data = {
+        const data2 = {
           type: this.BROADCAST_EVENT,
           event: userEvent,
           payload: parsedPayload
         };
         if (metadataSize > 0) {
-          data["meta"] = JSON.parse(metadata);
+          data2["meta"] = JSON.parse(metadata);
         }
-        return { join_ref: null, ref: null, topic, event: this.BROADCAST_EVENT, payload: data };
+        return { join_ref: null, ref: null, topic, event: this.BROADCAST_EVENT, payload: data2 };
       }
       _isArrayBuffer(buffer) {
         var _a;
@@ -6012,7 +6012,7 @@ var require_phoenix_cjs = __commonJS({
           const _timeoutId = setTimeout(() => controller.abort(), timeout);
           options.signal = controller.signal;
         }
-        global2.fetch(endPoint, options).then((response) => response.text()).then((data) => this.parseJSON(data)).then((data) => callback && callback(data)).catch((err) => {
+        global2.fetch(endPoint, options).then((response) => response.text()).then((data2) => this.parseJSON(data2)).then((data2) => callback && callback(data2)).catch((err) => {
           if (err.name === "AbortError" && ontimeout) {
             ontimeout();
           } else {
@@ -6577,8 +6577,8 @@ var require_phoenix_cjs = __commonJS({
         offset = offset + topicSize;
         let event = decoder.decode(buffer.slice(offset, offset + eventSize));
         offset = offset + eventSize;
-        let data = buffer.slice(offset, buffer.byteLength);
-        return { join_ref: joinRef, ref: null, topic, event, payload: data };
+        let data2 = buffer.slice(offset, buffer.byteLength);
+        return { join_ref: joinRef, ref: null, topic, event, payload: data2 };
       },
       /** @private */
       decodeReply(buffer, view, decoder) {
@@ -6595,8 +6595,8 @@ var require_phoenix_cjs = __commonJS({
         offset = offset + topicSize;
         let event = decoder.decode(buffer.slice(offset, offset + eventSize));
         offset = offset + eventSize;
-        let data = buffer.slice(offset, buffer.byteLength);
-        let payload = { status: event, response: data };
+        let data2 = buffer.slice(offset, buffer.byteLength);
+        let payload = { status: event, response: data2 };
         return { join_ref: joinRef, ref, topic, event: CHANNEL_EVENTS.reply, payload };
       },
       /** @private */
@@ -6608,8 +6608,8 @@ var require_phoenix_cjs = __commonJS({
         offset = offset + topicSize;
         let event = decoder.decode(buffer.slice(offset, offset + eventSize));
         offset = offset + eventSize;
-        let data = buffer.slice(offset, buffer.byteLength);
-        return { join_ref: null, ref: null, topic, event, payload: data };
+        let data2 = buffer.slice(offset, buffer.byteLength);
+        return { join_ref: null, ref: null, topic, event, payload: data2 };
       }
     };
     var Socket = class {
@@ -6703,8 +6703,8 @@ var require_phoenix_cjs = __commonJS({
         };
         this.logger = opts.logger || null;
         if (!this.logger && opts.debug) {
-          this.logger = (kind, msg, data) => {
-            console.log(`${kind}: ${msg}`, data);
+          this.logger = (kind, msg, data2) => {
+            console.log(`${kind}: ${msg}`, data2);
           };
         }
         this.longpollerTimeout = opts.longpollerTimeout || 2e4;
@@ -6823,8 +6823,8 @@ var require_phoenix_cjs = __commonJS({
        * @param {string} msg
        * @param {Object} data
        */
-      log(kind, msg, data) {
-        this.logger && this.logger(kind, msg, data);
+      log(kind, msg, data2) {
+        this.logger && this.logger(kind, msg, data2);
       }
       /**
        * Returns true if a logger has been set on this socket.
@@ -7173,15 +7173,15 @@ var require_phoenix_cjs = __commonJS({
       /**
        * @param {Message<Record<string, any>>} data
        */
-      push(data) {
+      push(data2) {
         if (this.hasLogger()) {
-          let { topic, event, payload, ref, join_ref } = data;
+          let { topic, event, payload, ref, join_ref } = data2;
           this.log("push", `${topic} ${event} (${join_ref}, ${ref})`, payload);
         }
         if (this.isConnected()) {
-          this.encode(data, (result) => this.conn.send(result));
+          this.encode(data2, (result) => this.conn.send(result));
         } else {
-          this.sendBuffer.push(() => this.encode(data, (result) => this.conn.send(result)));
+          this.sendBuffer.push(() => this.encode(data2, (result) => this.conn.send(result)));
         }
       }
       /**
@@ -8511,11 +8511,11 @@ var require_socketAdapter = __commonJS({
           }, code, reason);
         });
       }
-      push(data) {
-        this.socket.push(data);
+      push(data2) {
+        this.socket.push(data2);
       }
-      log(kind, msg, data) {
-        this.socket.log(kind, msg, data);
+      log(kind, msg, data2) {
+        this.socket.log(kind, msg, data2);
       }
       makeRef() {
         return this.socket.makeRef();
@@ -8834,8 +8834,8 @@ var require_RealtimeClient = __commonJS({
        *
        * @category Realtime
        */
-      log(kind, msg, data) {
-        this.socketAdapter.log(kind, msg, data);
+      log(kind, msg, data2) {
+        this.socketAdapter.log(kind, msg, data2);
       }
       /**
        * Returns the current state of the socket.
@@ -8897,8 +8897,8 @@ var require_RealtimeClient = __commonJS({
        *
        * @category Realtime
        */
-      push(data) {
-        this.socketAdapter.push(data);
+      push(data2) {
+        this.socketAdapter.push(data2);
       }
       /**
        * Sets the JWT access token used for channel subscription authorization and Realtime RLS.
@@ -9318,9 +9318,9 @@ function createFetchClient(options) {
       });
       const text3 = await res.text();
       const isJson = (res.headers.get("content-type") || "").includes("application/json");
-      const data = isJson && text3 ? JSON.parse(text3) : text3;
+      const data2 = isJson && text3 ? JSON.parse(text3) : text3;
       if (!res.ok) {
-        const errBody = isJson ? data : void 0;
+        const errBody = isJson ? data2 : void 0;
         const errorDetail = errBody?.error;
         throw new IcebergError(
           errorDetail?.message ?? `Request failed with status ${res.status}`,
@@ -9332,7 +9332,7 @@ function createFetchClient(options) {
           }
         );
       }
-      return { status: res.status, headers: res.headers, data };
+      return { status: res.status, headers: res.headers, data: data2 };
     }
   };
 }
@@ -9884,7 +9884,7 @@ async function _handleRequest(fetcher, method, url, options, parameters, body, n
         if (!contentType || !contentType.includes("application/json")) return {};
       }
       return result.json();
-    }).then((data) => resolve(data)).catch((error) => handleError(error, reject, options, namespace));
+    }).then((data2) => resolve(data2)).catch((error) => handleError(error, reject, options, namespace));
   });
 }
 function createFetchApi(namespace = "storage") {
@@ -10231,11 +10231,11 @@ var init_dist3 = __esm({
           if (fileOptions === null || fileOptions === void 0 ? void 0 : fileOptions.headers) for (const [key, value] of Object.entries(fileOptions.headers)) headers = setHeader(headers, key, value);
           const cleanPath = _this._removeEmptyFolders(path);
           const _path = _this._getFinalPath(cleanPath);
-          const data = await (method == "PUT" ? put : post)(_this.fetch, `${_this.url}/object/${_path}`, body, _objectSpread22({ headers }, (options === null || options === void 0 ? void 0 : options.duplex) ? { duplex: options.duplex } : {}));
+          const data2 = await (method == "PUT" ? put : post)(_this.fetch, `${_this.url}/object/${_path}`, body, _objectSpread22({ headers }, (options === null || options === void 0 ? void 0 : options.duplex) ? { duplex: options.duplex } : {}));
           return {
             path: cleanPath,
-            id: data.Id,
-            fullPath: data.Key
+            id: data2.Id,
+            fullPath: data2.Key
           };
         });
       }
@@ -10424,8 +10424,8 @@ var init_dist3 = __esm({
           let _path = _this4._getFinalPath(path);
           const headers = _objectSpread22({}, _this4.headers);
           if (options === null || options === void 0 ? void 0 : options.upsert) headers["x-upsert"] = "true";
-          const data = await post(_this4.fetch, `${_this4.url}/object/upload/sign/${_path}`, {}, { headers });
-          const url = new URL(_this4.url + data.url);
+          const data2 = await post(_this4.fetch, `${_this4.url}/object/upload/sign/${_path}`, {}, { headers });
+          const url = new URL(_this4.url + data2.url);
           const token2 = url.searchParams.get("token");
           if (!token2) throw new StorageError("No token returned by API");
           return {
@@ -10647,12 +10647,12 @@ var init_dist3 = __esm({
         return _this8.handleOperation(async () => {
           let _path = _this8._getFinalPath(path);
           const hasTransform = typeof (options === null || options === void 0 ? void 0 : options.transform) === "object" && options.transform !== null && Object.keys(options.transform).length > 0;
-          let data = await post(_this8.fetch, `${_this8.url}/object/sign/${_path}`, _objectSpread22({ expiresIn }, hasTransform ? { transform: options.transform } : {}), { headers: _this8.headers });
+          let data2 = await post(_this8.fetch, `${_this8.url}/object/sign/${_path}`, _objectSpread22({ expiresIn }, hasTransform ? { transform: options.transform } : {}), { headers: _this8.headers });
           const query = new URLSearchParams();
           if (options === null || options === void 0 ? void 0 : options.download) query.set("download", options.download === true ? "" : options.download);
           if ((options === null || options === void 0 ? void 0 : options.cacheNonce) != null) query.set("cacheNonce", String(options.cacheNonce));
           const queryString = query.toString();
-          return { signedUrl: encodeURI(`${_this8.url}${data.signedURL}${queryString ? `&${queryString}` : ""}`) };
+          return { signedUrl: encodeURI(`${_this8.url}${data2.signedURL}${queryString ? `&${queryString}` : ""}`) };
         });
       }
       /**
@@ -10704,7 +10704,7 @@ var init_dist3 = __esm({
       async createSignedUrls(paths, expiresIn, options) {
         var _this9 = this;
         return _this9.handleOperation(async () => {
-          const data = await post(_this9.fetch, `${_this9.url}/object/sign/${_this9.bucketId}`, {
+          const data2 = await post(_this9.fetch, `${_this9.url}/object/sign/${_this9.bucketId}`, {
             expiresIn,
             paths
           }, { headers: _this9.headers });
@@ -10712,7 +10712,7 @@ var init_dist3 = __esm({
           if (options === null || options === void 0 ? void 0 : options.download) query.set("download", options.download === true ? "" : options.download);
           if ((options === null || options === void 0 ? void 0 : options.cacheNonce) != null) query.set("cacheNonce", String(options.cacheNonce));
           const queryString = query.toString();
-          return data.map((datum) => _objectSpread22(_objectSpread22({}, datum), {}, { signedUrl: datum.signedURL ? encodeURI(`${_this9.url}${datum.signedURL}${queryString ? `&${queryString}` : ""}`) : null }));
+          return data2.map((datum) => _objectSpread22(_objectSpread22({}, datum), {}, { signedUrl: datum.signedURL ? encodeURI(`${_this9.url}${datum.signedURL}${queryString ? `&${queryString}` : ""}`) : null }));
         });
       }
       /**
@@ -11180,9 +11180,9 @@ var init_dist3 = __esm({
       encodeMetadata(metadata) {
         return JSON.stringify(metadata);
       }
-      toBase64(data) {
-        if (typeof Buffer !== "undefined") return Buffer.from(data).toString("base64");
-        return btoa(data);
+      toBase64(data2) {
+        if (typeof Buffer !== "undefined") return Buffer.from(data2).toString("base64");
+        return btoa(data2);
       }
       _getFinalPath(path) {
         return `${this.bucketId}/${path.replace(/^\/+/, "")}`;
@@ -13096,8 +13096,8 @@ var require_helpers = __commonJS({
       return typeof maybeResponse === "object" && maybeResponse !== null && "status" in maybeResponse && "ok" in maybeResponse && "json" in maybeResponse && typeof maybeResponse.json === "function";
     };
     exports.looksLikeFetchResponse = looksLikeFetchResponse;
-    var setItemAsync = async (storage, key, data) => {
-      await storage.setItem(key, JSON.stringify(data));
+    var setItemAsync = async (storage, key, data2) => {
+      await storage.setItem(key, JSON.stringify(data2));
     };
     exports.setItemAsync = setItemAsync;
     var getItemAsync = async (storage, key) => {
@@ -13138,7 +13138,7 @@ var require_helpers = __commonJS({
           throw new errors_1.AuthInvalidJwtError("JWT not in base64url format");
         }
       }
-      const data = {
+      const data2 = {
         // using base64url lib
         header: JSON.parse((0, base64url_1.stringFromBase64URL)(parts[0])),
         payload: JSON.parse((0, base64url_1.stringFromBase64URL)(parts[1])),
@@ -13148,7 +13148,7 @@ var require_helpers = __commonJS({
           payload: parts[1]
         }
       };
-      return data;
+      return data2;
     }
     async function sleep3(time) {
       return await new Promise((accept) => {
@@ -13465,9 +13465,9 @@ var require_fetch = __commonJS({
       if (!(0, helpers_1.looksLikeFetchResponse)(error)) {
         throw new errors_1.AuthRetryableFetchError(_getErrorMessage2(error), 0);
       }
-      let data;
+      let data2;
       try {
-        data = await error.json();
+        data2 = await error.json();
       } catch (e) {
         if (NETWORK_ERROR_CODES.includes(error.status)) {
           throw new errors_1.AuthRetryableFetchError(error.statusText || `HTTP ${error.status}`, error.status);
@@ -13475,25 +13475,25 @@ var require_fetch = __commonJS({
         throw new errors_1.AuthUnknownError(_getErrorMessage2(e), e);
       }
       if (NETWORK_ERROR_CODES.includes(error.status)) {
-        throw new errors_1.AuthRetryableFetchError(_getErrorMessage2(data), error.status);
+        throw new errors_1.AuthRetryableFetchError(_getErrorMessage2(data2), error.status);
       }
       let errorCode = void 0;
       const responseAPIVersion = (0, helpers_1.parseResponseAPIVersion)(error);
-      if (responseAPIVersion && responseAPIVersion.getTime() >= constants_1.API_VERSIONS["2024-01-01"].timestamp && typeof data === "object" && data && typeof data.code === "string") {
-        errorCode = data.code;
-      } else if (typeof data === "object" && data && typeof data.error_code === "string") {
-        errorCode = data.error_code;
+      if (responseAPIVersion && responseAPIVersion.getTime() >= constants_1.API_VERSIONS["2024-01-01"].timestamp && typeof data2 === "object" && data2 && typeof data2.code === "string") {
+        errorCode = data2.code;
+      } else if (typeof data2 === "object" && data2 && typeof data2.error_code === "string") {
+        errorCode = data2.error_code;
       }
       if (!errorCode) {
-        if (typeof data === "object" && data && typeof data.weak_password === "object" && data.weak_password && Array.isArray(data.weak_password.reasons) && data.weak_password.reasons.length && data.weak_password.reasons.reduce((a, i) => a && typeof i === "string", true)) {
-          throw new errors_1.AuthWeakPasswordError(_getErrorMessage2(data), error.status, data.weak_password.reasons);
+        if (typeof data2 === "object" && data2 && typeof data2.weak_password === "object" && data2.weak_password && Array.isArray(data2.weak_password.reasons) && data2.weak_password.reasons.length && data2.weak_password.reasons.reduce((a, i) => a && typeof i === "string", true)) {
+          throw new errors_1.AuthWeakPasswordError(_getErrorMessage2(data2), error.status, data2.weak_password.reasons);
         }
       } else if (errorCode === "weak_password") {
-        throw new errors_1.AuthWeakPasswordError(_getErrorMessage2(data), error.status, ((_a = data.weak_password) === null || _a === void 0 ? void 0 : _a.reasons) || []);
+        throw new errors_1.AuthWeakPasswordError(_getErrorMessage2(data2), error.status, ((_a = data2.weak_password) === null || _a === void 0 ? void 0 : _a.reasons) || []);
       } else if (errorCode === "session_not_found") {
         throw new errors_1.AuthSessionMissingError();
       }
-      throw new errors_1.AuthApiError(_getErrorMessage2(data), error.status || 500, errorCode);
+      throw new errors_1.AuthApiError(_getErrorMessage2(data2), error.status || 500, errorCode);
     }
     var _getRequestParams2 = (method, options, parameters, body) => {
       const params = { method, headers: (options === null || options === void 0 ? void 0 : options.headers) || {} };
@@ -13518,11 +13518,11 @@ var require_fetch = __commonJS({
         qs["redirect_to"] = options.redirectTo;
       }
       const queryString = Object.keys(qs).length ? "?" + new URLSearchParams(qs).toString() : "";
-      const data = await _handleRequest2(fetcher, method, url + queryString, {
+      const data2 = await _handleRequest2(fetcher, method, url + queryString, {
         headers,
         noResolveJson: options === null || options === void 0 ? void 0 : options.noResolveJson
       }, {}, options === null || options === void 0 ? void 0 : options.body);
-      return (options === null || options === void 0 ? void 0 : options.xform) ? options === null || options === void 0 ? void 0 : options.xform(data) : { data: Object.assign({}, data), error: null };
+      return (options === null || options === void 0 ? void 0 : options.xform) ? options === null || options === void 0 ? void 0 : options.xform(data2) : { data: Object.assign({}, data2), error: null };
     }
     async function _handleRequest2(fetcher, method, url, options, parameters, body) {
       const requestParams = _getRequestParams2(method, options, parameters, body);
@@ -13544,35 +13544,35 @@ var require_fetch = __commonJS({
         await handleError2(e);
       }
     }
-    function _sessionResponse(data) {
+    function _sessionResponse(data2) {
       var _a;
       let session = null;
-      if (hasSession(data)) {
-        session = Object.assign({}, data);
-        if (!data.expires_at) {
-          session.expires_at = (0, helpers_1.expiresAt)(data.expires_in);
+      if (hasSession(data2)) {
+        session = Object.assign({}, data2);
+        if (!data2.expires_at) {
+          session.expires_at = (0, helpers_1.expiresAt)(data2.expires_in);
         }
       }
-      const user = (_a = data.user) !== null && _a !== void 0 ? _a : typeof (data === null || data === void 0 ? void 0 : data.id) === "string" ? data : null;
+      const user = (_a = data2.user) !== null && _a !== void 0 ? _a : typeof (data2 === null || data2 === void 0 ? void 0 : data2.id) === "string" ? data2 : null;
       return { data: { session, user }, error: null };
     }
-    function _sessionResponsePassword(data) {
-      const response = _sessionResponse(data);
-      if (!response.error && data.weak_password && typeof data.weak_password === "object" && Array.isArray(data.weak_password.reasons) && data.weak_password.reasons.length && data.weak_password.message && typeof data.weak_password.message === "string" && data.weak_password.reasons.reduce((a, i) => a && typeof i === "string", true)) {
-        response.data.weak_password = data.weak_password;
+    function _sessionResponsePassword(data2) {
+      const response = _sessionResponse(data2);
+      if (!response.error && data2.weak_password && typeof data2.weak_password === "object" && Array.isArray(data2.weak_password.reasons) && data2.weak_password.reasons.length && data2.weak_password.message && typeof data2.weak_password.message === "string" && data2.weak_password.reasons.reduce((a, i) => a && typeof i === "string", true)) {
+        response.data.weak_password = data2.weak_password;
       }
       return response;
     }
-    function _userResponse(data) {
+    function _userResponse(data2) {
       var _a;
-      const user = (_a = data.user) !== null && _a !== void 0 ? _a : data;
+      const user = (_a = data2.user) !== null && _a !== void 0 ? _a : data2;
       return { data: { user }, error: null };
     }
-    function _ssoResponse(data) {
-      return { data, error: null };
+    function _ssoResponse(data2) {
+      return { data: data2, error: null };
     }
-    function _generateLinkResponse(data) {
-      const { action_link, email_otp, hashed_token, redirect_to, verification_type } = data, rest = tslib_1.__rest(data, ["action_link", "email_otp", "hashed_token", "redirect_to", "verification_type"]);
+    function _generateLinkResponse(data2) {
+      const { action_link, email_otp, hashed_token, redirect_to, verification_type } = data2, rest = tslib_1.__rest(data2, ["action_link", "email_otp", "hashed_token", "redirect_to", "verification_type"]);
       const properties = {
         action_link,
         email_otp,
@@ -13589,11 +13589,11 @@ var require_fetch = __commonJS({
         error: null
       };
     }
-    function _noResolveJsonResponse(data) {
-      return data;
+    function _noResolveJsonResponse(data2) {
+      return data2;
     }
-    function hasSession(data) {
-      return !!data.access_token && !!data.refresh_token && !!data.expires_in;
+    function hasSession(data2) {
+      return !!data2.access_token && !!data2.refresh_token && !!data2.expires_in;
     }
   }
 });
@@ -14356,13 +14356,13 @@ var require_GoTrueAdminApi = __commonJS({
       async _listFactors(params) {
         (0, helpers_1.validateUUID)(params.userId);
         try {
-          const { data, error } = await (0, fetch_1._request)(this.fetch, "GET", `${this.url}/admin/users/${params.userId}/factors`, {
+          const { data: data2, error } = await (0, fetch_1._request)(this.fetch, "GET", `${this.url}/admin/users/${params.userId}/factors`, {
             headers: this.headers,
             xform: (factors) => {
               return { data: { factors }, error: null };
             }
           });
-          return { data, error };
+          return { data: data2, error };
         } catch (error) {
           if ((0, errors_1.isAuthError)(error)) {
             return { data: null, error };
@@ -14374,10 +14374,10 @@ var require_GoTrueAdminApi = __commonJS({
         (0, helpers_1.validateUUID)(params.userId);
         (0, helpers_1.validateUUID)(params.id);
         try {
-          const data = await (0, fetch_1._request)(this.fetch, "DELETE", `${this.url}/admin/users/${params.userId}/factors/${params.id}`, {
+          const data2 = await (0, fetch_1._request)(this.fetch, "DELETE", `${this.url}/admin/users/${params.userId}/factors/${params.id}`, {
             headers: this.headers
           });
-          return { data, error: null };
+          return { data: data2, error: null };
         } catch (error) {
           if ((0, errors_1.isAuthError)(error)) {
             return { data: null, error };
@@ -14545,9 +14545,9 @@ var require_GoTrueAdminApi = __commonJS({
           return await (0, fetch_1._request)(this.fetch, "GET", `${this.url}/admin/custom-providers`, {
             headers: this.headers,
             query,
-            xform: (data) => {
+            xform: (data2) => {
               var _a;
-              return { data: { providers: (_a = data === null || data === void 0 ? void 0 : data.providers) !== null && _a !== void 0 ? _a : [] }, error: null };
+              return { data: { providers: (_a = data2 === null || data2 === void 0 ? void 0 : data2.providers) !== null && _a !== void 0 ? _a : [] }, error: null };
             }
           });
         } catch (error) {
@@ -14660,7 +14660,7 @@ var require_GoTrueAdminApi = __commonJS({
         (0, helpers_1.assertPasskeyExperimentalEnabled)(this.experimental);
         (0, helpers_1.validateUUID)(params.userId);
         try {
-          return await (0, fetch_1._request)(this.fetch, "GET", `${this.url}/admin/users/${params.userId}/passkeys`, { headers: this.headers, xform: (data) => ({ data, error: null }) });
+          return await (0, fetch_1._request)(this.fetch, "GET", `${this.url}/admin/users/${params.userId}/passkeys`, { headers: this.headers, xform: (data2) => ({ data: data2, error: null }) });
         } catch (error) {
           if ((0, errors_1.isAuthError)(error)) {
             return { data: null, error };
@@ -15548,18 +15548,18 @@ var require_webauthn = __commonJS({
           switch (challengeResponse.webauthn.type) {
             case "create": {
               const options = mergeCredentialCreationOptions(challengeResponse.webauthn.credential_options.publicKey, overrides === null || overrides === void 0 ? void 0 : overrides.create);
-              const { data, error } = await createCredential({
+              const { data: data2, error } = await createCredential({
                 publicKey: options,
                 signal: abortSignal
               });
-              if (data) {
+              if (data2) {
                 return {
                   data: {
                     factorId,
                     challengeId: challengeResponse.id,
                     webauthn: {
                       type: challengeResponse.webauthn.type,
-                      credential_response: data
+                      credential_response: data2
                     }
                   },
                   error: null
@@ -15569,15 +15569,15 @@ var require_webauthn = __commonJS({
             }
             case "request": {
               const options = mergeCredentialRequestOptions(challengeResponse.webauthn.credential_options.publicKey, overrides === null || overrides === void 0 ? void 0 : overrides.request);
-              const { data, error } = await getCredential(Object.assign(Object.assign({}, challengeResponse.webauthn.credential_options), { publicKey: options, signal: abortSignal }));
-              if (data) {
+              const { data: data2, error } = await getCredential(Object.assign(Object.assign({}, challengeResponse.webauthn.credential_options), { publicKey: options, signal: abortSignal }));
+              if (data2) {
                 return {
                   data: {
                     factorId,
                     challengeId: challengeResponse.id,
                     webauthn: {
                       type: challengeResponse.webauthn.type,
-                      credential_response: data
+                      credential_response: data2
                     }
                   },
                   error: null
@@ -16039,7 +16039,7 @@ var require_GoTrueClient = __commonJS({
             }
           }
           if ((0, helpers_1.isBrowser)() && this.detectSessionInUrl && callbackUrlType !== "none") {
-            const { data, error } = await this._getSessionFromURL(params, callbackUrlType);
+            const { data: data2, error } = await this._getSessionFromURL(params, callbackUrlType);
             if (error) {
               this._debug("#_initialize()", "error detecting session from URL", error);
               if ((0, errors_1.isAuthImplicitGrantRedirectError)(error)) {
@@ -16050,7 +16050,7 @@ var require_GoTrueClient = __commonJS({
               }
               return { error };
             }
-            const { session, redirectType } = data;
+            const { session, redirectType } = data2;
             this._debug("#_initialize()", "detected session in URL", session, "redirect type", redirectType);
             await this._saveSession(session);
             setTimeout(async () => {
@@ -16160,14 +16160,14 @@ var require_GoTrueClient = __commonJS({
             },
             xform: fetch_1._sessionResponse
           });
-          const { data, error } = res;
-          if (error || !data) {
+          const { data: data2, error } = res;
+          if (error || !data2) {
             return this._returnResult({ data: { user: null, session: null }, error });
           }
-          const session = data.session;
-          const user = data.user;
-          if (data.session) {
-            await this._saveSession(data.session);
+          const session = data2.session;
+          const user = data2.user;
+          if (data2.session) {
+            await this._saveSession(data2.session);
             await this._notifyAllSubscribers("SIGNED_IN", session);
           }
           return this._returnResult({ data: { user, session }, error: null });
@@ -16397,15 +16397,15 @@ var require_GoTrueClient = __commonJS({
           } else {
             throw new errors_1.AuthInvalidCredentialsError("You must provide either an email or phone number and a password");
           }
-          const { data, error } = res;
-          if (error || !data) {
+          const { data: data2, error } = res;
+          if (error || !data2) {
             await (0, helpers_1.removePKCEVerifier)(this.storage, this.storageKey, flowId);
             return this._returnResult({ data: { user: null, session: null }, error });
           }
-          const session = data.session;
-          const user = data.user;
-          if (data.session) {
-            await this._saveSession(data.session);
+          const session = data2.session;
+          const user = data2.user;
+          if (data2.session) {
+            await this._saveSession(data2.session);
             await this._notifyAllSubscribers("SIGNED_IN", session);
           }
           return this._returnResult({ data: { user, session }, error: null });
@@ -16577,19 +16577,19 @@ var require_GoTrueClient = __commonJS({
           } else {
             throw new errors_1.AuthInvalidCredentialsError("You must provide either an email or phone number and a password");
           }
-          const { data, error } = res;
+          const { data: data2, error } = res;
           if (error) {
             return this._returnResult({ data: { user: null, session: null }, error });
-          } else if (!data || !data.session || !data.user) {
+          } else if (!data2 || !data2.session || !data2.user) {
             const invalidTokenError = new errors_1.AuthInvalidTokenResponseError();
             return this._returnResult({ data: { user: null, session: null }, error: invalidTokenError });
           }
-          if (data.session) {
-            await this._saveSession(data.session);
-            await this._notifyAllSubscribers("SIGNED_IN", data.session);
+          if (data2.session) {
+            await this._saveSession(data2.session);
+            await this._notifyAllSubscribers("SIGNED_IN", data2.session);
           }
           return this._returnResult({
-            data: Object.assign({ user: data.user, session: data.session }, data.weak_password ? { weakPassword: data.weak_password } : null),
+            data: Object.assign({ user: data2.user, session: data2.session }, data2.weak_password ? { weakPassword: data2.weak_password } : null),
             error
           });
         } catch (error) {
@@ -17046,7 +17046,7 @@ var require_GoTrueClient = __commonJS({
           });
         }
         try {
-          const { data, error } = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/token?grant_type=web3`, {
+          const { data: data2, error } = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/token?grant_type=web3`, {
             headers: this.headers,
             body: Object.assign({
               chain: "ethereum",
@@ -17058,15 +17058,15 @@ var require_GoTrueClient = __commonJS({
           if (error) {
             throw error;
           }
-          if (!data || !data.session || !data.user) {
+          if (!data2 || !data2.session || !data2.user) {
             const invalidTokenError = new errors_1.AuthInvalidTokenResponseError();
             return this._returnResult({ data: { user: null, session: null }, error: invalidTokenError });
           }
-          if (data.session) {
-            await this._saveSession(data.session);
-            await this._notifyAllSubscribers("SIGNED_IN", data.session);
+          if (data2.session) {
+            await this._saveSession(data2.session);
+            await this._notifyAllSubscribers("SIGNED_IN", data2.session);
           }
-          return this._returnResult({ data: Object.assign({}, data), error });
+          return this._returnResult({ data: Object.assign({}, data2), error });
         } catch (error) {
           if ((0, errors_1.isAuthError)(error)) {
             return this._returnResult({ data: { user: null, session: null }, error });
@@ -17150,7 +17150,7 @@ var require_GoTrueClient = __commonJS({
           }
         }
         try {
-          const { data, error } = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/token?grant_type=web3`, {
+          const { data: data2, error } = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/token?grant_type=web3`, {
             headers: this.headers,
             body: Object.assign({ chain: "solana", message, signature: (0, base64url_1.bytesToBase64URL)(signature) }, ((_m = credentials.options) === null || _m === void 0 ? void 0 : _m.captchaToken) ? { gotrue_meta_security: { captcha_token: (_o = credentials.options) === null || _o === void 0 ? void 0 : _o.captchaToken } } : null),
             xform: fetch_1._sessionResponse
@@ -17158,15 +17158,15 @@ var require_GoTrueClient = __commonJS({
           if (error) {
             throw error;
           }
-          if (!data || !data.session || !data.user) {
+          if (!data2 || !data2.session || !data2.user) {
             const invalidTokenError = new errors_1.AuthInvalidTokenResponseError();
             return this._returnResult({ data: { user: null, session: null }, error: invalidTokenError });
           }
-          if (data.session) {
-            await this._saveSession(data.session);
-            await this._notifyAllSubscribers("SIGNED_IN", data.session);
+          if (data2.session) {
+            await this._saveSession(data2.session);
+            await this._notifyAllSubscribers("SIGNED_IN", data2.session);
           }
-          return this._returnResult({ data: Object.assign({}, data), error });
+          return this._returnResult({ data: Object.assign({}, data2), error });
         } catch (error) {
           if ((0, errors_1.isAuthError)(error)) {
             return this._returnResult({ data: { user: null, session: null }, error });
@@ -17186,7 +17186,7 @@ var require_GoTrueClient = __commonJS({
           if (!codeVerifier && this.flowType === "pkce") {
             throw new errors_1.AuthPKCECodeVerifierMissingError();
           }
-          const { data, error } = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/token?grant_type=pkce`, {
+          const { data: data2, error } = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/token?grant_type=pkce`, {
             headers: this.headers,
             body: {
               auth_code: authCode,
@@ -17198,18 +17198,18 @@ var require_GoTrueClient = __commonJS({
           if (error) {
             throw error;
           }
-          if (!data || !data.session || !data.user) {
+          if (!data2 || !data2.session || !data2.user) {
             const invalidTokenError = new errors_1.AuthInvalidTokenResponseError();
             return this._returnResult({
               data: { user: null, session: null, redirectType: null },
               error: invalidTokenError
             });
           }
-          if (data.session) {
-            await this._saveSession(data.session);
-            await this._notifyAllSubscribers(redirectType === "recovery" ? "PASSWORD_RECOVERY" : "SIGNED_IN", data.session);
+          if (data2.session) {
+            await this._saveSession(data2.session);
+            await this._notifyAllSubscribers(redirectType === "recovery" ? "PASSWORD_RECOVERY" : "SIGNED_IN", data2.session);
           }
-          return this._returnResult({ data: Object.assign(Object.assign({}, data), { redirectType: redirectType !== null && redirectType !== void 0 ? redirectType : null }), error });
+          return this._returnResult({ data: Object.assign(Object.assign({}, data2), { redirectType: redirectType !== null && redirectType !== void 0 ? redirectType : null }), error });
         } catch (error) {
           await (0, helpers_1.removePKCEVerifier)(this.storage, this.storageKey, flowId);
           if ((0, errors_1.isAuthError)(error)) {
@@ -17310,18 +17310,18 @@ var require_GoTrueClient = __commonJS({
             },
             xform: fetch_1._sessionResponse
           });
-          const { data, error } = res;
+          const { data: data2, error } = res;
           if (error) {
             return this._returnResult({ data: { user: null, session: null }, error });
-          } else if (!data || !data.session || !data.user) {
+          } else if (!data2 || !data2.session || !data2.user) {
             const invalidTokenError = new errors_1.AuthInvalidTokenResponseError();
             return this._returnResult({ data: { user: null, session: null }, error: invalidTokenError });
           }
-          if (data.session) {
-            await this._saveSession(data.session);
-            await this._notifyAllSubscribers("SIGNED_IN", data.session);
+          if (data2.session) {
+            await this._saveSession(data2.session);
+            await this._notifyAllSubscribers("SIGNED_IN", data2.session);
           }
-          return this._returnResult({ data, error });
+          return this._returnResult({ data: data2, error });
         } catch (error) {
           if ((0, errors_1.isAuthError)(error)) {
             return this._returnResult({ data: { user: null, session: null }, error });
@@ -17434,7 +17434,7 @@ var require_GoTrueClient = __commonJS({
           }
           if ("phone" in credentials) {
             const { phone, options } = credentials;
-            const { data, error } = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/otp`, {
+            const { data: data2, error } = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/otp`, {
               headers: this.headers,
               body: {
                 phone,
@@ -17445,7 +17445,7 @@ var require_GoTrueClient = __commonJS({
               }
             });
             return this._returnResult({
-              data: { user: null, session: null, messageId: data === null || data === void 0 ? void 0 : data.message_id },
+              data: { user: null, session: null, messageId: data2 === null || data2 === void 0 ? void 0 : data2.message_id },
               error
             });
           }
@@ -17604,7 +17604,7 @@ var require_GoTrueClient = __commonJS({
             redirectTo = (_a = params.options) === null || _a === void 0 ? void 0 : _a.redirectTo;
             captchaToken = (_b = params.options) === null || _b === void 0 ? void 0 : _b.captchaToken;
           }
-          const { data, error } = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/verify`, {
+          const { data: data2, error } = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/verify`, {
             headers: this.headers,
             body: Object.assign(Object.assign({}, params), { gotrue_meta_security: { captcha_token: captchaToken } }),
             redirectTo,
@@ -17613,12 +17613,12 @@ var require_GoTrueClient = __commonJS({
           if (error) {
             throw error;
           }
-          if (!data) {
+          if (!data2) {
             const tokenVerificationError = new Error("An error occurred on token verification.");
             throw tokenVerificationError;
           }
-          const session = data.session;
-          const user = data.user;
+          const session = data2.session;
+          const user = data2.user;
           if (session === null || session === void 0 ? void 0 : session.access_token) {
             await this._saveSession(session);
             await this._notifyAllSubscribers(params.type == "recovery" ? "PASSWORD_RECOVERY" : "SIGNED_IN", session);
@@ -17850,7 +17850,7 @@ var require_GoTrueClient = __commonJS({
             return this._returnResult({ data: { user: null, session: null }, error });
           } else if ("phone" in credentials) {
             const { phone, type, options } = credentials;
-            const { data, error } = await (0, fetch_1._request)(this.fetch, "POST", endpoint, {
+            const { data: data2, error } = await (0, fetch_1._request)(this.fetch, "POST", endpoint, {
               headers: this.headers,
               body: {
                 phone,
@@ -17859,7 +17859,7 @@ var require_GoTrueClient = __commonJS({
               }
             });
             return this._returnResult({
-              data: { user: null, session: null, messageId: data === null || data === void 0 ? void 0 : data.message_id },
+              data: { user: null, session: null, messageId: data2 === null || data2 === void 0 ? void 0 : data2.message_id },
               error
             });
           }
@@ -18201,16 +18201,16 @@ var require_GoTrueClient = __commonJS({
           }
           return await this._useSession(async (result) => {
             var _a, _b, _c;
-            const { data, error } = result;
+            const { data: data2, error } = result;
             if (error) {
               throw error;
             }
-            if (!((_a = data.session) === null || _a === void 0 ? void 0 : _a.access_token) && !this.hasCustomAuthorizationHeader) {
+            if (!((_a = data2.session) === null || _a === void 0 ? void 0 : _a.access_token) && !this.hasCustomAuthorizationHeader) {
               return { data: { user: null }, error: new errors_1.AuthSessionMissingError() };
             }
             return await (0, fetch_1._request)(this.fetch, "GET", `${this.url}/user`, {
               headers: this.headers,
-              jwt: (_c = (_b = data.session) === null || _b === void 0 ? void 0 : _b.access_token) !== null && _c !== void 0 ? _c : void 0,
+              jwt: (_c = (_b = data2.session) === null || _b === void 0 ? void 0 : _b.access_token) !== null && _c !== void 0 ? _c : void 0,
               xform: fetch_1._userResponse
             });
           });
@@ -18365,7 +18365,7 @@ var require_GoTrueClient = __commonJS({
               ;
               [codeChallenge, codeChallengeMethod, flowId] = await this._getCodeChallengeAndMethod();
             }
-            const { data, error: userError } = await (0, fetch_1._request)(this.fetch, "PUT", `${this.url}/user`, {
+            const { data: data2, error: userError } = await (0, fetch_1._request)(this.fetch, "PUT", `${this.url}/user`, {
               headers: this.headers,
               redirectTo: this._maybeAppendFlowIdToRedirect(options === null || options === void 0 ? void 0 : options.emailRedirectTo, flowId),
               body: Object.assign(Object.assign({}, attributes), { code_challenge: codeChallenge, code_challenge_method: codeChallengeMethod }),
@@ -18375,7 +18375,7 @@ var require_GoTrueClient = __commonJS({
             if (userError) {
               throw userError;
             }
-            session.user = data.user;
+            session.user = data2.user;
             await this._saveSession(session);
             await this._notifyAllSubscribers("USER_UPDATED", session);
             return this._returnResult({ data: { user: session.user }, error: null });
@@ -18545,14 +18545,14 @@ var require_GoTrueClient = __commonJS({
             }
             session = refreshedSession;
           } else {
-            const { data, error } = await this._getUser(currentSession.access_token);
+            const { data: data2, error } = await this._getUser(currentSession.access_token);
             if (error) {
               return this._returnResult({ data: { user: null, session: null }, error });
             }
             session = {
               access_token: currentSession.access_token,
               refresh_token: currentSession.refresh_token,
-              user: data.user,
+              user: data2.user,
               token_type: "bearer",
               expires_in: expiresAt - timeNow,
               expires_at: expiresAt
@@ -18707,11 +18707,11 @@ var require_GoTrueClient = __commonJS({
           return await this._useSession(async (result) => {
             var _a;
             if (!currentSession) {
-              const { data, error: error2 } = result;
+              const { data: data2, error: error2 } = result;
               if (error2) {
                 throw error2;
               }
-              currentSession = (_a = data.session) !== null && _a !== void 0 ? _a : void 0;
+              currentSession = (_a = data2.session) !== null && _a !== void 0 ? _a : void 0;
             }
             if (!(currentSession === null || currentSession === void 0 ? void 0 : currentSession.refresh_token)) {
               throw new errors_1.AuthSessionMissingError();
@@ -18763,7 +18763,7 @@ var require_GoTrueClient = __commonJS({
             this._debug("#_initialize()", "begin", "is PKCE flow", true);
             if (!params.code)
               throw new errors_1.AuthPKCEGrantCodeExchangeError("No code detected.");
-            const { data: data2, error: error2 } = await this._exchangeCodeForSession(params.code, {
+            const { data: data3, error: error2 } = await this._exchangeCodeForSession(params.code, {
               flowId: params[constants_1.PKCE_FLOW_ID_PARAM]
             });
             if (error2)
@@ -18773,7 +18773,7 @@ var require_GoTrueClient = __commonJS({
             url.searchParams.delete(constants_1.PKCE_FLOW_ID_PARAM);
             window.history.replaceState(window.history.state, "", url.toString());
             return {
-              data: { session: data2.session, redirectType: (_a = data2.redirectType) !== null && _a !== void 0 ? _a : null },
+              data: { session: data3.session, redirectType: (_a = data3.redirectType) !== null && _a !== void 0 ? _a : null },
               error: null
             };
           }
@@ -18797,7 +18797,7 @@ var require_GoTrueClient = __commonJS({
           } else if (timeNow - issuedAt < 0) {
             console.warn("@supabase/gotrue-js: Session as retrieved from URL was issued in the future? Check the device clock for skew", issuedAt, expiresAt, timeNow);
           }
-          const { data, error } = await this._getUser(access_token);
+          const { data: data2, error } = await this._getUser(access_token);
           if (error)
             throw error;
           const session = {
@@ -18808,7 +18808,7 @@ var require_GoTrueClient = __commonJS({
             expires_at: expiresAt,
             refresh_token,
             token_type,
-            user: data.user
+            user: data2.user
           };
           window.location.hash = "";
           this._debug("#_getSessionFromURL()", "clearing window.location.hash");
@@ -18903,11 +18903,11 @@ var require_GoTrueClient = __commonJS({
           const removeCurrentSession = async () => {
             await this._removeSession();
           };
-          const { data, error: sessionError } = result;
+          const { data: data2, error: sessionError } = result;
           if (sessionError && !(0, errors_1.isAuthSessionMissingError)(sessionError)) {
             return this._returnResult({ error: sessionError });
           }
-          const accessToken2 = (_a = data.session) === null || _a === void 0 ? void 0 : _a.access_token;
+          const accessToken2 = (_a = data2.session) === null || _a === void 0 ? void 0 : _a.access_token;
           if (accessToken2) {
             const { error } = await this.admin.signOut(accessToken2, scope);
             if (error) {
@@ -19286,10 +19286,10 @@ var require_GoTrueClient = __commonJS({
       async getUserIdentities() {
         var _a;
         try {
-          const { data, error } = await this.getUser();
+          const { data: data2, error } = await this.getUser();
           if (error)
             throw error;
-          return this._returnResult({ data: { identities: (_a = data.user.identities) !== null && _a !== void 0 ? _a : [] }, error: null });
+          return this._returnResult({ data: { identities: (_a = data2.user.identities) !== null && _a !== void 0 ? _a : [] }, error: null });
         } catch (error) {
           if ((0, errors_1.isAuthError)(error)) {
             return this._returnResult({ data: null, error });
@@ -19335,9 +19335,9 @@ var require_GoTrueClient = __commonJS({
         var _a;
         let flowId = null;
         try {
-          const { data, error } = await this._useSession(async (result) => {
+          const { data: data2, error } = await this._useSession(async (result) => {
             var _a2, _b, _c, _d, _f;
-            const { data: data2, error: error2 } = result;
+            const { data: data3, error: error2 } = result;
             if (error2)
               throw error2;
             const { url, flowId: urlFlowId } = await this._getUrlForProvider(`${this.url}/user/identities/authorize`, credentials.provider, {
@@ -19349,16 +19349,16 @@ var require_GoTrueClient = __commonJS({
             flowId = urlFlowId;
             return await (0, fetch_1._request)(this.fetch, "GET", url, {
               headers: this.headers,
-              jwt: (_f = (_d = data2.session) === null || _d === void 0 ? void 0 : _d.access_token) !== null && _f !== void 0 ? _f : void 0
+              jwt: (_f = (_d = data3.session) === null || _d === void 0 ? void 0 : _d.access_token) !== null && _f !== void 0 ? _f : void 0
             });
           });
           if (error)
             throw error;
           if ((0, helpers_1.isBrowser)() && !((_a = credentials.options) === null || _a === void 0 ? void 0 : _a.skipBrowserRedirect)) {
-            window.location.assign(data === null || data === void 0 ? void 0 : data.url);
+            window.location.assign(data2 === null || data2 === void 0 ? void 0 : data2.url);
           }
           return this._returnResult({
-            data: { provider: credentials.provider, url: data === null || data === void 0 ? void 0 : data.url, flowId },
+            data: { provider: credentials.provider, url: data2 === null || data2 === void 0 ? void 0 : data2.url, flowId },
             error: null
           });
         } catch (error) {
@@ -19392,20 +19392,20 @@ var require_GoTrueClient = __commonJS({
               },
               xform: fetch_1._sessionResponse
             });
-            const { data, error } = res;
+            const { data: data2, error } = res;
             if (error) {
               return this._returnResult({ data: { user: null, session: null }, error });
-            } else if (!data || !data.session || !data.user) {
+            } else if (!data2 || !data2.session || !data2.user) {
               return this._returnResult({
                 data: { user: null, session: null },
                 error: new errors_1.AuthInvalidTokenResponseError()
               });
             }
-            if (data.session) {
-              await this._saveSession(data.session);
-              await this._notifyAllSubscribers("USER_UPDATED", data.session);
+            if (data2.session) {
+              await this._saveSession(data2.session);
+              await this._notifyAllSubscribers("USER_UPDATED", data2.session);
             }
-            return this._returnResult({ data, error });
+            return this._returnResult({ data: data2, error });
           } catch (error) {
             await (0, helpers_1.removePKCEVerifier)(this.storage, this.storageKey, null);
             if ((0, errors_1.isAuthError)(error)) {
@@ -19444,13 +19444,13 @@ var require_GoTrueClient = __commonJS({
         try {
           return await this._useSession(async (result) => {
             var _a, _b;
-            const { data, error } = result;
+            const { data: data2, error } = result;
             if (error) {
               throw error;
             }
             return await (0, fetch_1._request)(this.fetch, "DELETE", `${this.url}/user/identities/${identity.identity_id}`, {
               headers: this.headers,
-              jwt: (_b = (_a = data.session) === null || _a === void 0 ? void 0 : _a.access_token) !== null && _b !== void 0 ? _b : void 0
+              jwt: (_b = (_a = data2.session) === null || _a === void 0 ? void 0 : _a.access_token) !== null && _b !== void 0 ? _b : void 0
             });
           });
         } catch (error) {
@@ -19562,9 +19562,9 @@ var require_GoTrueClient = __commonJS({
             }
           } else if (currentSession.user && currentSession.user.__isUserNotAvailableProxy === true) {
             try {
-              const { data, error: userError } = await this._getUser(currentSession.access_token);
-              if (!userError && (data === null || data === void 0 ? void 0 : data.user)) {
-                currentSession.user = data.user;
+              const { data: data2, error: userError } = await this._getUser(currentSession.access_token);
+              if (!userError && (data2 === null || data2 === void 0 ? void 0 : data2.user)) {
+                currentSession.user = data2.user;
                 await this._saveSession(currentSession);
                 await this._notifyAllSubscribers("SIGNED_IN", currentSession);
               } else {
@@ -19606,10 +19606,10 @@ var require_GoTrueClient = __commonJS({
         try {
           this.refreshingDeferred = new helpers_1.Deferred();
           const storedAtStart = await (0, helpers_1.getItemAsync)(this.storage, this.storageKey);
-          const { data, error } = await this._refreshAccessToken(refreshToken);
+          const { data: data2, error } = await this._refreshAccessToken(refreshToken);
           if (error)
             throw error;
-          if (!data.session)
+          if (!data2.session)
             throw new errors_1.AuthSessionMissingError();
           const storedAfter = await (0, helpers_1.getItemAsync)(this.storage, this.storageKey);
           const storageChangedUnderUs = storedAtStart !== null && (storedAfter === null || storedAfter.refresh_token !== storedAtStart.refresh_token);
@@ -19628,7 +19628,7 @@ var require_GoTrueClient = __commonJS({
             return discarded;
           }
           const epochBeforeSave = this._sessionRemovalEpoch;
-          await this._saveSession(data.session);
+          await this._saveSession(data2.session);
           if (this._sessionRemovalEpoch !== epochBeforeSave) {
             this._debug(debugName, "commit guard (post-save): _removeSession ran during _saveSession, undoing write");
             await (0, helpers_1.removeItemAsync)(this.storage, this.storageKey);
@@ -19642,8 +19642,8 @@ var require_GoTrueClient = __commonJS({
             this.refreshingDeferred.resolve(discarded);
             return discarded;
           }
-          await this._notifyAllSubscribers("TOKEN_REFRESHED", data.session);
-          const result = { data: data.session, error: null };
+          await this._notifyAllSubscribers("TOKEN_REFRESHED", data2.session);
+          const result = { data: data2.session, error: null };
           this.lastRefreshFailure = null;
           this.refreshingDeferred.resolve(result);
           return result;
@@ -20137,7 +20137,7 @@ var require_GoTrueClient = __commonJS({
               return this._returnResult({ data: null, error: sessionError });
             }
             const body = Object.assign({ friendly_name: params.friendlyName, factor_type: params.factorType }, params.factorType === "phone" ? { phone: params.phone } : params.factorType === "totp" ? { issuer: params.issuer } : {});
-            const { data, error } = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/factors`, {
+            const { data: data2, error } = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/factors`, {
               body,
               headers: this.headers,
               jwt: (_a = sessionData === null || sessionData === void 0 ? void 0 : sessionData.session) === null || _a === void 0 ? void 0 : _a.access_token
@@ -20145,10 +20145,10 @@ var require_GoTrueClient = __commonJS({
             if (error) {
               return this._returnResult({ data: null, error });
             }
-            if (params.factorType === "totp" && data.type === "totp" && ((_b = data === null || data === void 0 ? void 0 : data.totp) === null || _b === void 0 ? void 0 : _b.qr_code)) {
-              data.totp.qr_code = `data:image/svg+xml;utf-8,${data.totp.qr_code}`;
+            if (params.factorType === "totp" && data2.type === "totp" && ((_b = data2 === null || data2 === void 0 ? void 0 : data2.totp) === null || _b === void 0 ? void 0 : _b.qr_code)) {
+              data2.totp.qr_code = `data:image/svg+xml;utf-8,${data2.totp.qr_code}`;
             }
-            return this._returnResult({ data, error: null });
+            return this._returnResult({ data: data2, error: null });
           });
         } catch (error) {
           if ((0, errors_1.isAuthError)(error)) {
@@ -20169,7 +20169,7 @@ var require_GoTrueClient = __commonJS({
               const body = Object.assign({ challenge_id: params.challengeId }, "webauthn" in params ? {
                 webauthn: Object.assign(Object.assign({}, params.webauthn), { credential_response: params.webauthn.type === "create" ? (0, webauthn_1.serializeCredentialCreationResponse)(params.webauthn.credential_response) : (0, webauthn_1.serializeCredentialRequestResponse)(params.webauthn.credential_response) })
               } : { code: params.code });
-              const { data, error } = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/factors/${params.factorId}/verify`, {
+              const { data: data2, error } = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/factors/${params.factorId}/verify`, {
                 body,
                 headers: this.headers,
                 jwt: (_a = sessionData === null || sessionData === void 0 ? void 0 : sessionData.session) === null || _a === void 0 ? void 0 : _a.access_token
@@ -20177,9 +20177,9 @@ var require_GoTrueClient = __commonJS({
               if (error) {
                 return this._returnResult({ data: null, error });
               }
-              await this._saveSession(Object.assign({ expires_at: Math.round(Date.now() / 1e3) + data.expires_in }, data));
-              await this._notifyAllSubscribers("MFA_CHALLENGE_VERIFIED", data);
-              return this._returnResult({ data, error });
+              await this._saveSession(Object.assign({ expires_at: Math.round(Date.now() / 1e3) + data2.expires_in }, data2));
+              await this._notifyAllSubscribers("MFA_CHALLENGE_VERIFIED", data2);
+              return this._returnResult({ data: data2, error });
             });
           } catch (error) {
             if ((0, errors_1.isAuthError)(error)) {
@@ -20210,19 +20210,19 @@ var require_GoTrueClient = __commonJS({
               if (response.error) {
                 return response;
               }
-              const { data } = response;
-              if (data.type !== "webauthn") {
-                return { data, error: null };
+              const { data: data2 } = response;
+              if (data2.type !== "webauthn") {
+                return { data: data2, error: null };
               }
-              switch (data.webauthn.type) {
+              switch (data2.webauthn.type) {
                 case "create":
                   return {
-                    data: Object.assign(Object.assign({}, data), { webauthn: Object.assign(Object.assign({}, data.webauthn), { credential_options: Object.assign(Object.assign({}, data.webauthn.credential_options), { publicKey: (0, webauthn_1.deserializeCredentialCreationOptions)(data.webauthn.credential_options.publicKey) }) }) }),
+                    data: Object.assign(Object.assign({}, data2), { webauthn: Object.assign(Object.assign({}, data2.webauthn), { credential_options: Object.assign(Object.assign({}, data2.webauthn.credential_options), { publicKey: (0, webauthn_1.deserializeCredentialCreationOptions)(data2.webauthn.credential_options.publicKey) }) }) }),
                     error: null
                   };
                 case "request":
                   return {
-                    data: Object.assign(Object.assign({}, data), { webauthn: Object.assign(Object.assign({}, data.webauthn), { credential_options: Object.assign(Object.assign({}, data.webauthn.credential_options), { publicKey: (0, webauthn_1.deserializeCredentialRequestOptions)(data.webauthn.credential_options.publicKey) }) }) }),
+                    data: Object.assign(Object.assign({}, data2), { webauthn: Object.assign(Object.assign({}, data2.webauthn), { credential_options: Object.assign(Object.assign({}, data2.webauthn.credential_options), { publicKey: (0, webauthn_1.deserializeCredentialRequestOptions)(data2.webauthn.credential_options.publicKey) }) }) }),
                     error: null
                   };
               }
@@ -20264,21 +20264,21 @@ var require_GoTrueClient = __commonJS({
         if (userError) {
           return { data: null, error: userError };
         }
-        const data = {
+        const data2 = {
           all: [],
           phone: [],
           totp: [],
           webauthn: []
         };
         for (const factor of (_a = user === null || user === void 0 ? void 0 : user.factors) !== null && _a !== void 0 ? _a : []) {
-          data.all.push(factor);
+          data2.all.push(factor);
           if (factor.status === "verified") {
             ;
-            data[factor.factor_type].push(factor);
+            data2[factor.factor_type].push(factor);
           }
         }
         return {
-          data,
+          data: data2,
           error: null
         };
       }
@@ -20356,7 +20356,7 @@ var require_GoTrueClient = __commonJS({
             return await (0, fetch_1._request)(this.fetch, "GET", `${this.url}/oauth/authorizations/${authorizationId}`, {
               headers: this.headers,
               jwt: session.access_token,
-              xform: (data) => ({ data, error: null })
+              xform: (data2) => ({ data: data2, error: null })
             });
           });
         } catch (error) {
@@ -20384,7 +20384,7 @@ var require_GoTrueClient = __commonJS({
               headers: this.headers,
               jwt: session.access_token,
               body: { action: "approve" },
-              xform: (data) => ({ data, error: null })
+              xform: (data2) => ({ data: data2, error: null })
             });
             if (response.data && response.data.redirect_url) {
               if ((0, helpers_1.isBrowser)() && !(options === null || options === void 0 ? void 0 : options.skipBrowserRedirect)) {
@@ -20418,7 +20418,7 @@ var require_GoTrueClient = __commonJS({
               headers: this.headers,
               jwt: session.access_token,
               body: { action: "deny" },
-              xform: (data) => ({ data, error: null })
+              xform: (data2) => ({ data: data2, error: null })
             });
             if (response.data && response.data.redirect_url) {
               if ((0, helpers_1.isBrowser)() && !(options === null || options === void 0 ? void 0 : options.skipBrowserRedirect)) {
@@ -20451,7 +20451,7 @@ var require_GoTrueClient = __commonJS({
             return await (0, fetch_1._request)(this.fetch, "GET", `${this.url}/user/oauth/grants`, {
               headers: this.headers,
               jwt: session.access_token,
-              xform: (data) => ({ data, error: null })
+              xform: (data2) => ({ data: data2, error: null })
             });
           });
         } catch (error) {
@@ -20500,18 +20500,18 @@ var require_GoTrueClient = __commonJS({
         if (jwk && this.jwks_cached_at + constants_1.JWKS_TTL > now) {
           return jwk;
         }
-        const { data, error } = await (0, fetch_1._request)(this.fetch, "GET", `${this.url}/.well-known/jwks.json`, {
+        const { data: data2, error } = await (0, fetch_1._request)(this.fetch, "GET", `${this.url}/.well-known/jwks.json`, {
           headers: this.headers
         });
         if (error) {
           throw error;
         }
-        if (!data.keys || data.keys.length === 0) {
+        if (!data2.keys || data2.keys.length === 0) {
           return null;
         }
-        this.jwks = data;
+        this.jwks = data2;
         this.jwks_cached_at = now;
-        jwk = data.keys.find((key) => key.kid === kid);
+        jwk = data2.keys.find((key) => key.kid === kid);
         if (!jwk) {
           return null;
         }
@@ -20586,11 +20586,11 @@ var require_GoTrueClient = __commonJS({
         try {
           let token2 = jwt;
           if (!token2) {
-            const { data, error } = await this.getSession();
-            if (error || !data.session) {
+            const { data: data2, error } = await this.getSession();
+            if (error || !data2.session) {
               return this._returnResult({ data: null, error });
             }
-            token2 = data.session.access_token;
+            token2 = data2.session.access_token;
           }
           const { header, payload, signature, raw: { header: rawHeader, payload: rawPayload } } = (0, helpers_1.decodeJWT)(token2);
           if (!(options === null || options === void 0 ? void 0 : options.allowExpired)) {
@@ -20752,7 +20752,7 @@ var require_GoTrueClient = __commonJS({
             if (!session) {
               return this._returnResult({ data: null, error: new errors_1.AuthSessionMissingError() });
             }
-            const { data, error } = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/passkeys/registration/options`, {
+            const { data: data2, error } = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/passkeys/registration/options`, {
               headers: this.headers,
               jwt: session.access_token,
               body: {}
@@ -20760,7 +20760,7 @@ var require_GoTrueClient = __commonJS({
             if (error) {
               return this._returnResult({ data: null, error });
             }
-            return this._returnResult({ data, error: null });
+            return this._returnResult({ data: data2, error: null });
           });
         } catch (error) {
           if ((0, errors_1.isAuthError)(error)) {
@@ -20784,7 +20784,7 @@ var require_GoTrueClient = __commonJS({
             if (!session) {
               return this._returnResult({ data: null, error: new errors_1.AuthSessionMissingError() });
             }
-            const { data, error } = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/passkeys/registration/verify`, {
+            const { data: data2, error } = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/passkeys/registration/verify`, {
               headers: this.headers,
               jwt: session.access_token,
               body: {
@@ -20795,7 +20795,7 @@ var require_GoTrueClient = __commonJS({
             if (error) {
               return this._returnResult({ data: null, error });
             }
-            return this._returnResult({ data, error: null });
+            return this._returnResult({ data: data2, error: null });
           });
         } catch (error) {
           if ((0, errors_1.isAuthError)(error)) {
@@ -20812,7 +20812,7 @@ var require_GoTrueClient = __commonJS({
         var _a;
         (0, helpers_1.assertPasskeyExperimentalEnabled)(this.experimental);
         try {
-          const { data, error } = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/passkeys/authentication/options`, {
+          const { data: data2, error } = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/passkeys/authentication/options`, {
             headers: this.headers,
             body: {
               gotrue_meta_security: { captcha_token: (_a = params === null || params === void 0 ? void 0 : params.options) === null || _a === void 0 ? void 0 : _a.captchaToken }
@@ -20821,7 +20821,7 @@ var require_GoTrueClient = __commonJS({
           if (error) {
             return this._returnResult({ data: null, error });
           }
-          return this._returnResult({ data, error: null });
+          return this._returnResult({ data: data2, error: null });
         } catch (error) {
           if ((0, errors_1.isAuthError)(error)) {
             return this._returnResult({ data: null, error });
@@ -20836,7 +20836,7 @@ var require_GoTrueClient = __commonJS({
       async _verifyPasskeyAuthentication(params) {
         (0, helpers_1.assertPasskeyExperimentalEnabled)(this.experimental);
         try {
-          const { data, error } = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/passkeys/authentication/verify`, {
+          const { data: data2, error } = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/passkeys/authentication/verify`, {
             headers: this.headers,
             body: {
               challenge_id: params.challengeId,
@@ -20847,11 +20847,11 @@ var require_GoTrueClient = __commonJS({
           if (error) {
             return this._returnResult({ data: null, error });
           }
-          if (data.session) {
-            await this._saveSession(data.session);
-            await this._notifyAllSubscribers("SIGNED_IN", data.session);
+          if (data2.session) {
+            await this._saveSession(data2.session);
+            await this._notifyAllSubscribers("SIGNED_IN", data2.session);
           }
-          return this._returnResult({ data, error: null });
+          return this._returnResult({ data: data2, error: null });
         } catch (error) {
           if ((0, errors_1.isAuthError)(error)) {
             return this._returnResult({ data: null, error });
@@ -20873,15 +20873,15 @@ var require_GoTrueClient = __commonJS({
             if (!session) {
               return this._returnResult({ data: null, error: new errors_1.AuthSessionMissingError() });
             }
-            const { data, error } = await (0, fetch_1._request)(this.fetch, "GET", `${this.url}/passkeys`, {
+            const { data: data2, error } = await (0, fetch_1._request)(this.fetch, "GET", `${this.url}/passkeys`, {
               headers: this.headers,
               jwt: session.access_token,
-              xform: (data2) => ({ data: data2, error: null })
+              xform: (data3) => ({ data: data3, error: null })
             });
             if (error) {
               return this._returnResult({ data: null, error });
             }
-            return this._returnResult({ data, error: null });
+            return this._returnResult({ data: data2, error: null });
           });
         } catch (error) {
           if ((0, errors_1.isAuthError)(error)) {
@@ -20904,7 +20904,7 @@ var require_GoTrueClient = __commonJS({
             if (!session) {
               return this._returnResult({ data: null, error: new errors_1.AuthSessionMissingError() });
             }
-            const { data, error } = await (0, fetch_1._request)(this.fetch, "PATCH", `${this.url}/passkeys/${params.passkeyId}`, {
+            const { data: data2, error } = await (0, fetch_1._request)(this.fetch, "PATCH", `${this.url}/passkeys/${params.passkeyId}`, {
               headers: this.headers,
               jwt: session.access_token,
               body: { friendly_name: params.friendlyName }
@@ -20912,7 +20912,7 @@ var require_GoTrueClient = __commonJS({
             if (error) {
               return this._returnResult({ data: null, error });
             }
-            return this._returnResult({ data, error: null });
+            return this._returnResult({ data: data2, error: null });
           });
         } catch (error) {
           if ((0, errors_1.isAuthError)(error)) {
@@ -21695,8 +21695,8 @@ var init_dist4 = __esm({
         var _this = this;
         var _data$session$access_, _data$session;
         if (_this.accessToken) return await _this.accessToken();
-        const { data } = await _this.auth.getSession();
-        return (_data$session$access_ = (_data$session = data.session) === null || _data$session === void 0 ? void 0 : _data$session.access_token) !== null && _data$session$access_ !== void 0 ? _data$session$access_ : null;
+        const { data: data2 } = await _this.auth.getSession();
+        return (_data$session$access_ = (_data$session = data2.session) === null || _data$session === void 0 ? void 0 : _data$session.access_token) !== null && _data$session$access_ !== void 0 ? _data$session$access_ : null;
       }
       async _getAccessToken() {
         var _this2 = this;
@@ -21944,20 +21944,20 @@ var init_client3 = __esm({
               return { status: response.status, data: null, headers: selectedHeaders, durationMs, approximateBytes: 0 };
             }
             const text3 = await response.text();
-            let data = null;
+            let data2 = null;
             if (text3) {
               try {
-                data = JSON.parse(text3);
+                data2 = JSON.parse(text3);
               } catch {
-                data = { unparseable_response: true };
+                data2 = { unparseable_response: true };
               }
             }
             if (!response.ok) {
-              throw new MeliApiError(`Mercado Livre respondeu HTTP ${response.status}`, response.status, data);
+              throw new MeliApiError(`Mercado Livre respondeu HTTP ${response.status}`, response.status, data2);
             }
             return {
               status: response.status,
-              data,
+              data: data2,
               headers: selectedHeaders,
               durationMs,
               approximateBytes: Buffer.byteLength(text3)
@@ -21983,11 +21983,11 @@ var init_client3 = __esm({
 function isRecord2(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-function singleRow(data) {
-  if (!Array.isArray(data) || data.length !== 1 || !isRecord2(data[0])) {
+function singleRow(data2) {
+  if (!Array.isArray(data2) || data2.length !== 1 || !isRecord2(data2[0])) {
     throw new ControlPlaneError(CONTROL_PLANE_RESPONSE_INVALID, false);
   }
-  return data[0];
+  return data2[0];
 }
 function stringValue(row, key) {
   const value = row[key];
@@ -22032,8 +22032,8 @@ function validDate(value) {
 }
 function createMeliOAuthControlPlane(client) {
   return new SupabaseMeliOAuthControlPlane(async (functionName, args) => {
-    const { data, error } = await client.rpc(functionName, args);
-    return { data, error };
+    const { data: data2, error } = await client.rpc(functionName, args);
+    return { data: data2, error };
   });
 }
 var CONTROL_PLANE_RESPONSE_INVALID, CONTROL_PLANE_REQUEST_FAILED, ControlPlaneError, SupabaseMeliOAuthControlPlane;
@@ -23455,8 +23455,8 @@ function parseRun(value) {
   const runId = text2(row, "run_id", "DISCOVERY_PERSISTENCE_READ_FAILED");
   const mode = text2(row, "run_mode", "DISCOVERY_PERSISTENCE_READ_FAILED");
   const status = text2(row, "status", "DISCOVERY_PERSISTENCE_READ_FAILED");
-  const digest2 = text2(row, "registry_digest", "DISCOVERY_PERSISTENCE_READ_FAILED");
-  if (!UUID2.test(runId) || mode !== "SMOKE" && mode !== "FULL_SWEEP" || !["PENDING", "RUNNING", "PARTIAL", "COMPLETED", "FAILED"].includes(status) || !SHA256.test(digest2) || typeof row.request_count !== "number" || typeof row.rate_limited !== "boolean") {
+  const digest3 = text2(row, "registry_digest", "DISCOVERY_PERSISTENCE_READ_FAILED");
+  if (!UUID2.test(runId) || mode !== "SMOKE" && mode !== "FULL_SWEEP" || !["PENDING", "RUNNING", "PARTIAL", "COMPLETED", "FAILED"].includes(status) || !SHA256.test(digest3) || typeof row.request_count !== "number" || typeof row.rate_limited !== "boolean") {
     fail2("DISCOVERY_PERSISTENCE_READ_FAILED", "Discovery run persistido inválido");
   }
   return Object.freeze({
@@ -23465,7 +23465,7 @@ function parseRun(value) {
     shardKey: text2(row, "shard_key", "DISCOVERY_PERSISTENCE_READ_FAILED"),
     status,
     mode,
-    registryDigest: digest2,
+    registryDigest: digest3,
     startedAt: row.started_at === null ? null : text2(row, "started_at", "DISCOVERY_PERSISTENCE_READ_FAILED"),
     finishedAt: row.finished_at === null ? null : text2(row, "finished_at", "DISCOVERY_PERSISTENCE_READ_FAILED"),
     requestCount: row.request_count,
@@ -23727,9 +23727,9 @@ var init_operational = __esm({
       }
       client;
       async latestSnapshots() {
-        const { data, count, error } = await this.client.schema("public").from("highlight_snapshots").select("product_id,marketplace_category_id,position,type,priority_tier,observed_at", { count: "exact" }).order("observed_at", { ascending: false }).order("product_id").limit(100);
+        const { data: data2, count, error } = await this.client.schema("public").from("highlight_snapshots").select("product_id,marketplace_category_id,position,type,priority_tier,observed_at", { count: "exact" }).order("observed_at", { ascending: false }).order("product_id").limit(100);
         if (error) throw new Error("SNAPSHOTS_READ_FAILED");
-        return { snapshots: data ?? [], total: count ?? 0, syncedAt: (/* @__PURE__ */ new Date()).toISOString() };
+        return { snapshots: data2 ?? [], total: count ?? 0, syncedAt: (/* @__PURE__ */ new Date()).toISOString() };
       }
     };
     LiveSmokeDiscoveryRunner = class {
@@ -23814,9 +23814,9 @@ function safePreviewUrl(value, image = false) {
     return null;
   }
 }
-function picture(data) {
-  const pictures = Array.isArray(data.pictures) ? data.pictures : [];
-  for (const value of [data.secure_thumbnail, ...pictures.flatMap((p) => [p?.secure_url, p?.url]), data.thumbnail]) {
+function picture(data2) {
+  const pictures = Array.isArray(data2.pictures) ? data2.pictures : [];
+  for (const value of [data2.secure_thumbnail, ...pictures.flatMap((p) => [p?.secure_url, p?.url]), data2.thumbnail]) {
     const url = safePreviewUrl(value, true);
     if (url) return url;
   }
@@ -23871,25 +23871,25 @@ async function resolveProductPreview(id, type, read) {
     let itemId = type === "ITEM" ? id : null;
     let sellerId = null;
     if (type !== "ITEM") {
-      const data = await read(type === "PRODUCT" ? `/products/${id}` : `/user-products/${id}`);
-      if (data.id !== id) return preview;
-      if (type === "PRODUCT" && data.status === "active" && (!Array.isArray(data.children_ids) || data.children_ids.length === 0)) preview.catalog_product_id = id;
-      if (type === "PRODUCT" && Number.isSafeInteger(data.sold_quantity) && data.sold_quantity >= 0) {
-        preview.sales_total_reported = data.sold_quantity;
+      const data2 = await read(type === "PRODUCT" ? `/products/${id}` : `/user-products/${id}`);
+      if (data2.id !== id) return preview;
+      if (type === "PRODUCT" && data2.status === "active" && (!Array.isArray(data2.children_ids) || data2.children_ids.length === 0)) preview.catalog_product_id = id;
+      if (type === "PRODUCT" && Number.isSafeInteger(data2.sold_quantity) && data2.sold_quantity >= 0) {
+        preview.sales_total_reported = data2.sold_quantity;
         preview.sales_source = "CATALOG";
       }
-      if (typeof data.category_id === "string" && /^MLB\d+$/.test(data.category_id)) preview.category_id = data.category_id;
-      preview.title = shortText(data.name) ?? id;
-      preview.image = picture(data);
-      const attributes = Array.isArray(data.attributes) ? data.attributes : [];
+      if (typeof data2.category_id === "string" && /^MLB\d+$/.test(data2.category_id)) preview.category_id = data2.category_id;
+      preview.title = shortText(data2.name) ?? id;
+      preview.image = picture(data2);
+      const attributes = Array.isArray(data2.attributes) ? data2.attributes : [];
       preview.description = attributes.slice(0, 4).map((a) => [shortText(a?.name, 50), shortText(a?.value_name, 80)].filter(Boolean).join(": ")).filter(Boolean).join(" · ").slice(0, 400) || null;
       if (type === "PRODUCT") {
-        preview.url = safePreviewUrl(data.permalink) ?? preview.url;
+        preview.url = safePreviewUrl(data2.permalink) ?? preview.url;
         preview.status = preview.url ? "CATALOG" : "UNRESOLVED";
-        itemId = data.buy_box_winner?.item_id ?? null;
-        if (typeof itemId === "string" && /^MLB\d+$/.test(itemId) && data.status !== "inactive") {
-          setPrice(preview, data.buy_box_winner?.price, data.buy_box_winner?.currency_id, "CATALOG_OFFER", data.buy_box_winner?.original_price);
-          let candidate = data.buy_box_winner;
+        itemId = data2.buy_box_winner?.item_id ?? null;
+        if (typeof itemId === "string" && /^MLB\d+$/.test(itemId) && data2.status !== "inactive") {
+          setPrice(preview, data2.buy_box_winner?.price, data2.buy_box_winner?.currency_id, "CATALOG_OFFER", data2.buy_box_winner?.original_price);
+          let candidate = data2.buy_box_winner;
           if (preview.catalog_product_id && candidate?.condition !== "new") {
             try {
               const offers = await read(`/products/${id}/items?limit=3`);
@@ -23911,7 +23911,7 @@ async function resolveProductPreview(id, type, read) {
           }
         }
       } else {
-        sellerId = /^\d+$/.test(String(data.user_id)) ? String(data.user_id) : null;
+        sellerId = /^\d+$/.test(String(data2.user_id)) ? String(data2.user_id) : null;
         if (sellerId) {
           const items = await read(`/users/${sellerId}/items/search?user_product_id=${id}&limit=1`);
           itemId = items.results?.[0] ?? null;
@@ -24045,6 +24045,52 @@ var init_product_preview = __esm({
   }
 });
 
+// src/server/affiliate/coupon-service.ts
+var coupon_service_exports = {};
+__export(coupon_service_exports, {
+  activeCoupons: () => activeCoupons,
+  affiliateIntelligence: () => affiliateIntelligence,
+  couponRegistry: () => couponRegistry,
+  findBestCouponForProduct: () => findBestCouponForProduct
+});
+function activeCoupons(coupons = couponRegistry, now = Date.now()) {
+  return coupons.filter((c) => {
+    let official = false;
+    try {
+      const url = new URL(c.sourceUrl);
+      official = url.protocol === "https:" && !url.username && !url.password && !url.port && (url.hostname === "mercadolivre.com.br" || url.hostname.endsWith(".mercadolivre.com.br"));
+    } catch {
+    }
+    return c.active && official && !!c.code.trim() && Number.isFinite(c.amount) && c.amount > 0 && (c.discountType === "FIXED" || c.discountType === "PERCENT" && c.amount <= 100) && (c.minPurchase === void 0 || Number.isFinite(c.minPurchase) && c.minPurchase >= 0) && (c.maxDiscount === void 0 || Number.isFinite(c.maxDiscount) && c.maxDiscount > 0) && Date.parse(c.startsAt) <= now && Date.parse(c.expiresAt) > now && Date.parse(c.verifiedAt) <= now && Date.parse(c.verifiedAt) >= Date.parse(c.startsAt);
+  });
+}
+function findBestCouponForProduct(categoryId, price, coupons = couponRegistry, now = Date.now()) {
+  if (!Number.isFinite(price) || price <= 0) return null;
+  const eligible = activeCoupons(coupons, now).filter((c) => price >= (c.minPurchase ?? 0) && (c.categoryMatch?.includes("ALL") || /^MLB\d+$/.test(categoryId) && c.categoryMatch?.includes(categoryId)));
+  const saving = (c) => Math.min(
+    price,
+    c.maxDiscount ?? Infinity,
+    c.discountType === "PERCENT" ? price * c.amount / 100 : c.amount
+  );
+  return eligible.sort((a, b) => saving(b) - saving(a) || a.code.localeCompare(b.code))[0] ?? null;
+}
+function affiliateIntelligence(item) {
+  const valid = typeof item.price === "number" && Number.isFinite(item.price) && item.price > 0 && typeof item.original_price === "number" && Number.isFinite(item.original_price) && item.original_price > item.price;
+  const percent = valid ? (item.original_price - item.price) / item.original_price * 100 : 0;
+  return {
+    discount_percent: Math.round(percent),
+    has_advertised_discount: percent >= 5,
+    matched_coupon: item.currency === "BRL" ? findBestCouponForProduct(item.category_id ?? "", item.price ?? 0) : null
+  };
+}
+var couponRegistry;
+var init_coupon_service = __esm({
+  "src/server/affiliate/coupon-service.ts"() {
+    "use strict";
+    couponRegistry = [];
+  }
+});
+
 // src/server/commercial/profile.ts
 function commercialProfile(title) {
   const text3 = title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -24101,24 +24147,209 @@ var init_editorial = __esm({
   }
 });
 
+// src/server/commercial/price-truth.ts
+function priceHistoryStart(now) {
+  const d = new Date(now);
+  return d.getUTCMonth() >= 8 ? Math.min(now - 30 * DAY, Date.UTC(d.getUTCFullYear(), 8, 1)) : now - 30 * DAY;
+}
+function reference(history, start, end) {
+  const days = /* @__PURE__ */ new Map(), sellers = /* @__PURE__ */ new Set();
+  for (const o of history) {
+    const t = Date.parse(o.observed_at);
+    if (t < start || t >= end || !Number.isFinite(t) || !o.comparable || !o.trusted || o.currency !== "BRL" || !o.seller_id || typeof o.price !== "number" || !Number.isFinite(o.price) || o.price <= 0) continue;
+    const day = new Date(t).toISOString().slice(0, 10);
+    days.set(day, Math.min(days.get(day) ?? Infinity, o.price));
+    sellers.add(o.seller_id);
+  }
+  const first = days.size ? Math.min(...[...days.keys()].map(Date.parse)) : end;
+  return { price: days.size ? median([...days.values()]) : null, days: days.size, sellers: sellers.size, sufficient: days.size >= 20 && end - first >= 27 * DAY && sellers.size >= 2 };
+}
+function analyzePriceTruth(p, history, now = Date.now()) {
+  const date = new Date(now), today = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  const rolling = reference(history, now - 30 * DAY, today);
+  const campaignStart = Date.UTC(date.getUTCFullYear(), 8, 1), campaignEnd = Date.UTC(date.getUTCFullYear(), 9, 1);
+  const campaign = date.getUTCMonth() >= 9 ? reference(history, campaignStart, campaignEnd) : null;
+  const usable = [rolling, ...campaign ? [campaign] : []].filter((r) => r.sufficient && r.price !== null);
+  const baseline = usable.length ? Math.min(...usable.map((r) => r.price)) : null;
+  const checked5 = Date.parse(p.priceCheckedAt ?? "");
+  const valid = p.comparable && p.seller_trusted && p.status !== "UNAVAILABLE" && p.currency === "BRL" && typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0 && checked5 <= now && checked5 >= now - DAY;
+  const actual = valid && baseline !== null ? (baseline - p.price) / baseline * 100 : null;
+  const advertised = valid && typeof p.original_price === "number" && Number.isFinite(p.original_price) && p.original_price > p.price ? (p.original_price - p.price) / p.original_price * 100 : null;
+  const inflated = actual !== null && advertised !== null && advertised >= 5 && advertised - actual > 5;
+  const state = !valid ? "CURRENT_PRICE_UNVERIFIED" : actual === null ? "INSUFFICIENT_HISTORY" : inflated ? "ANNOUNCED_NOT_CONFIRMED" : actual >= 10 ? "HISTORICAL_DISCOUNT" : "USUAL_OR_HIGHER_PRICE";
+  return {
+    version: "price-truth-v1",
+    state,
+    reference_price: baseline,
+    historical_discount_percent: actual === null ? null : Math.round(actual),
+    advertised_discount_percent: advertised === null ? null : Math.round(advertised),
+    historical_discount_confirmed: actual !== null && actual >= 10,
+    rolling,
+    campaign: campaign ? { ...campaign, start: new Date(campaignStart).toISOString(), endExclusive: new Date(campaignEnd).toISOString() } : null,
+    policy: "Mediana dos mínimos diários observados. Quando suficiente, setembro fixa a janela pré-campanha; usamos a menor referência suficiente. Não inclui frete e não prova fraude."
+  };
+}
+var DAY, median;
+var init_price_truth = __esm({
+  "src/server/commercial/price-truth.ts"() {
+    "use strict";
+    DAY = 864e5;
+    median = (v) => {
+      const a = [...v].sort((a2, b) => a2 - b);
+      return a.length % 2 ? a[Math.floor(a.length / 2)] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2;
+    };
+  }
+});
+
+// src/server/commercial/ranking.ts
+function rankProduct(preview, history, feedback = null, now = Date.now()) {
+  const profile = commercialProfile(preview.title);
+  const editorial = assessAutomotive(preview);
+  const reasons = [], evidence = [];
+  let rejected = false;
+  const fail3 = (text3, hard = false) => {
+    reasons.push(text3);
+    rejected ||= hard;
+  };
+  const currentTime = Date.parse(preview.priceCheckedAt ?? "");
+  const complete = !!preview.title.trim() && !/^MLBU?\d+$/.test(preview.title.trim()) && !!safePreviewUrl(preview.image, true) && !!safePreviewUrl(preview.url) && typeof preview.price === "number" && Number.isFinite(preview.price) && preview.price > 0 && preview.currency === "BRL";
+  if (!complete) fail3("Faltam título, foto, preço em BRL ou link utilizável.");
+  if (!(currentTime <= now && currentTime >= now - DAY2)) fail3("Preço precisa ser consultado novamente (validade de 24 horas).");
+  if (preview.status === "UNAVAILABLE") fail3("Oferta indisponível.", true);
+  if (!preview.comparable) fail3("Identidade, condição, variação ou contexto de preço ainda não confirmados.");
+  if (!preview.seller_trusted) fail3("Reputação do vendedor ainda não confirmada.");
+  if (preview.seller_level && !["5_green", "4_light_green"].includes(preview.seller_level)) fail3("Reputação do vendedor abaixo do mínimo.", true);
+  if (editorial.state !== "ELIGIBLE") fail3(editorial.reason, editorial.state === "EXCLUDE");
+  if (profile.reason) fail3(profile.reason, true);
+  if (feedback === "NOT_RELEVANT") fail3("Você marcou este produto como inadequado para o público.", true);
+  const truth = analyzePriceTruth(preview, history, now);
+  const coverage = truth.campaign?.sufficient && (!truth.rolling.sufficient || truth.campaign.price <= truth.rolling.price) ? truth.campaign : truth.rolling;
+  const reference2 = truth.reference_price;
+  const discount = reference2 !== null && preview.price !== null ? (reference2 - preview.price) / reference2 * 100 : null;
+  const sufficient = truth.rolling.sufficient || truth.campaign?.sufficient === true;
+  if (!sufficient) fail3("Histórico insuficiente: exigimos 20 dias observados, janela de 27 dias e 2 vendedores na referência de 30 dias ou de setembro.");
+  else if (discount === null || discount < 10) fail3("Desconto histórico inferior a 10%.", true);
+  else evidence.push(Math.round(discount) + "% abaixo da mediana dos melhores preços diários observados.");
+  const dimensions = /* @__PURE__ */ new Map();
+  for (const observation of history) {
+    const time = Date.parse(observation.observed_at);
+    if (time <= now && time >= now - 14 * DAY2 && Number.isInteger(observation.position) && observation.position >= 1 && observation.position <= 20) {
+      const day = observation.observed_at.slice(0, 10);
+      const dimension = observation.demand_category ?? "legacy";
+      const demand2 = dimensions.get(dimension) ?? /* @__PURE__ */ new Map();
+      demand2.set(day, Math.min(demand2.get(day) ?? 21, observation.position));
+      dimensions.set(dimension, demand2);
+    }
+  }
+  const demand = [...dimensions.values()].sort((a, b) => Number(b.size >= 7 && median2([...b.values()]) <= 10) - Number(a.size >= 7 && median2([...a.values()]) <= 10) || b.size - a.size)[0] ?? /* @__PURE__ */ new Map();
+  const strongDemand = demand.size >= 7 && median2([...demand.values()]) <= 10;
+  if (!strongDemand) fail3("Demanda não confirmada: exigimos presença em 7 dias de ranking em 14 dias, com posição mediana até 10.");
+  else evidence.push("Presença recorrente entre mais vendidos em " + demand.size + " dias; indício de demanda, sem volume de vendas comprovado.");
+  if (Number.isSafeInteger(preview.sales_total_reported) && preview.sales_total_reported >= 0) evidence.push("Vendas acumuladas informadas pela API: " + preview.sales_total_reported + (preview.sales_source === "CATALOG" ? " (produto de catálogo)." : " (anúncio).") + " Não representa vendas recentes.");
+  if (preview.seller_trusted) evidence.push("Vendedor com reputação verde confirmada.");
+  evidence.push("Preço do produto sem frete; confira entrega, pagamento e compatibilidade antes de divulgar.");
+  const demandScore = strongDemand ? Math.min(100, 60 + demand.size * 2) : 0;
+  const discountScore = sufficient && discount !== null ? Math.max(0, Math.min(100, discount * 3)) : 0;
+  const commercial = preview.price && preview.price <= 150 ? 80 : preview.price && preview.price <= 300 ? 60 : 30;
+  const score = Math.round(demandScore * 0.3 + discountScore * 0.25 + profile.appeal * 0.15 + profile.ease * 0.15 + (preview.seller_trusted ? 100 : 0) * 0.1 + commercial * 0.05);
+  return {
+    version: RANKING_VERSION,
+    state: rejected ? "REJECTED" : reasons.length ? "OBSERVING" : "APPROVED",
+    score,
+    group: editorial.family,
+    reasons,
+    evidence,
+    reference_price: reference2,
+    historical_discount_percent: sufficient && discount !== null ? Math.round(discount) : null,
+    history_days: coverage.days,
+    history_sufficient: sufficient,
+    seller_count: coverage.sellers,
+    demand_days: demand.size,
+    checked_at: new Date(now).toISOString()
+  };
+}
+var RANKING_VERSION, DAY2, median2;
+var init_ranking = __esm({
+  "src/server/commercial/ranking.ts"() {
+    "use strict";
+    init_profile();
+    init_profile();
+    init_editorial();
+    init_product_preview();
+    init_price_truth();
+    RANKING_VERSION = "commercial-v3-pre-home";
+    DAY2 = 864e5;
+    median2 = (values) => {
+      const sorted = [...values].sort((a, b) => a - b);
+      const half = Math.floor(sorted.length / 2);
+      return sorted.length % 2 ? sorted[half] : (sorted[half - 1] + sorted[half]) / 2;
+    };
+  }
+});
+
+// src/server/commercial/cohort-review.ts
+var cohort_review_exports = {};
+__export(cohort_review_exports, {
+  reviewAutomotiveCohort: () => reviewAutomotiveCohort
+});
+async function reviewAutomotiveCohort(client) {
+  const rows = [];
+  for (let page = 0; ; page++) {
+    const result = await client.from("commercial_watchlist").select("source_key,identity_key,preview,monitor").order("source_key").range(page * 500, page * 500 + 499);
+    if (result.error) throw new Error("COHORT_REVIEW_UNAVAILABLE");
+    rows.push(...result.data ?? []);
+    if (!result.data || result.data.length < 500) break;
+    if (page >= 99) throw new Error("COHORT_REVIEW_LIMIT");
+  }
+  const assessments = rows.map((row) => {
+    const p = row.preview ?? {}, assessment = assessAutomotive({ title: p.title ?? "", description: p.description ?? null });
+    const eligible = assessment.state === "ELIGIBLE" && p.comparable && p.seller_trusted && p.currency === "BRL" && typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0 && safePreviewUrl(p.image, true) && safePreviewUrl(p.url) && p.status !== "UNAVAILABLE" && Date.parse(p.priceCheckedAt ?? "") >= Date.now() - 864e5 && Date.parse(p.priceCheckedAt ?? "") <= Date.now();
+    return {
+      source_key: row.source_key,
+      vertical_key: "AUTOMOTIVE",
+      identity_key: row.identity_key,
+      family: assessment.family,
+      state: assessment.state === "ELIGIBLE" && !eligible ? "REVIEW" : assessment.state,
+      reason: assessment.state === "ELIGIBLE" && !eligible ? "Preço, imagem, identidade ou vendedor precisam de nova validação." : assessment.reason,
+      version: assessment.version,
+      possible_variant_key: possibleVariantKey(p.description ?? null),
+      assessed_at: (/* @__PURE__ */ new Date()).toISOString(),
+      preview_checked_at: p.priceCheckedAt ?? null,
+      valid_until: eligible ? new Date(Date.parse(p.priceCheckedAt) + 864e5).toISOString() : null
+    };
+  });
+  for (let start = 0; start < assessments.length; start += 500) {
+    const saved = await client.from("commercial_editorial_assessments").upsert(assessments.slice(start, start + 500), { onConflict: "vertical_key,source_key" });
+    if (saved.error) throw new Error("COHORT_REVIEW_WRITE_FAILED");
+  }
+  return { reviewed: assessments.length };
+}
+var init_cohort_review = __esm({
+  "src/server/commercial/cohort-review.ts"() {
+    "use strict";
+    init_editorial();
+    init_product_preview();
+  }
+});
+
 // src/server/commercial/selection-algorithm.ts
 function demandPotential(signals, now = Date.now()) {
   const dimensions = /* @__PURE__ */ new Map();
   for (const r of signals) {
     const time = Date.parse(r.observed_at);
-    if (!Number.isFinite(time) || time > now || time < now - 14 * DAY || !Number.isInteger(r.position) || r.position < 1 || r.position > 20) continue;
+    if (!Number.isFinite(time) || time > now || time < now - 14 * DAY3 || !Number.isInteger(r.position) || r.position < 1 || r.position > 20) continue;
     const days = dimensions.get(r.category) ?? /* @__PURE__ */ new Map();
     const day = new Date(time).toISOString().slice(0, 10);
     days.set(day, Math.min(days.get(day) ?? 21, r.position));
     dimensions.set(r.category, days);
   }
   const results = [...dimensions].map(([category, days]) => {
-    const ordered = [...days].sort(([a], [b]) => a.localeCompare(b)), values = ordered.map(([, p]) => p), mid = median(values);
+    const ordered = [...days].sort(([a], [b]) => a.localeCompare(b)), values = ordered.map(([, p]) => p), mid = median3(values);
     const recurrence = 25 * Math.min(1, days.size / 14), position = 15 * (21 - mid) / 20;
-    const spread = median(values.map((v) => Math.abs(v - mid)));
+    const spread = median3(values.map((v) => Math.abs(v - mid)));
     const stability = days.size >= 3 ? 5 * Math.max(0, 1 - spread / 10) : 0;
     const half = Math.floor(values.length / 2);
-    const improvement = values.length >= 6 ? median(values.slice(0, half)) - median(values.slice(half)) : 0;
+    const improvement = values.length >= 6 ? median3(values.slice(0, half)) - median3(values.slice(half)) : 0;
     const trend = values.length >= 6 ? 5 * Math.max(0, Math.min(1, improvement / 5)) : 0;
     return { category, days: days.size, median_position: mid, improvement, score: recurrence + position + stability + trend };
   }).sort((a, b) => b.score - a.score || a.category.localeCompare(b.category));
@@ -24127,7 +24358,7 @@ function demandPotential(signals, now = Date.now()) {
 function scoreCandidate(c, now = Date.now()) {
   const p = c.preview, demand = demandPotential(c.ranks, now), profile = commercialProfile(p?.title ?? ""), editorial = assessAutomotive({ title: p?.title ?? "", description: p?.description ?? null });
   const checked5 = Date.parse(p?.priceCheckedAt ?? "");
-  const complete = !!p && !!p.title.trim() && !/^MLBU?\d+$/.test(p.title.trim()) && !!safePreviewUrl(p.image, true) && !!safePreviewUrl(p.url) && typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0 && p.currency === "BRL" && p.comparable === true && p.seller_trusted === true && !!p.seller_id && p.status !== "UNAVAILABLE" && checked5 <= now && checked5 >= now - DAY;
+  const complete = !!p && !!p.title.trim() && !/^MLBU?\d+$/.test(p.title.trim()) && !!safePreviewUrl(p.image, true) && !!safePreviewUrl(p.url) && typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0 && p.currency === "BRL" && p.comparable === true && p.seller_trusted === true && !!p.seller_id && p.status !== "UNAVAILABLE" && checked5 <= now && checked5 >= now - DAY3;
   const components = {
     demand: Math.round(demand.score * 100) / 100,
     utility: profile.appeal * 0.2,
@@ -24190,7 +24421,7 @@ function simulateSelection(candidates, now = Date.now(), capacity = 100, familyL
   const replacements = [];
   for (const next of newcomers) {
     if (replacements.length >= 5 || next.demand.days < 7) continue;
-    const victim = displaced.find((c) => !replacements.some((r) => r.from === c.identity_key) && next.score - c.score >= 10 && Number.isFinite(Date.parse(c.monitor_since ?? "")) && Date.parse(c.monitor_since) <= now - 7 * DAY);
+    const victim = displaced.find((c) => !replacements.some((r) => r.from === c.identity_key) && next.score - c.score >= 10 && Number.isFinite(Date.parse(c.monitor_since ?? "")) && Date.parse(c.monitor_since) <= now - 7 * DAY3);
     if (victim) replacements.push({ from: victim.identity_key, to: next.identity_key, advantage: next.score - victim.score });
   }
   return {
@@ -24212,7 +24443,7 @@ function simulateSelection(candidates, now = Date.now(), capacity = 100, familyL
     warning: "As notas não estimam unidades vendidas ou probabilidade de conversão. Não são ofertas aprovadas nem substituições executadas."
   };
 }
-var SELECTION_VERSION, DAY, median;
+var SELECTION_VERSION, DAY3, median3;
 var init_selection_algorithm = __esm({
   "src/server/commercial/selection-algorithm.ts"() {
     "use strict";
@@ -24220,62 +24451,8 @@ var init_selection_algorithm = __esm({
     init_profile();
     init_editorial();
     SELECTION_VERSION = "automotive-potential-v1-simulation";
-    DAY = 864e5;
-    median = (v) => {
-      const a = [...v].sort((a2, b) => a2 - b);
-      return a.length % 2 ? a[Math.floor(a.length / 2)] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2;
-    };
-  }
-});
-
-// src/server/commercial/price-truth.ts
-function priceHistoryStart(now) {
-  const d = new Date(now);
-  return d.getUTCMonth() >= 8 ? Math.min(now - 30 * DAY2, Date.UTC(d.getUTCFullYear(), 8, 1)) : now - 30 * DAY2;
-}
-function reference(history, start, end) {
-  const days = /* @__PURE__ */ new Map(), sellers = /* @__PURE__ */ new Set();
-  for (const o of history) {
-    const t = Date.parse(o.observed_at);
-    if (t < start || t >= end || !Number.isFinite(t) || !o.comparable || !o.trusted || o.currency !== "BRL" || !o.seller_id || typeof o.price !== "number" || !Number.isFinite(o.price) || o.price <= 0) continue;
-    const day = new Date(t).toISOString().slice(0, 10);
-    days.set(day, Math.min(days.get(day) ?? Infinity, o.price));
-    sellers.add(o.seller_id);
-  }
-  const first = days.size ? Math.min(...[...days.keys()].map(Date.parse)) : end;
-  return { price: days.size ? median2([...days.values()]) : null, days: days.size, sellers: sellers.size, sufficient: days.size >= 20 && end - first >= 27 * DAY2 && sellers.size >= 2 };
-}
-function analyzePriceTruth(p, history, now = Date.now()) {
-  const date = new Date(now), today = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-  const rolling = reference(history, now - 30 * DAY2, today);
-  const campaignStart = Date.UTC(date.getUTCFullYear(), 8, 1), campaignEnd = Date.UTC(date.getUTCFullYear(), 9, 1);
-  const campaign = date.getUTCMonth() >= 9 ? reference(history, campaignStart, campaignEnd) : null;
-  const usable = [rolling, ...campaign ? [campaign] : []].filter((r) => r.sufficient && r.price !== null);
-  const baseline = usable.length ? Math.min(...usable.map((r) => r.price)) : null;
-  const checked5 = Date.parse(p.priceCheckedAt ?? "");
-  const valid = p.comparable && p.seller_trusted && p.status !== "UNAVAILABLE" && p.currency === "BRL" && typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0 && checked5 <= now && checked5 >= now - DAY2;
-  const actual = valid && baseline !== null ? (baseline - p.price) / baseline * 100 : null;
-  const advertised = valid && typeof p.original_price === "number" && Number.isFinite(p.original_price) && p.original_price > p.price ? (p.original_price - p.price) / p.original_price * 100 : null;
-  const inflated = actual !== null && advertised !== null && advertised >= 5 && advertised - actual > 5;
-  const state = !valid ? "CURRENT_PRICE_UNVERIFIED" : actual === null ? "INSUFFICIENT_HISTORY" : inflated ? "ANNOUNCED_NOT_CONFIRMED" : actual >= 10 ? "HISTORICAL_DISCOUNT" : "USUAL_OR_HIGHER_PRICE";
-  return {
-    version: "price-truth-v1",
-    state,
-    reference_price: baseline,
-    historical_discount_percent: actual === null ? null : Math.round(actual),
-    advertised_discount_percent: advertised === null ? null : Math.round(advertised),
-    historical_discount_confirmed: actual !== null && actual >= 10,
-    rolling,
-    campaign: campaign ? { ...campaign, start: new Date(campaignStart).toISOString(), endExclusive: new Date(campaignEnd).toISOString() } : null,
-    policy: "Mediana dos mínimos diários observados. Quando suficiente, setembro fixa a janela pré-campanha; usamos a menor referência suficiente. Não inclui frete e não prova fraude."
-  };
-}
-var DAY2, median2;
-var init_price_truth = __esm({
-  "src/server/commercial/price-truth.ts"() {
-    "use strict";
-    DAY2 = 864e5;
-    median2 = (v) => {
+    DAY3 = 864e5;
+    median3 = (v) => {
       const a = [...v].sort((a2, b) => a2 - b);
       return a.length % 2 ? a[Math.floor(a.length / 2)] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2;
     };
@@ -24289,11 +24466,11 @@ __export(selection_simulation_exports, {
   runSelectionSimulation: () => runSelectionSimulation
 });
 async function runSelectionSimulation(client, now = Date.now(), evaluationLimit = 500) {
-  const { data, error } = await client.rpc("commercial_selection_inputs", { reference_time: new Date(now).toISOString(), history_start: new Date(priceHistoryStart(now)).toISOString() });
+  const { data: data2, error } = await client.rpc("commercial_selection_inputs", { reference_time: new Date(now).toISOString(), history_start: new Date(priceHistoryStart(now)).toISOString() });
   if (error) throw new Error("SELECTION_SIMULATION_READ_FAILED");
-  if (!data || !["snapshots", "watches", "memberships", "feedback", "sent", "changes", "observations"].every((k) => Array.isArray(data[k])))
+  if (!data2 || !["snapshots", "watches", "memberships", "feedback", "sent", "changes", "observations"].every((k) => Array.isArray(data2[k])))
     throw new Error("SELECTION_SIMULATION_INVALID_DATA");
-  return analyzeSelectionInputs(data, now, evaluationLimit);
+  return analyzeSelectionInputs(data2, now, evaluationLimit);
 }
 function analyzeSelectionInputs(input, now = Date.now(), evaluationLimit = 500) {
   const { snapshots, watches, memberships, feedback, sent, changes } = input;
@@ -24380,263 +24557,6 @@ var init_selection_simulation = __esm({
   }
 });
 
-// src/server/commercial/cohort-review.ts
-var cohort_review_exports = {};
-__export(cohort_review_exports, {
-  reviewAutomotiveCohort: () => reviewAutomotiveCohort
-});
-async function reviewAutomotiveCohort(client) {
-  const rows = [];
-  for (let page = 0; ; page++) {
-    const result = await client.from("commercial_watchlist").select("source_key,identity_key,preview,monitor").order("source_key").range(page * 500, page * 500 + 499);
-    if (result.error) throw new Error("COHORT_REVIEW_UNAVAILABLE");
-    rows.push(...result.data ?? []);
-    if (!result.data || result.data.length < 500) break;
-    if (page >= 99) throw new Error("COHORT_REVIEW_LIMIT");
-  }
-  const assessments = rows.map((row) => {
-    const p = row.preview ?? {}, assessment = assessAutomotive({ title: p.title ?? "", description: p.description ?? null });
-    const eligible = assessment.state === "ELIGIBLE" && p.comparable && p.seller_trusted && p.currency === "BRL" && typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0 && safePreviewUrl(p.image, true) && safePreviewUrl(p.url) && p.status !== "UNAVAILABLE" && Date.parse(p.priceCheckedAt ?? "") >= Date.now() - 864e5 && Date.parse(p.priceCheckedAt ?? "") <= Date.now();
-    return {
-      source_key: row.source_key,
-      vertical_key: "AUTOMOTIVE",
-      identity_key: row.identity_key,
-      family: assessment.family,
-      state: assessment.state === "ELIGIBLE" && !eligible ? "REVIEW" : assessment.state,
-      reason: assessment.state === "ELIGIBLE" && !eligible ? "Preço, imagem, identidade ou vendedor precisam de nova validação." : assessment.reason,
-      version: assessment.version,
-      possible_variant_key: possibleVariantKey(p.description ?? null),
-      assessed_at: (/* @__PURE__ */ new Date()).toISOString(),
-      preview_checked_at: p.priceCheckedAt ?? null,
-      valid_until: eligible ? new Date(Date.parse(p.priceCheckedAt) + 864e5).toISOString() : null
-    };
-  });
-  for (let start = 0; start < assessments.length; start += 500) {
-    const saved = await client.from("commercial_editorial_assessments").upsert(assessments.slice(start, start + 500), { onConflict: "vertical_key,source_key" });
-    if (saved.error) throw new Error("COHORT_REVIEW_WRITE_FAILED");
-  }
-  return { reviewed: assessments.length };
-}
-var init_cohort_review = __esm({
-  "src/server/commercial/cohort-review.ts"() {
-    "use strict";
-    init_editorial();
-    init_product_preview();
-  }
-});
-
-// src/server/commercial/home-probe.ts
-var home_probe_exports = {};
-__export(home_probe_exports, {
-  inspectKnownVariants: () => inspectKnownVariants,
-  probeHome: () => probeHome,
-  probeHomeAccess: () => probeHomeAccess
-});
-async function probeHome(read, deadline = Date.now() + 15e4) {
-  const categories = [];
-  const rankings = [];
-  const products = [];
-  const pending = ["MLB1574"], seen = /* @__PURE__ */ new Set(), productIds = /* @__PURE__ */ new Set();
-  while (pending.length && categories.length < 20 && Date.now() < deadline) {
-    const id = pending.shift();
-    if (seen.has(id)) continue;
-    seen.add(id);
-    try {
-      const data = await read("/categories/" + id);
-      const children = (Array.isArray(data.children_categories) ? data.children_categories : []).filter((c) => typeof c.id === "string" && /^MLB\d+$/.test(c.id) && typeof c.name === "string").map((c) => ({ id: c.id, name: c.name }));
-      categories.push({ id, name: String(data.name ?? id), children, status: 200 });
-      for (const c of children) if (/cozinha|utens[ií]lio|organiza|limpeza|lavanderia|banheiro|conserva|armazen|potes|gaveta/i.test(c.name)) pending.push(c.id);
-      if (id === "MLB1574") continue;
-      try {
-        const ranking = await read("/highlights/MLB/category/" + id);
-        const entries = Array.isArray(ranking.content) ? ranking.content : [];
-        rankings.push({ category: id, status: 200, count: entries.length });
-        for (const entry of entries) {
-          if (products.length >= 30 || Date.now() >= deadline) break;
-          if (entry.type !== "PRODUCT" || typeof entry.id !== "string" || !/^MLB\d+$/.test(entry.id) || productIds.has(entry.id)) continue;
-          productIds.add(entry.id);
-          try {
-            const p = await resolveProductPreview(entry.id, "PRODUCT", read);
-            const complete = !!p.title.trim() && !/^MLB\d+$/.test(p.title) && !!safePreviewUrl(p.image, true) && !!safePreviewUrl(p.url) && p.currency === "BRL" && typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0 && p.status !== "UNAVAILABLE";
-            products.push({ id: entry.id, category: id, title: p.title, complete, comparable: p.comparable === true, trusted: p.seller_trusted === true, price: p.price, status: p.status });
-          } catch {
-            products.push({ id: entry.id, category: id, title: entry.id, complete: false, comparable: false, trusted: false, price: null, status: "FAILED" });
-          }
-          if (products.filter((p) => p.category === id).length >= 3) break;
-        }
-      } catch (error) {
-        rankings.push({ category: id, status: error instanceof PreviewUpstreamError ? error.status : 0, count: 0 });
-      }
-    } catch (error) {
-      categories.push({ id, name: id, children: [], status: error instanceof PreviewUpstreamError ? error.status : 0 });
-    }
-  }
-  return {
-    checkedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    activation: false,
-    scope: "BOUNDED_READ_ONLY_SAMPLE",
-    categories,
-    rankings,
-    products,
-    resolved: products.filter((p) => p.complete && p.comparable && p.trusted).length,
-    hundredCandidatesProven: false,
-    remainingCategories: pending.length
-  };
-}
-async function probeHomeAccess(client) {
-  return probeHome(await configuredMeliReader(client));
-}
-async function inspectKnownVariants(client) {
-  const read = await configuredMeliReader(client), results = [];
-  for (const id of ["MLB6339793", "MLB6339794"]) {
-    try {
-      const data = await read("/products/" + id);
-      results.push({ id, status: 200, attributes: (Array.isArray(data.attributes) ? data.attributes : []).filter((a) => typeof a.id === "string" && /BRAND|MODEL|VOLTAGE|CAPACITY|UNITS|GTIN/.test(a.id)).map((a) => ({ id: a.id, value: typeof a.value_name === "string" ? a.value_name.slice(0, 200) : null })) });
-    } catch (error) {
-      results.push({ id, status: error instanceof PreviewUpstreamError ? error.status : 0, attributes: [] });
-    }
-  }
-  return { results, identitiesMerged: false };
-}
-var init_home_probe = __esm({
-  "src/server/commercial/home-probe.ts"() {
-    "use strict";
-    init_product_preview();
-  }
-});
-
-// src/server/affiliate/coupon-service.ts
-var coupon_service_exports = {};
-__export(coupon_service_exports, {
-  activeCoupons: () => activeCoupons,
-  affiliateIntelligence: () => affiliateIntelligence,
-  couponRegistry: () => couponRegistry,
-  findBestCouponForProduct: () => findBestCouponForProduct
-});
-function activeCoupons(coupons = couponRegistry, now = Date.now()) {
-  return coupons.filter((c) => {
-    let official = false;
-    try {
-      const url = new URL(c.sourceUrl);
-      official = url.protocol === "https:" && !url.username && !url.password && !url.port && (url.hostname === "mercadolivre.com.br" || url.hostname.endsWith(".mercadolivre.com.br"));
-    } catch {
-    }
-    return c.active && official && !!c.code.trim() && Number.isFinite(c.amount) && c.amount > 0 && (c.discountType === "FIXED" || c.discountType === "PERCENT" && c.amount <= 100) && (c.minPurchase === void 0 || Number.isFinite(c.minPurchase) && c.minPurchase >= 0) && (c.maxDiscount === void 0 || Number.isFinite(c.maxDiscount) && c.maxDiscount > 0) && Date.parse(c.startsAt) <= now && Date.parse(c.expiresAt) > now && Date.parse(c.verifiedAt) <= now && Date.parse(c.verifiedAt) >= Date.parse(c.startsAt);
-  });
-}
-function findBestCouponForProduct(categoryId, price, coupons = couponRegistry, now = Date.now()) {
-  if (!Number.isFinite(price) || price <= 0) return null;
-  const eligible = activeCoupons(coupons, now).filter((c) => price >= (c.minPurchase ?? 0) && (c.categoryMatch?.includes("ALL") || /^MLB\d+$/.test(categoryId) && c.categoryMatch?.includes(categoryId)));
-  const saving = (c) => Math.min(
-    price,
-    c.maxDiscount ?? Infinity,
-    c.discountType === "PERCENT" ? price * c.amount / 100 : c.amount
-  );
-  return eligible.sort((a, b) => saving(b) - saving(a) || a.code.localeCompare(b.code))[0] ?? null;
-}
-function affiliateIntelligence(item) {
-  const valid = typeof item.price === "number" && Number.isFinite(item.price) && item.price > 0 && typeof item.original_price === "number" && Number.isFinite(item.original_price) && item.original_price > item.price;
-  const percent = valid ? (item.original_price - item.price) / item.original_price * 100 : 0;
-  return {
-    discount_percent: Math.round(percent),
-    has_advertised_discount: percent >= 5,
-    matched_coupon: item.currency === "BRL" ? findBestCouponForProduct(item.category_id ?? "", item.price ?? 0) : null
-  };
-}
-var couponRegistry;
-var init_coupon_service = __esm({
-  "src/server/affiliate/coupon-service.ts"() {
-    "use strict";
-    couponRegistry = [];
-  }
-});
-
-// src/server/commercial/ranking.ts
-function rankProduct(preview, history, feedback = null, now = Date.now()) {
-  const profile = commercialProfile(preview.title);
-  const editorial = assessAutomotive(preview);
-  const reasons = [], evidence = [];
-  let rejected = false;
-  const fail3 = (text3, hard = false) => {
-    reasons.push(text3);
-    rejected ||= hard;
-  };
-  const currentTime = Date.parse(preview.priceCheckedAt ?? "");
-  const complete = !!preview.title.trim() && !/^MLBU?\d+$/.test(preview.title.trim()) && !!safePreviewUrl(preview.image, true) && !!safePreviewUrl(preview.url) && typeof preview.price === "number" && Number.isFinite(preview.price) && preview.price > 0 && preview.currency === "BRL";
-  if (!complete) fail3("Faltam título, foto, preço em BRL ou link utilizável.");
-  if (!(currentTime <= now && currentTime >= now - DAY3)) fail3("Preço precisa ser consultado novamente (validade de 24 horas).");
-  if (preview.status === "UNAVAILABLE") fail3("Oferta indisponível.", true);
-  if (!preview.comparable) fail3("Identidade, condição, variação ou contexto de preço ainda não confirmados.");
-  if (!preview.seller_trusted) fail3("Reputação do vendedor ainda não confirmada.");
-  if (preview.seller_level && !["5_green", "4_light_green"].includes(preview.seller_level)) fail3("Reputação do vendedor abaixo do mínimo.", true);
-  if (editorial.state !== "ELIGIBLE") fail3(editorial.reason, editorial.state === "EXCLUDE");
-  if (profile.reason) fail3(profile.reason, true);
-  if (feedback === "NOT_RELEVANT") fail3("Você marcou este produto como inadequado para o público.", true);
-  const truth = analyzePriceTruth(preview, history, now);
-  const coverage = truth.campaign?.sufficient && (!truth.rolling.sufficient || truth.campaign.price <= truth.rolling.price) ? truth.campaign : truth.rolling;
-  const reference2 = truth.reference_price;
-  const discount = reference2 !== null && preview.price !== null ? (reference2 - preview.price) / reference2 * 100 : null;
-  const sufficient = truth.rolling.sufficient || truth.campaign?.sufficient === true;
-  if (!sufficient) fail3("Histórico insuficiente: exigimos 20 dias observados, janela de 27 dias e 2 vendedores na referência de 30 dias ou de setembro.");
-  else if (discount === null || discount < 10) fail3("Desconto histórico inferior a 10%.", true);
-  else evidence.push(Math.round(discount) + "% abaixo da mediana dos melhores preços diários observados.");
-  const dimensions = /* @__PURE__ */ new Map();
-  for (const observation of history) {
-    const time = Date.parse(observation.observed_at);
-    if (time <= now && time >= now - 14 * DAY3 && Number.isInteger(observation.position) && observation.position >= 1 && observation.position <= 20) {
-      const day = observation.observed_at.slice(0, 10);
-      const dimension = observation.demand_category ?? "legacy";
-      const demand2 = dimensions.get(dimension) ?? /* @__PURE__ */ new Map();
-      demand2.set(day, Math.min(demand2.get(day) ?? 21, observation.position));
-      dimensions.set(dimension, demand2);
-    }
-  }
-  const demand = [...dimensions.values()].sort((a, b) => Number(b.size >= 7 && median3([...b.values()]) <= 10) - Number(a.size >= 7 && median3([...a.values()]) <= 10) || b.size - a.size)[0] ?? /* @__PURE__ */ new Map();
-  const strongDemand = demand.size >= 7 && median3([...demand.values()]) <= 10;
-  if (!strongDemand) fail3("Demanda não confirmada: exigimos presença em 7 dias de ranking em 14 dias, com posição mediana até 10.");
-  else evidence.push("Presença recorrente entre mais vendidos em " + demand.size + " dias; indício de demanda, sem volume de vendas comprovado.");
-  if (Number.isSafeInteger(preview.sales_total_reported) && preview.sales_total_reported >= 0) evidence.push("Vendas acumuladas informadas pela API: " + preview.sales_total_reported + (preview.sales_source === "CATALOG" ? " (produto de catálogo)." : " (anúncio).") + " Não representa vendas recentes.");
-  if (preview.seller_trusted) evidence.push("Vendedor com reputação verde confirmada.");
-  evidence.push("Preço do produto sem frete; confira entrega, pagamento e compatibilidade antes de divulgar.");
-  const demandScore = strongDemand ? Math.min(100, 60 + demand.size * 2) : 0;
-  const discountScore = sufficient && discount !== null ? Math.max(0, Math.min(100, discount * 3)) : 0;
-  const commercial = preview.price && preview.price <= 150 ? 80 : preview.price && preview.price <= 300 ? 60 : 30;
-  const score = Math.round(demandScore * 0.3 + discountScore * 0.25 + profile.appeal * 0.15 + profile.ease * 0.15 + (preview.seller_trusted ? 100 : 0) * 0.1 + commercial * 0.05);
-  return {
-    version: RANKING_VERSION,
-    state: rejected ? "REJECTED" : reasons.length ? "OBSERVING" : "APPROVED",
-    score,
-    group: editorial.family,
-    reasons,
-    evidence,
-    reference_price: reference2,
-    historical_discount_percent: sufficient && discount !== null ? Math.round(discount) : null,
-    history_days: coverage.days,
-    history_sufficient: sufficient,
-    seller_count: coverage.sellers,
-    demand_days: demand.size,
-    checked_at: new Date(now).toISOString()
-  };
-}
-var RANKING_VERSION, DAY3, median3;
-var init_ranking = __esm({
-  "src/server/commercial/ranking.ts"() {
-    "use strict";
-    init_profile();
-    init_profile();
-    init_editorial();
-    init_product_preview();
-    init_price_truth();
-    RANKING_VERSION = "commercial-v3-pre-home";
-    DAY3 = 864e5;
-    median3 = (values) => {
-      const sorted = [...values].sort((a, b) => a - b);
-      const half = Math.floor(sorted.length / 2);
-      return sorted.length % 2 ? sorted[half] : (sorted[half - 1] + sorted[half]) / 2;
-    };
-  }
-});
-
 // src/server/commercial/selection-renewal.ts
 async function renewAutomotiveSelection(client) {
   const result = await runSelectionSimulation(client, Date.now(), 1e4);
@@ -24652,12 +24572,12 @@ async function renewAutomotiveSelection(client) {
     assessed_at: result.checkedAt,
     evidence: c
   }));
-  const { data, error } = await client.rpc("refresh_commercial_selection", { assessments });
+  const { data: data2, error } = await client.rpc("refresh_commercial_selection", { assessments });
   if (error) {
     console.warn(JSON.stringify({ event: "SELECTION_RENEWAL_FAILED", code: error.code || "UNKNOWN" }));
     throw new Error("SELECTION_RENEWAL_FAILED");
   }
-  return data;
+  return data2;
 }
 var init_selection_renewal = __esm({
   "src/server/commercial/selection-renewal.ts"() {
@@ -24757,10 +24677,10 @@ var init_collection_policy = __esm({
 
 // src/server/commercial/collection-scope.ts
 async function automotiveCollectionScope(client) {
-  const { data, error } = await client.from("commercial_verticals").select("enabled,executor_ready,history_batch_size").eq("vertical_key", "AUTOMOTIVE").single();
-  if (error || !data?.enabled || !data.executor_ready || !Number.isInteger(data.history_batch_size) || data.history_batch_size < 1 || data.history_batch_size > 25)
+  const { data: data2, error } = await client.from("commercial_verticals").select("enabled,executor_ready,history_batch_size").eq("vertical_key", "AUTOMOTIVE").single();
+  if (error || !data2?.enabled || !data2.executor_ready || !Number.isInteger(data2.history_batch_size) || data2.history_batch_size < 1 || data2.history_batch_size > 25)
     throw new Error("COMMERCIAL_EXECUTOR_NOT_READY");
-  return { vertical: "AUTOMOTIVE", historyBatch: data.history_batch_size };
+  return { vertical: "AUTOMOTIVE", historyBatch: data2.history_batch_size };
 }
 var init_collection_scope = __esm({
   "src/server/commercial/collection-scope.ts"() {
@@ -24865,9 +24785,9 @@ async function collectCommercialEvidence(client) {
       if (!liveRankings.has(category)) liveRankings.set(category, (async () => {
         try {
           const categoryRead = await configuredMeliReader(client);
-          const data = await categoryRead("/highlights/MLB/category/" + category);
+          const data2 = await categoryRead("/highlights/MLB/category/" + category);
           const values = /* @__PURE__ */ new Map();
-          for (const entry of Array.isArray(data.content) ? data.content : []) {
+          for (const entry of Array.isArray(data2.content) ? data2.content : []) {
             if (typeof entry.id === "string" && Number.isInteger(entry.position) && entry.position >= 1 && entry.position <= 20)
               values.set(entry.type + ":" + entry.id, entry.position);
           }
@@ -25092,23 +25012,287 @@ var init_service = __esm({
   }
 });
 
+// src/server/commercial/revalidate.ts
+var revalidate_exports = {};
+__export(revalidate_exports, {
+  revalidateProduct: () => revalidateProduct
+});
+function checked3(r) {
+  if (r.error) throw new Error("REVALIDATION_STORAGE_FAILED");
+  return r.data;
+}
+async function revalidateProduct(client, id, type) {
+  const preview = await configuredProductPreview(client, id, type, true);
+  const identity = productIdentity(id, type, preview);
+  const rows = [];
+  for (const table of ["commercial_observations", "commercial_rank_observations"]) for (let page = 0; ; page++) {
+    const data2 = checked3(await client.from(table).select("*").eq("identity_key", identity).gte("observed_at", new Date(priceHistoryStart(Date.now())).toISOString()).order("observed_at").order(table === "commercial_observations" ? "source_key" : "category_id").range(page * 1e3, page * 1e3 + 999));
+    rows.push(...(data2 ?? []).map((row) => table === "commercial_observations" ? { ...row, position: null } : { ...row, demand_category: row.category_id, price: null, currency: "BRL", seller_id: null, comparable: false, trusted: false }));
+    if (!data2 || data2.length < 1e3) break;
+    if (page >= 99) throw new Error("REVALIDATION_HISTORY_LIMIT");
+  }
+  const feedback = checked3(await client.from("commercial_vertical_feedback").select("action").eq("vertical_key", "AUTOMOTIVE").eq("identity_key", identity).maybeSingle());
+  const commercial = rankProduct(preview, rows, feedback?.action ?? null);
+  checked3(await client.from("commercial_watchlist").update({ preview, identity_key: identity }).eq("source_key", type + ":" + id));
+  const ready = preview.status !== "UNAVAILABLE" && !!preview.title && preview.title !== id && !!safePreviewUrl(preview.image, true) && !!safePreviewUrl(preview.url) && !!preview.price && preview.currency === "BRL" && Date.parse(preview.priceCheckedAt ?? "") >= Date.now() - 6e4;
+  return { ready, preview: { ...preview, ...affiliateIntelligence(preview), commercial } };
+}
+var init_revalidate = __esm({
+  "src/server/commercial/revalidate.ts"() {
+    "use strict";
+    init_product_preview();
+    init_coupon_service();
+    init_service();
+    init_ranking();
+    init_price_truth();
+  }
+});
+
+// src/server/whatsapp/service.ts
+var service_exports2 = {};
+__export(service_exports2, {
+  OutboxError: () => OutboxError,
+  affiliateLink: () => affiliateLink,
+  digest: () => digest2,
+  offerMessage: () => offerMessage,
+  outboxAction: () => outboxAction,
+  workerAuth: () => workerAuth
+});
+import { createHash as createHash4, randomBytes as randomBytes3 } from "node:crypto";
+function data(r) {
+  if (r.error) throw new OutboxError(r.error.code === "23505" ? 409 : 503, r.error.code === "23505" ? "DUPLICATE_SEND" : "OUTBOX_UNAVAILABLE");
+  return r.data;
+}
+function affiliateLink(value) {
+  try {
+    const u = new URL(String(value));
+    if (u.protocol === "https:" && !u.username && !u.password && !u.port && (u.hostname === "meli.la" || u.hostname === "mercadolivre.com.br" || u.hostname.endsWith(".mercadolivre.com.br"))) return u.href;
+  } catch {
+  }
+  throw new OutboxError(400, "INVALID_AFFILIATE_LINK");
+}
+function offerMessage(p, link) {
+  const lines = ["🔥 ACHADO NO MERCADO LIVRE!", "📦 " + p.title];
+  if (Number.isFinite(p.original_price) && p.original_price > p.price) lines.push("~De: " + money(p.original_price) + "~");
+  lines.push("💥 Por: " + money(p.price) + (p.has_advertised_discount ? " (" + p.discount_percent + "% de desconto anunciado)" : ""));
+  const c = p.matched_coupon;
+  if (c && Date.parse(c.expiresAt) > Date.now()) {
+    lines.push("🏷️ Cupom sugerido: *" + c.code + "* (" + c.discountValue + ")");
+    lines.push("Condições: " + c.restrictions + (c.minPurchase ? " · Mínimo " + money(c.minPurchase) : "") + (c.maxDiscount ? " · Limite " + money(c.maxDiscount) : "") + " · Até " + new Date(c.expiresAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }));
+    lines.push("Confirme a elegibilidade e o desconto no checkout.");
+  }
+  if (p.commercial?.state === "APPROVED") lines.push("📉 " + p.commercial.historical_discount_percent + "% abaixo da referência histórica observada de " + money(p.commercial.reference_price) + ".");
+  lines.push("🛒 " + affiliateLink(link), "Preço e estoque podem mudar. Confira a oferta e aproveite! 🛒");
+  return lines.join("\n\n");
+}
+async function workerAuth(client, authorization) {
+  const token2 = authorization?.startsWith("Bearer ") ? authorization.slice(7) : "";
+  if (!/^[a-f0-9]{64}$/.test(token2)) throw new OutboxError(401, "CONNECTOR_UNAUTHORIZED");
+  const connector = data(await client.from("whatsapp_connector").select("generation").eq("id", 1).eq("token_hash", digest2(token2)).maybeSingle());
+  if (!connector) throw new OutboxError(401, "CONNECTOR_UNAUTHORIZED");
+  return connector.generation;
+}
+async function outboxAction(client, action, b, origin, generation) {
+  if (action === "status") {
+    const connector = data(await client.from("whatsapp_connector").select("connected,heartbeat_at,groups").eq("id", 1).maybeSingle());
+    return {
+      connector,
+      destinations: data(await client.from("whatsapp_destinations").select("*")),
+      jobs: data(await client.from("whatsapp_outbox").select("id,vertical_key,title,group_name,state,created_at,finished_at,failure_code").order("created_at", { ascending: false }).limit(30))
+    };
+  }
+  if (action === "pair") {
+    const token2 = randomBytes3(32).toString("hex");
+    data(await client.rpc("whatsapp_pair", { new_hash: digest2(token2) }));
+    return { baseUrl: origin, token: token2 };
+  }
+  if (action === "bind") {
+    if (typeof b.vertical !== "string" || typeof b.group_id !== "string" || typeof b.enabled !== "boolean") throw new OutboxError(400, "INVALID_DESTINATION");
+    const c = data(await client.from("whatsapp_connector").select("groups").eq("id", 1).single());
+    const g = c?.groups.find((g2) => g2.id === b.group_id);
+    if (!g) throw new OutboxError(400, "UNKNOWN_GROUP");
+    data(await client.rpc("whatsapp_bind", { v: b.vertical, g: g.id, n: g.name, e: b.enabled }));
+    return { saved: true };
+  }
+  if (action === "prepare") {
+    if (b.vertical !== "AUTOMOTIVE") throw new OutboxError(400, "VERTICAL_NOT_ACTIVE");
+    if (!["ITEM", "PRODUCT", "USER_PRODUCT"].includes(b.type) || !/^MLBU?\d{1,20}$/.test(b.id ?? "")) throw new OutboxError(400, "INVALID_PRODUCT");
+    const link = affiliateLink(b.link);
+    const destination = data(await client.from("whatsapp_destinations").select("*").eq("vertical_key", b.vertical).eq("enabled", true).maybeSingle());
+    if (!destination) throw new OutboxError(409, "DESTINATION_NOT_CONFIGURED");
+    const c = data(await client.from("whatsapp_connector").select("generation").eq("id", 1).single());
+    const watch = data(await client.from("commercial_watchlist").select("identity_key,monitor").eq("source_key", b.type + ":" + b.id).maybeSingle());
+    if (!watch?.monitor) throw new OutboxError(409, "PRODUCT_NOT_MONITORED");
+    const fresh = await revalidateProduct(client, b.id, b.type);
+    if (!fresh.ready || productIdentity(b.id, b.type, fresh.preview) !== watch.identity_key) throw new OutboxError(409, "OFFER_CHANGED");
+    const job = data(await client.from("whatsapp_outbox").insert({
+      generation: c.generation,
+      vertical_key: b.vertical,
+      identity_key: watch.identity_key,
+      product_id: b.id,
+      product_type: b.type,
+      affiliate_url: link,
+      group_id: destination.group_id,
+      group_name: destination.group_name,
+      title: fresh.preview.title,
+      message: offerMessage(fresh.preview, link)
+    }).select("id,message,group_name").single());
+    return job;
+  }
+  if (action === "approve" || action === "cancel") {
+    if (!/^[a-f0-9-]{36}$/.test(b.id ?? "")) throw new OutboxError(400, "INVALID_JOB");
+    if (action === "approve") data(await client.rpc("whatsapp_approve", { job: b.id }));
+    else data(await client.from("whatsapp_outbox").update({ state: "CANCELLED" }).eq("id", b.id).in("state", ["DRAFT", "PENDING"]));
+    return { saved: true };
+  }
+  if (!generation) throw new OutboxError(401, "CONNECTOR_UNAUTHORIZED");
+  if (action === "heartbeat") {
+    if (typeof b.connected !== "boolean" || !Array.isArray(b.groups) || b.groups.length > 300) throw new OutboxError(400, "INVALID_HEARTBEAT");
+    const groups = b.groups.map((g) => {
+      if (!/^[0-9-]+@g.us$/.test(g.id ?? "") || typeof g.name !== "string" || g.name.length > 200) throw new OutboxError(400, "INVALID_GROUP");
+      return { id: g.id, name: g.name };
+    });
+    data(await client.from("whatsapp_connector").update({ connected: b.connected, groups, heartbeat_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", 1).eq("generation", generation));
+    return { saved: true };
+  }
+  if (action === "claim") {
+    const job = data(await client.rpc("whatsapp_claim", { gen: generation }))?.[0];
+    if (!job) return { job: null };
+    try {
+      const fresh = await revalidateProduct(client, job.product_id, job.product_type);
+      if (!fresh.ready || productIdentity(job.product_id, job.product_type, fresh.preview) !== job.identity_key || offerMessage(fresh.preview, job.affiliate_url) !== job.message) throw new Error("OFFER_CHANGED");
+    } catch {
+      data(await client.rpc("whatsapp_finish", { job: job.id, gen: generation, claim: job.claim_token, result: "FAILED", provider_id: null, reason: "OFFER_REQUIRES_REVIEW" }));
+      return { job: null };
+    }
+    const current = data(await client.from("whatsapp_connector").select("generation").eq("id", 1).single());
+    if (current?.generation !== generation) return { job: null };
+    return { job: { id: job.id, claim: job.claim_token, group_id: job.group_id, message: job.message, expires_at: new Date(Date.now() + 6e4).toISOString() } };
+  }
+  if (action === "finish") {
+    if (!["SENT", "UNKNOWN", "FAILED"].includes(b.state) || !["GROUP_UNAVAILABLE", "CONFIRMATION_TIMEOUT", "LOCAL_UNCERTAIN", null].includes(b.reason ?? null) || typeof b.id !== "string" || typeof b.claim !== "string" || b.state === "SENT" && (typeof b.message_id !== "string" || b.message_id.length > 300)) throw new OutboxError(400, "INVALID_RESULT");
+    data(await client.rpc("whatsapp_finish", { job: b.id, gen: generation, claim: b.claim, result: b.state, provider_id: b.message_id ?? null, reason: b.reason ?? null }));
+    return { saved: true };
+  }
+  throw new OutboxError(404, "NOT_FOUND");
+}
+var digest2, OutboxError, money;
+var init_service2 = __esm({
+  "src/server/whatsapp/service.ts"() {
+    "use strict";
+    init_revalidate();
+    init_service();
+    digest2 = (value) => createHash4("sha256").update(value).digest("hex");
+    OutboxError = class extends Error {
+      constructor(status, code) {
+        super(code);
+        this.status = status;
+        this.code = code;
+      }
+      status;
+      code;
+    };
+    money = (v) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+  }
+});
+
+// src/server/commercial/home-probe.ts
+var home_probe_exports = {};
+__export(home_probe_exports, {
+  inspectKnownVariants: () => inspectKnownVariants,
+  probeHome: () => probeHome,
+  probeHomeAccess: () => probeHomeAccess
+});
+async function probeHome(read, deadline = Date.now() + 15e4) {
+  const categories = [];
+  const rankings = [];
+  const products = [];
+  const pending = ["MLB1574"], seen = /* @__PURE__ */ new Set(), productIds = /* @__PURE__ */ new Set();
+  while (pending.length && categories.length < 20 && Date.now() < deadline) {
+    const id = pending.shift();
+    if (seen.has(id)) continue;
+    seen.add(id);
+    try {
+      const data2 = await read("/categories/" + id);
+      const children = (Array.isArray(data2.children_categories) ? data2.children_categories : []).filter((c) => typeof c.id === "string" && /^MLB\d+$/.test(c.id) && typeof c.name === "string").map((c) => ({ id: c.id, name: c.name }));
+      categories.push({ id, name: String(data2.name ?? id), children, status: 200 });
+      for (const c of children) if (/cozinha|utens[ií]lio|organiza|limpeza|lavanderia|banheiro|conserva|armazen|potes|gaveta/i.test(c.name)) pending.push(c.id);
+      if (id === "MLB1574") continue;
+      try {
+        const ranking = await read("/highlights/MLB/category/" + id);
+        const entries = Array.isArray(ranking.content) ? ranking.content : [];
+        rankings.push({ category: id, status: 200, count: entries.length });
+        for (const entry of entries) {
+          if (products.length >= 30 || Date.now() >= deadline) break;
+          if (entry.type !== "PRODUCT" || typeof entry.id !== "string" || !/^MLB\d+$/.test(entry.id) || productIds.has(entry.id)) continue;
+          productIds.add(entry.id);
+          try {
+            const p = await resolveProductPreview(entry.id, "PRODUCT", read);
+            const complete = !!p.title.trim() && !/^MLB\d+$/.test(p.title) && !!safePreviewUrl(p.image, true) && !!safePreviewUrl(p.url) && p.currency === "BRL" && typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0 && p.status !== "UNAVAILABLE";
+            products.push({ id: entry.id, category: id, title: p.title, complete, comparable: p.comparable === true, trusted: p.seller_trusted === true, price: p.price, status: p.status });
+          } catch {
+            products.push({ id: entry.id, category: id, title: entry.id, complete: false, comparable: false, trusted: false, price: null, status: "FAILED" });
+          }
+          if (products.filter((p) => p.category === id).length >= 3) break;
+        }
+      } catch (error) {
+        rankings.push({ category: id, status: error instanceof PreviewUpstreamError ? error.status : 0, count: 0 });
+      }
+    } catch (error) {
+      categories.push({ id, name: id, children: [], status: error instanceof PreviewUpstreamError ? error.status : 0 });
+    }
+  }
+  return {
+    checkedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    activation: false,
+    scope: "BOUNDED_READ_ONLY_SAMPLE",
+    categories,
+    rankings,
+    products,
+    resolved: products.filter((p) => p.complete && p.comparable && p.trusted).length,
+    hundredCandidatesProven: false,
+    remainingCategories: pending.length
+  };
+}
+async function probeHomeAccess(client) {
+  return probeHome(await configuredMeliReader(client));
+}
+async function inspectKnownVariants(client) {
+  const read = await configuredMeliReader(client), results = [];
+  for (const id of ["MLB6339793", "MLB6339794"]) {
+    try {
+      const data2 = await read("/products/" + id);
+      results.push({ id, status: 200, attributes: (Array.isArray(data2.attributes) ? data2.attributes : []).filter((a) => typeof a.id === "string" && /BRAND|MODEL|VOLTAGE|CAPACITY|UNITS|GTIN/.test(a.id)).map((a) => ({ id: a.id, value: typeof a.value_name === "string" ? a.value_name.slice(0, 200) : null })) });
+    } catch (error) {
+      results.push({ id, status: error instanceof PreviewUpstreamError ? error.status : 0, attributes: [] });
+    }
+  }
+  return { results, identitiesMerged: false };
+}
+var init_home_probe = __esm({
+  "src/server/commercial/home-probe.ts"() {
+    "use strict";
+    init_product_preview();
+  }
+});
+
 // src/server/commercial/priority.ts
 var priority_exports = {};
 __export(priority_exports, {
   collectPriority: () => collectPriority
 });
-function checked3(r) {
+function checked4(r) {
   if (r.error) throw new Error("PRIORITY_STORAGE_FAILED");
   return r.data;
 }
 async function collectPriority(client) {
-  const runId = checked3(await client.rpc("begin_commercial_collection"));
+  const runId = checked4(await client.rpc("begin_commercial_collection"));
   if (!runId) return { status: "BUSY", collected: 0, failed: 0 };
   let collected = 0, failed = 0;
   const start = Date.now();
   try {
-    checked3(await client.from("commercial_collection_runs").update({ kind: "PRIORITY" }).eq("id", runId));
-    const rows = checked3(await client.from("commercial_watchlist").select("*").eq("monitor", true).gt("priority_until", (/* @__PURE__ */ new Date()).toISOString()).lte("next_priority_check", (/* @__PURE__ */ new Date()).toISOString()).order("next_priority_check").order("source_key").limit(6));
+    checked4(await client.from("commercial_collection_runs").update({ kind: "PRIORITY" }).eq("id", runId));
+    const rows = checked4(await client.from("commercial_watchlist").select("*").eq("monitor", true).gt("priority_until", (/* @__PURE__ */ new Date()).toISOString()).lte("next_priority_check", (/* @__PURE__ */ new Date()).toISOString()).order("next_priority_check").order("source_key").limit(6));
     for (const row of rows ?? []) {
       if (Date.now() - start > 12e4) {
         failed++;
@@ -25122,7 +25306,7 @@ async function collectPriority(client) {
             const read = await configuredMeliReader(client);
             const rank = await read("/highlights/MLB/product/" + preview.catalog_product_id);
             if (rank.dimension === "category" && /^MLB\d+$/.test(rank.id) && Number.isInteger(rank.position) && rank.position >= 1 && rank.position <= 20)
-              checked3(await client.from("commercial_rank_observations").upsert({
+              checked4(await client.from("commercial_rank_observations").upsert({
                 identity_key: productIdentity(row.product_id, row.type, preview),
                 category_id: rank.id,
                 observed_at: (/* @__PURE__ */ new Date()).toISOString(),
@@ -25131,7 +25315,7 @@ async function collectPriority(client) {
           } catch {
           }
         }
-        checked3(await client.from("commercial_watchlist").update({
+        checked4(await client.from("commercial_watchlist").update({
           preview,
           identity_key: productIdentity(row.product_id, row.type, preview),
           next_priority_check: new Date(Date.now() + 30 * 6e4).toISOString(),
@@ -25140,11 +25324,11 @@ async function collectPriority(client) {
         collected++;
       } catch {
         failed++;
-        checked3(await client.from("commercial_watchlist").update({ next_priority_check: new Date(Date.now() + 36e5).toISOString() }).eq("source_key", row.source_key));
+        checked4(await client.from("commercial_watchlist").update({ next_priority_check: new Date(Date.now() + 36e5).toISOString() }).eq("source_key", row.source_key));
       }
     }
     const status = failed ? "PARTIAL" : "COMPLETED";
-    checked3(await client.from("commercial_collection_runs").update({ status, collected, failed, finished_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", runId));
+    checked4(await client.from("commercial_collection_runs").update({ status, collected, failed, finished_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", runId));
     return { status, collected, failed };
   } catch (error) {
     await client.from("commercial_collection_runs").update({ status: "FAILED", collected, failed, finished_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", runId);
@@ -25177,15 +25361,15 @@ async function probeOfficialSources(client) {
   for (const path of paths) {
     const start = Date.now();
     try {
-      const data = await read(path);
+      const data2 = await read(path);
       results.push({
         path,
         status: 200,
         ms: Date.now() - start,
-        fields: Object.keys(data).slice(0, 25),
-        count: Array.isArray(data.results) ? data.results.length : null,
-        hasDeadline: !!(data.finish_date || data.end_date || data.end_time),
-        position: Number.isInteger(data.position) ? data.position : null
+        fields: Object.keys(data2).slice(0, 25),
+        count: Array.isArray(data2.results) ? data2.results.length : null,
+        hasDeadline: !!(data2.finish_date || data2.end_date || data2.end_time),
+        position: Number.isInteger(data2.position) ? data2.position : null
       });
     } catch (error) {
       results.push({ path, status: error instanceof PreviewUpstreamError ? error.status : 0, ms: Date.now() - start });
@@ -25197,42 +25381,6 @@ var init_feasibility_probe = __esm({
   "src/server/commercial/feasibility-probe.ts"() {
     "use strict";
     init_product_preview();
-  }
-});
-
-// src/server/commercial/revalidate.ts
-var revalidate_exports = {};
-__export(revalidate_exports, {
-  revalidateProduct: () => revalidateProduct
-});
-function checked4(r) {
-  if (r.error) throw new Error("REVALIDATION_STORAGE_FAILED");
-  return r.data;
-}
-async function revalidateProduct(client, id, type) {
-  const preview = await configuredProductPreview(client, id, type, true);
-  const identity = productIdentity(id, type, preview);
-  const rows = [];
-  for (const table of ["commercial_observations", "commercial_rank_observations"]) for (let page = 0; ; page++) {
-    const data = checked4(await client.from(table).select("*").eq("identity_key", identity).gte("observed_at", new Date(priceHistoryStart(Date.now())).toISOString()).order("observed_at").order(table === "commercial_observations" ? "source_key" : "category_id").range(page * 1e3, page * 1e3 + 999));
-    rows.push(...(data ?? []).map((row) => table === "commercial_observations" ? { ...row, position: null } : { ...row, demand_category: row.category_id, price: null, currency: "BRL", seller_id: null, comparable: false, trusted: false }));
-    if (!data || data.length < 1e3) break;
-    if (page >= 99) throw new Error("REVALIDATION_HISTORY_LIMIT");
-  }
-  const feedback = checked4(await client.from("commercial_vertical_feedback").select("action").eq("vertical_key", "AUTOMOTIVE").eq("identity_key", identity).maybeSingle());
-  const commercial = rankProduct(preview, rows, feedback?.action ?? null);
-  checked4(await client.from("commercial_watchlist").update({ preview, identity_key: identity }).eq("source_key", type + ":" + id));
-  const ready = preview.status !== "UNAVAILABLE" && !!preview.title && preview.title !== id && !!safePreviewUrl(preview.image, true) && !!safePreviewUrl(preview.url) && !!preview.price && preview.currency === "BRL" && Date.parse(preview.priceCheckedAt ?? "") >= Date.now() - 6e4;
-  return { ready, preview: { ...preview, ...affiliateIntelligence(preview), commercial } };
-}
-var init_revalidate = __esm({
-  "src/server/commercial/revalidate.ts"() {
-    "use strict";
-    init_product_preview();
-    init_coupon_service();
-    init_service();
-    init_ranking();
-    init_price_truth();
   }
 });
 
@@ -25414,6 +25562,79 @@ function errorPage(title, message) {
   return layout(`<h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p><p><a href="/">Voltar</a></p>`);
 }
 
+// src/ui/whatsapp.ts
+var whatsappPanel = `<details id="whatsapp-central" class="panel"><summary>WhatsApp — conexão, grupos e envios</summary>
+<p>Envie pelo notebook conectado. Escolha o grupo de cada categoria; o nome “#7” não altera o vínculo.</p>
+<p id="wa-status" role="status" aria-live="polite"></p><div class="controls"><button id="wa-refresh">Atualizar conexão e envios</button><button id="wa-pair">Conectar notebook / renovar chave</button></div>
+<p>No notebook: baixe a configuração pelo botão acima, abra o conector local e importe o arquivo. Em seguida, escaneie o QR Code em Aparelhos conectados. Renovar a chave desconecta o conector anterior e pausa os destinos.</p>
+<div id="wa-destinations"></div><h3>Últimos envios</h3><div id="wa-jobs"></div></details>
+<dialog id="wa-preview" style="max-width:600px;width:95%;background:#131d31;color:#e2e8f0;border:1px solid #64748b;border-radius:12px"><h2>Revisar envio</h2><p id="wa-target"></p><pre id="wa-copy" style="white-space:pre-wrap;overflow-wrap:anywhere;font:inherit"></pre><p>Confirme o destino e a oferta. O envio ocorrerá pelo notebook quando estiver conectado, dentro de 30 minutos.</p><div class="controls"><button id="wa-confirm">Confirmar envio</button><button id="wa-close">Voltar</button></div></dialog>`;
+var whatsappScript = `
+let waData=null,waDraft=null,waWatching=false;
+const waVerticals=['AUTOMOTIVE','HOME','APPLIANCES','FASHION','BEAUTY','ELECTRONICS','KIDS','GAMES','SPORTS_FITNESS','PET'];
+const waLabels={DRAFT:'Aguardando sua confirmação',PENDING:'Na fila',SENDING:'Enviando',SENT:'Enviado ao WhatsApp',UNKNOWN:'Confirmação pendente — confira no grupo; não será reenviado',FAILED:'Não enviado — revise a oferta',CANCELLED:'Cancelado'};
+async function waRequest(action,body) {
+ const response=await fetch('/api/whatsapp/'+action,{method:body?'POST':'GET',credentials:'same-origin',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
+ const data=await response.json();
+ if(!response.ok) {const messages={AUTHORIZATION_REQUIRED:'Conecte sua conta Mercado Livre para configurar os envios.',DESTINATION_NOT_CONFIGURED:'Abra a Central WhatsApp e configure o grupo desta categoria.',DUPLICATE_SEND:'Este produto já está na fila, enviado ou com confirmação pendente para esse grupo.',OFFER_CHANGED:'A oferta mudou. Atualize os produtos antes de tentar novamente.',PRODUCT_NOT_MONITORED:'Este produto não está na carteira monitorada.',INVALID_AFFILIATE_LINK:'Cole um link oficial de afiliado válido.'};throw new Error(messages[data.errorCode]||'Não foi possível concluir. Atualize a Central WhatsApp e confira a configuração.');}
+ return data;
+}
+async function loadWhatsApp() {
+ try {
+  waData=await waRequest('status');const c=waData.connector;
+  const online=c?.connected&&Date.parse(c.heartbeat_at)>Date.now()-90000;
+  el('wa-status').textContent=online?'● Notebook conectado ao WhatsApp':'Notebook desconectado ou aguardando configuração. A fila não será marcada como enviada.';
+  el('wa-destinations').replaceChildren();
+  for(let i=0;i<waVerticals.length;i++) {
+   const current=waData.destinations.find(d=>d.vertical_key===waVerticals[i]);
+   const row=textNode('div','','wa-destination'),label=textNode('label',verticalNames[i]+' '),select=document.createElement('select');
+   select.className='affiliate-input';select.append(new Option('Escolha o grupo', ''));
+   for(const g of c?.groups||[])select.append(new Option(g.name,g.id));
+   if(current&&!Array.from(select.options).some(o=>o.value===current.group_id))select.append(new Option(current.group_name+' (fora da última conexão)',current.group_id));
+   select.value=current?.group_id||'';label.append(select);row.append(label);
+   const active=document.createElement('input');active.type='checkbox';active.checked=!!current?.enabled;
+   const enabledLabel=textNode('label',' Habilitar envios ');enabledLabel.prepend(active);row.append(enabledLabel);
+   const save=textNode('button','Salvar destino');save.addEventListener('click',async()=>{save.disabled=true;try{await waRequest('bind',{vertical:waVerticals[i],group_id:select.value,enabled:active.checked});await loadWhatsApp();}catch(e){el('wa-status').textContent=e.message;}finally{save.disabled=false;}});row.append(save);el('wa-destinations').append(row);
+  }
+  el('wa-jobs').replaceChildren();
+  for(const job of waData.jobs) {
+   const row=textNode('div','','wa-destination');row.append(textNode('strong',job.title),textNode('p',job.group_name+' · '+waLabels[job.state]+' · '+date(job.created_at)));
+   if(['DRAFT','PENDING'].includes(job.state)){const cancel=textNode('button','Cancelar');cancel.addEventListener('click',async()=>{try{await waRequest('cancel',{id:job.id});await loadWhatsApp();}catch(e){el('wa-status').textContent=e.message;}});row.append(cancel);}
+   el('wa-jobs').append(row);
+  }
+  if(!waData.jobs.length)el('wa-jobs').append(textNode('p','Nenhum envio solicitado.'));
+ }catch(e){el('wa-status').textContent=e.message;}
+}
+function whatsappSendButton(snapshot,input) {
+ const button=textNode('button','📤 Revisar envio para '+verticalNames[selectedVertical],'copy-button');
+ button.addEventListener('click',async()=>{
+  button.disabled=true;el('copy-status').textContent='Revalidando a oferta e preparando a mensagem…';
+  try{waDraft=await waRequest('prepare',{vertical:waVerticals[selectedVertical],id:snapshot.product_id,type:snapshot.type,link:input.value.trim()});el('wa-target').textContent='Destino: '+waDraft.group_name;el('wa-copy').textContent=waDraft.message;el('wa-preview').showModal();el('copy-status').textContent='';}
+  catch(e){el('copy-status').textContent=e.message;}finally{button.disabled=false;}
+ });return button;
+}
+if(el('whatsapp-central')) {
+ el('wa-refresh').addEventListener('click',loadWhatsApp);
+ el('whatsapp-central').addEventListener('toggle',()=>{if(el('whatsapp-central').open)loadWhatsApp();});
+ el('wa-pair').addEventListener('click',async()=>{
+  if(!confirm('Gerar a configuração do notebook? Isso revoga a chave anterior, cancela a fila pendente e pausa os destinos.'))return;
+  try{const config=await waRequest('pair',{}),url=URL.createObjectURL(new Blob([JSON.stringify(config)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='cyber-ofertas-conector.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);await loadWhatsApp();el('wa-status').textContent='Configuração baixada. Importe no conector local do notebook. O arquivo contém sua chave privada; não compartilhe.';}catch(e){el('wa-status').textContent=e.message;}
+ });
+ el('wa-close').addEventListener('click',()=>el('wa-preview').close());
+ el('wa-confirm').addEventListener('click',async()=>{
+  const button=el('wa-confirm');button.disabled=true;
+  try{await waRequest('approve',{id:waDraft.id});waWatching=true;el('wa-preview').close();el('copy-status').textContent='Envio colocado na fila. Será marcado como enviado após a confirmação do WhatsApp.';await loadWhatsApp();}
+  catch(e){el('wa-target').textContent=e.message;}finally{button.disabled=false;}
+ });
+ setInterval(async()=>{
+  if(waWatching&&waDraft)try {
+   const state=await waRequest('status'),job=state.jobs.find(j=>j.id===waDraft.id);
+   if(job&&!['DRAFT','PENDING','SENDING'].includes(job.state)) {waWatching=false;el('copy-status').textContent=waLabels[job.state];if(job.state==='SENT')await loadCommercial();}
+  }catch{}
+ },15000);
+}
+`;
+
 // src/ui/dashboard.ts
 function dashboardPage(props) {
   const connected = props.authorized && props.userId === "296984475";
@@ -25436,6 +25657,7 @@ function dashboardPage(props) {
 <style>
 *{box-sizing:border-box}body{margin:0;background:#090d16;color:#e2e8f0;font:15px system-ui,sans-serif}header{padding:24px max(24px,calc((100% - 1200px)/2));background:#111827;border-bottom:1px solid #25324a;display:flex;gap:20px;align-items:center;justify-content:space-between}h1{margin:0;font-size:24px}h2{font-size:19px;margin-top:0}p,small{color:#9bacc4}main{max-width:1250px;margin:auto;padding:28px 24px}.stats,.matrix{display:grid;gap:16px;grid-template-columns:repeat(4,minmax(0,1fr))}.matrix{grid-template-columns:repeat(2,minmax(0,1fr));padding:0;list-style:none}.card,.panel,.matrix li{border:1px solid #25324a;border-radius:12px;background:#131d31;padding:20px}.card strong{display:block;font-size:24px;margin:12px 0}.panel{margin-top:24px}.matrix li{background:#0e1728;padding:14px}.matrix span{display:block;color:#9bacc4;margin-top:6px}.badge{color:#6ee7b7}.controls{display:flex;flex-wrap:wrap;gap:12px}button,a{color:#93c5fd}button{border:1px solid #3b82f6;background:#1d4ed8;color:white;border-radius:8px;padding:12px 16px;font:inherit;cursor:pointer}button:disabled{opacity:.5;cursor:wait}button:focus-visible,a:focus-visible{outline:3px solid #fcd34d;outline-offset:3px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;text-align:left}th,td{padding:14px 10px;border-bottom:1px solid #25324a}th{color:#9bacc4;font-size:12px;text-transform:uppercase}#message{min-height:24px}@media(max-width:850px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:520px){.stats,.matrix{grid-template-columns:1fr}header{align-items:flex-start;flex-direction:column}.card strong{font-size:22px}}
 .results{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px}.product-card{background:#0e1728;border:1px solid #25324a;border-radius:12px;overflow:hidden;display:flex;flex-direction:column}.product-photo{height:200px;background:#fff;display:flex;align-items:center;justify-content:center;color:#64748b}.product-photo img{height:100%;width:100%;object-fit:contain}.product-body{padding:16px;display:flex;flex-direction:column;gap:10px;flex:1}.product-body h3{font-size:16px;margin:0;line-height:1.4}.product-body p{margin:0;font-size:13px;line-height:1.5;overflow-wrap:anywhere}.product-price{font-size:23px;color:#6ee7b7}.product-link{display:block;background:#1d4ed8;color:white;padding:12px;border-radius:8px;text-align:center;text-decoration:none;margin-top:auto}.product-meta{font-size:11px;color:#9bacc4;overflow-wrap:anywhere}#more{margin-top:20px}#more[hidden]{display:none}.affiliate-input{width:100%;padding:10px;background:#131d31;color:#e2e8f0;border:1px solid #64748b;border-radius:6px}.coupon-bar{display:flex;gap:10px;overflow:auto;padding:12px 0}.copy-button{background:#065f46}.filters{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.filters [aria-pressed="true"]{background:#065f46;border-color:#6ee7b7}#manual-copy{width:100%;min-height:160px}#manual-copy[hidden]{display:none}.matrix li{padding:0}.vertical-button{width:100%;height:100%;text-align:left;padding:16px;background:transparent;border-color:transparent}.vertical-button:hover{background:#1a2942}.vertical-button[aria-pressed="true"]{border-color:#60a5fa;background:#172b49}#vertical-products{scroll-margin-top:20px}.product-details,.price-history{border-top:1px solid #25324a;padding-top:12px;margin-top:4px}.product-details summary,.price-history summary{cursor:pointer;color:#bcd0e8;font-size:13px;line-height:1.5}.product-details[open] summary,.price-history[open] summary{margin-bottom:12px}.product-details>.product-body{padding:12px 0 0}.product-details>span{display:block;margin-top:8px}.product-actions{display:grid;gap:8px}.product-actions button{background:transparent;border-color:#41516a;font-size:13px}.history-table{font-size:11px;font-variant-numeric:tabular-nums}.history-table th,.history-table td{padding:10px 3px;white-space:nowrap}.history-table th{font-size:10px;text-transform:none}.history-table caption{text-align:left;color:#9bacc4;font-size:11px;margin:10px 0}.price-history p{font-size:11px;margin-top:10px}.product-link{margin-top:0}.product-card{align-self:start}.product-body del{color:#9bacc4;font-size:14px}summary:focus-visible{outline:2px solid #fcd34d;outline-offset:3px}@media(max-width:520px){main{padding:20px 14px}.results{grid-template-columns:minmax(0,1fr)}.product-photo{height:240px}}
+.wa-destination{display:grid;gap:10px;margin:12px 0;padding:12px;border:1px solid #25324a;border-radius:8px}dialog::backdrop{background:#000b}
 </style></head><body><header><div><h1>AutoAchado.AI</h1><p>Dashboard Operacional · Robô de mineração · MLB / Brasil · 0B3D-C</p></div><div class="badge">${connected ? "● Mercado Livre conectado" : "⚠ Mercado Livre não conectado"}<br><small>ID: 296984475</small> · <a href="/auth/start">Conectar conta</a></div></header>
 <main><section class="stats" aria-label="Indicadores">
 <div class="card">Status do Robô<strong>Operacional ✅</strong><small>Automotivo V1</small></div>
@@ -25443,7 +25665,7 @@ function dashboardPage(props) {
 <div class="card">Oportunidades no Banco<strong id="count">—</strong><small>Registros em public.highlight_snapshots</small></div>
 <div class="card">Última Sincronização<strong id="synced">—</strong><small>Atualização automática a cada 30 segundos</small></div></section>
 <section class="panel"><h2>Matriz de Expansão (10 Verticais Estratégicas)</h2><ol class="matrix">${verticals.map(([name, id], i) => `<li><button id="vertical-${i}" class="vertical-button" aria-controls="vertical-products" aria-pressed="${i === 0}">${i + 1}. ${name}<span>${id} · ${i === 0 ? "ATIVO (144 Cats)" : "PLANEJADO"}</span></button></li>`).join("")}</ol></section>
-<section class="panel" id="vertical-products"><h2 id="vertical-title" tabindex="-1">Automotivo — produtos e ofertas</h2><p>Melhores oportunidades primeiro: ofertas aprovadas por desconto e demanda; em acompanhamento, maior potencial de venda.</p><div class="controls filters"><button id="rank-ALL" aria-pressed="true">Todos</button><button id="rank-APPROVED" aria-pressed="false">🔥 Prontos para divulgar</button><button id="rank-OBSERVING" aria-pressed="false">⏳ Em acompanhamento</button><button id="rank-SENT" aria-pressed="false">✅ Enviados</button><button id="refresh">🔄 Atualizar</button></div><p id="message" role="status" aria-live="polite"></p><p id="commercial-status" role="status" aria-live="polite"></p><p id="copy-status" role="status" aria-live="polite"></p><textarea id="manual-copy" hidden readonly aria-label="Texto para copiar manualmente"></textarea><p>Para copiar a divulgação, cole no produto o link criado pelo gerador oficial de afiliados.</p><p id="commercial-summary"></p><div id="commercial-results" class="results"></div><button id="commercial-more" hidden>Mostrar mais desta seleção</button></section><details id="robot-admin" class="panel"><summary>Administração do robô</summary><p>Ferramentas técnicas de coleta e diagnóstico — Automotivo.</p><div class="controls"><button id="sweep">🚀 Executar varredura</button><button id="smoke">⚡ Teste de coleta (2 categorias)</button><button id="collect-evidence">📊 Coletar evidências agora</button></div><p id="admin-summary"></p><details id="raw-products" class="panel"><summary>Explorar todos os registros minerados (sem aprovação comercial)</summary><section><h2>Produtos encontrados</h2><p>Prévia dos destaques minerados: foto, descrição e preço informado pelo Mercado Livre. Preço e disponibilidade podem mudar; os destaques ainda não representam descontos validados.</p><h2>Central de Cupons Ativos</h2><div id="coupons" class="coupon-bar" aria-live="polite">Consultando campanhas verificadas…</div><p>Cupons sugeridos conforme categoria e valor. Confira as restrições e a aplicação no checkout. Para divulgar com comissão, cole em cada produto o link criado no gerador oficial de afiliados do Mercado Livre. Os links ficam salvos somente neste navegador.</p><div class="filters" aria-label="Filtrar produtos"><button id="filter-all" aria-pressed="true">Todas as ofertas completas</button><button id="filter-discount" aria-pressed="false">🔥 Desconto anunciado ≥ 5%</button><button id="filter-tier" aria-pressed="false">⚡ Prioridade Tier A</button><button id="filter-coupon" aria-pressed="false">🏷️ Cupom sugerido</button><button id="filter-incomplete" aria-pressed="false">Registros incompletos</button></div><p id="results-summary"></p><div id="snapshots" class="results" aria-label="Produtos minerados"></div><button id="more" hidden>Mostrar mais produtos</button></section></details></details></main>
+<section class="panel" id="vertical-products"><h2 id="vertical-title" tabindex="-1">Automotivo — produtos e ofertas</h2><p>Melhores oportunidades primeiro: ofertas aprovadas por desconto e demanda; em acompanhamento, maior potencial de venda.</p><div class="controls filters"><button id="rank-ALL" aria-pressed="true">Todos</button><button id="rank-APPROVED" aria-pressed="false">🔥 Prontos para divulgar</button><button id="rank-OBSERVING" aria-pressed="false">⏳ Em acompanhamento</button><button id="rank-SENT" aria-pressed="false">✅ Enviados</button><button id="refresh">🔄 Atualizar</button></div><p id="message" role="status" aria-live="polite"></p><p id="commercial-status" role="status" aria-live="polite"></p><p id="copy-status" role="status" aria-live="polite"></p><textarea id="manual-copy" hidden readonly aria-label="Texto para copiar manualmente"></textarea><p>Para copiar a divulgação, cole no produto o link criado pelo gerador oficial de afiliados.</p><p id="commercial-summary"></p><div id="commercial-results" class="results"></div><button id="commercial-more" hidden>Mostrar mais desta seleção</button></section>${whatsappPanel}<details id="robot-admin" class="panel"><summary>Administração do robô</summary><p>Ferramentas técnicas de coleta e diagnóstico — Automotivo.</p><div class="controls"><button id="sweep">🚀 Executar varredura</button><button id="smoke">⚡ Teste de coleta (2 categorias)</button><button id="collect-evidence">📊 Coletar evidências agora</button></div><p id="admin-summary"></p><details id="raw-products" class="panel"><summary>Explorar todos os registros minerados (sem aprovação comercial)</summary><section><h2>Produtos encontrados</h2><p>Prévia dos destaques minerados: foto, descrição e preço informado pelo Mercado Livre. Preço e disponibilidade podem mudar; os destaques ainda não representam descontos validados.</p><h2>Central de Cupons Ativos</h2><div id="coupons" class="coupon-bar" aria-live="polite">Consultando campanhas verificadas…</div><p>Cupons sugeridos conforme categoria e valor. Confira as restrições e a aplicação no checkout. Para divulgar com comissão, cole em cada produto o link criado no gerador oficial de afiliados do Mercado Livre. Os links ficam salvos somente neste navegador.</p><div class="filters" aria-label="Filtrar produtos"><button id="filter-all" aria-pressed="true">Todas as ofertas completas</button><button id="filter-discount" aria-pressed="false">🔥 Desconto anunciado ≥ 5%</button><button id="filter-tier" aria-pressed="false">⚡ Prioridade Tier A</button><button id="filter-coupon" aria-pressed="false">🏷️ Cupom sugerido</button><button id="filter-incomplete" aria-pressed="false">Registros incompletos</button></div><p id="results-summary"></p><div id="snapshots" class="results" aria-label="Produtos minerados"></div><button id="more" hidden>Mostrar mais produtos</button></section></details></details></main>
 <script>
 const el = id => document.getElementById(id);
 let busy = false;
@@ -25753,6 +25975,7 @@ function fillCard(card, snapshot, preview, timeline) {
       } catch {el('copy-status').textContent='Não foi possível revalidar a oferta. Tente novamente antes de divulgar.';}
       finally {button.disabled=false;if(button.textContent==='Conferindo oferta…') button.textContent='📋 Copiar texto p/ WhatsApp';}
     }); body.append(button);
+    if(timeline) body.append(whatsappSendButton(snapshot,input));
   }
   body.append(details);
   card.append(photo); card.append(body);
@@ -25812,6 +26035,7 @@ async function act(action) {
   finally { busy = false; document.querySelectorAll('button').forEach(button => button.disabled = false); updateVerticalControls(); }
 }
 for (const action of ['sweep','smoke','refresh']) el(action).addEventListener('click', () => act(action));
+${whatsappScript}
 act('refresh'); setInterval(() => { if (!busy && !loading) refresh().catch(() => { el('message').textContent = 'Falha ao sincronizar. Use Atualizar Dados para tentar novamente.'; }); }, 30000);
 </script></body></html>`;
 }
@@ -26016,6 +26240,68 @@ async function handleRequest(request, response, overrides = {}) {
   const dependencies = { ...DEFAULT_DEPENDENCIES, ...overrides };
   const url = requestUrl(request);
   const method = request.method ?? "GET";
+  if (url.pathname.startsWith("/api/whatsapp/")) {
+    try {
+      const action = url.pathname.slice("/api/whatsapp/".length);
+      const worker = ["heartbeat", "claim", "finish"].includes(action);
+      if (!worker && !["status", "pair", "bind", "prepare", "approve", "cancel"].includes(action)) {
+        sendJson(response, 404, { errorCode: "NOT_FOUND" });
+        return;
+      }
+      if (method !== (action === "status" ? "GET" : "POST")) {
+        sendJson(response, 405, { errorCode: "METHOD_NOT_ALLOWED" });
+        return;
+      }
+      const config = dependencies.loadAppConfig(), origin = new URL(config.redirectUri).origin;
+      if (!worker) {
+        const session = readAuthorizationSession(request.headers.cookie, config.sessionSecret);
+        if (!session || session.userId !== 296984475) {
+          sendJson(response, 401, { errorCode: "AUTHORIZATION_REQUIRED" });
+          return;
+        }
+        if (method === "POST" && request.headers.origin !== origin) {
+          sendJson(response, 403, { errorCode: "ORIGIN_NOT_ALLOWED" });
+          return;
+        }
+      }
+      const { createOperationalDiscoveryAdapter: createOperationalDiscoveryAdapter2 } = await Promise.resolve().then(() => (init_operational(), operational_exports));
+      const client = createOperationalDiscoveryAdapter2().client;
+      const { workerAuth: workerAuth2, outboxAction: outboxAction2 } = await Promise.resolve().then(() => (init_service2(), service_exports2));
+      const generation = worker ? await workerAuth2(client, request.headers.authorization) : void 0;
+      let body = {};
+      if (method === "POST") {
+        if (mediaType(request.headers["content-type"]) !== "application/json") {
+          sendJson(response, 415, { errorCode: "JSON_REQUIRED" });
+          return;
+        }
+        const chunks = [];
+        let bytes = 0;
+        for await (const chunk of request) {
+          const buffer = Buffer.from(chunk);
+          bytes += buffer.length;
+          if (bytes > 96e3) {
+            sendJson(response, 413, { errorCode: "BODY_TOO_LARGE" });
+            return;
+          }
+          chunks.push(buffer);
+        }
+        try {
+          body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+        } catch {
+          sendJson(response, 400, { errorCode: "INVALID_JSON" });
+          return;
+        }
+        if (!body || typeof body !== "object" || Array.isArray(body)) {
+          sendJson(response, 400, { errorCode: "INVALID_JSON" });
+          return;
+        }
+      }
+      if (!sendJson(response, 200, await outboxAction2(client, action, body, origin, generation), void 0, 256 * 1024)) sendJson(response, 503, { errorCode: "OUTBOX_RESPONSE_TOO_LARGE" });
+    } catch (error) {
+      sendJson(response, error?.status ?? 503, { errorCode: error?.code ?? "OUTBOX_UNAVAILABLE" });
+    }
+    return;
+  }
   if (url.pathname.startsWith("/api/commercial/")) {
     try {
       const collecting = url.pathname === "/api/commercial/collect";

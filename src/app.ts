@@ -239,6 +239,35 @@ export async function handleRequest(
   const url = requestUrl(request);
   const method = request.method ?? "GET";
 
+  if(url.pathname.startsWith('/api/whatsapp/')) {
+    try {
+      const action=url.pathname.slice('/api/whatsapp/'.length);
+      const worker=['heartbeat','claim','finish'].includes(action);
+      if(!worker&&!['status','pair','bind','prepare','approve','cancel'].includes(action)) {sendJson(response,404,{errorCode:'NOT_FOUND'});return;}
+      if(method!==(action==='status'?'GET':'POST')) {sendJson(response,405,{errorCode:'METHOD_NOT_ALLOWED'});return;}
+      const config=dependencies.loadAppConfig(),origin=new URL(config.redirectUri).origin;
+      if(!worker) {
+        const session=readAuthorizationSession(request.headers.cookie,config.sessionSecret);
+        if(!session||session.userId!==296984475) {sendJson(response,401,{errorCode:'AUTHORIZATION_REQUIRED'});return;}
+        if(method==='POST'&&request.headers.origin!==origin) {sendJson(response,403,{errorCode:'ORIGIN_NOT_ALLOWED'});return;}
+      }
+      const {createOperationalDiscoveryAdapter}=await import('./server/discovery/operational.js');
+      const client=createOperationalDiscoveryAdapter().client;
+      const {workerAuth,outboxAction}=await import('./server/whatsapp/service.js');
+      const generation=worker?await workerAuth(client,request.headers.authorization):undefined;
+      let body:any={};
+      if(method==='POST') {
+        if(mediaType(request.headers['content-type'])!=='application/json') {sendJson(response,415,{errorCode:'JSON_REQUIRED'});return;}
+        const chunks:Buffer[]=[];let bytes=0;
+        for await(const chunk of request) {const buffer=Buffer.from(chunk);bytes+=buffer.length;if(bytes>96000){sendJson(response,413,{errorCode:'BODY_TOO_LARGE'});return;}chunks.push(buffer);}
+        try {body=JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch {sendJson(response,400,{errorCode:'INVALID_JSON'});return;}
+        if(!body||typeof body!=='object'||Array.isArray(body)){sendJson(response,400,{errorCode:'INVALID_JSON'});return;}
+      }
+      if(!sendJson(response,200,await outboxAction(client,action,body,origin,generation),undefined,256*1024))sendJson(response,503,{errorCode:'OUTBOX_RESPONSE_TOO_LARGE'});
+    }catch(error:any){sendJson(response,error?.status??503,{errorCode:error?.code??'OUTBOX_UNAVAILABLE'});}
+    return;
+  }
+
   if (url.pathname.startsWith("/api/commercial/")) {
     try {
       const collecting=url.pathname === "/api/commercial/collect";
