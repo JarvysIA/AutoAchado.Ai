@@ -21,6 +21,8 @@ O envio é registrado após ACK do servidor WhatsApp (não significa leitura por
 
 Notebook desligado, suspenso ou sem internet não envia. Inicie o script novamente após reiniciar o Windows. Não instalamos inicialização automática nem alteramos as opções de energia. Se a sessão desconectar, reinicie o processo local; não remova a sessão sem necessidade.
 
+Falhas de navegação interna do WhatsApp são tratadas com tentativas limitadas e reconexão, mantendo a página local disponível. Use **Reconectar WhatsApp** se necessário. Se aparecer **Chave revogada**, importe a configuração mais recente baixada da dashboard; não é necessário gerar outra chave. Renovar a chave na dashboard invalida o arquivo anterior.
+
 ## Verificação e limites
 
 `npm test --prefix whatsapp-connector` testa intenção durável, ACK, expiração e falhas sem enviar mensagens reais. Os testes HTTP e SQL ficam no projeto principal. A confirmação real depende do QR Code e de um envio escolhido pelo operador.
