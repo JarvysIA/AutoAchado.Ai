@@ -6,6 +6,7 @@ import WWebJS from 'whatsapp-web.js';
 import QRCode from 'qrcode';
 import {deliver} from './delivery.mjs';
 import {guardInjection} from './injection-guard.mjs';
+import {readGroups,groupDeliveryClient} from './groups.mjs';
 const root=path.dirname(fileURLToPath(import.meta.url)),stateDir=path.join(root,'.state');
 await mkdir(stateDir,{recursive:true});
 const configFile=path.join(stateDir,'config.json'),journalFile=path.join(stateDir,'journal.json');
@@ -34,7 +35,7 @@ function validConfig(c){return c&&c.baseUrl==='https://autoachado-ai.vercel.app'
 if(config&&!validConfig(config))throw new Error('Configuração local inválida.');
 async function api(action,body){
  const r=await fetch(config.baseUrl+'/api/whatsapp/'+action,{method:'POST',headers:{authorization:'Bearer '+config.token,'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(90000)});
- if(!r.ok)throw new Error(r.status===401?'CONNECTOR_REVOKED':'API_UNAVAILABLE');return r.json();
+ if(!r.ok){let code='UNKNOWN';try{const payload=await r.json();if(/^[A-Z_]+$/.test(payload.errorCode??''))code=payload.errorCode;}catch{}throw new Error(r.status===401?'CONNECTOR_REVOKED':'API_'+action+'_'+r.status+'_'+code);}return r.json();
 }
 async function persist(record){journal[record.id]=record;await atomic(journalFile,journal);}
 async function report(record){await api('finish',{id:record.id,claim:record.claim,state:record.state,message_id:record.message_id,reason:record.reason??null});}
@@ -53,24 +54,23 @@ async function reconcile(){
  }
 }
 async function tick(){
- if(busy||!config||!client||recovering||recoveryTimer)return;busy=true;
+ if(busy||!config||!client||recovering||recoveryTimer)return;busy=true;let stage='READ_GROUPS';
  try {
-  const chats=connected?await client.getChats():[];
-  const groups=chats.filter(c=>c.isGroup).slice(0,300).map(c=>({id:c.id._serialized,name:c.name.slice(0,200)}));
-  await api('heartbeat',{connected,groups});
+  const groups=connected?(await readGroups(client)).slice(0,300):[];
+  stage='HEARTBEAT';await api('heartbeat',{connected,groups});
   if(!connected)return;
-  await reconcile();
-  const result=await api('claim',{});
+  stage='RECONCILE';await reconcile();
+  stage='CLAIM';const result=await api('claim',{});
   if(result.job){
    if(journal[result.job.id]){status='Envio já registrado localmente; revisão necessária.';return;}
    status='Processando envio confirmado no app…';
    // Do not race a timeout with another send. A hung client leaves the queue locked;
    // the server marks it UNKNOWN rather than giving the same work to another process.
-   const record=await deliver(result.job,{client,persist,waitAck});
+   const record=await deliver(result.job,{client:groupDeliveryClient(client),persist,waitAck});
    await persist(record);await report(record);record.reported=record.state;await persist(record);
    status=record.state==='SENT'?'Envio confirmado pelo servidor do WhatsApp.':'Envio não confirmado. Confira a Central.';
-  }else status='Conectado. Aguardando envios confirmados na dashboard.';
- }catch(e){status=e.message==='CONNECTOR_REVOKED'?'Chave revogada. Importe uma nova configuração e reinicie o conector.':'Sem comunicação. Os envios não serão repetidos automaticamente.';}
+  }else status='Conectado. '+groups.length+' grupos disponíveis. Aguardando envios confirmados na dashboard.';
+ }catch(e){console.error(JSON.stringify({event:'CONNECTOR_TICK_FAILED',stage,error:String(e.message).replace(/https?:\/\/\S+/g,'[url]').slice(0,240)}));status=e.message==='CONNECTOR_REVOKED'?'Chave revogada. Importe uma nova configuração e reinicie o conector.':stage==='READ_GROUPS'?'WhatsApp conectado, mas a leitura dos grupos falhou. Nova tentativa automática em instantes.':'Falha na comunicação com a Central ('+stage+'). Os envios estão pausados.';}
  finally{busy=false;}
 }
 async function start(){
