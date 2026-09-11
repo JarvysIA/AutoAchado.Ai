@@ -25,3 +25,13 @@ it('simulates against persisted discovery data without writes or changing member
 it('fails visibly on a read error instead of reporting a truncated successful selection',async()=>{
  await expect(runSelectionSimulation(fixture(true).client,now)).rejects.toThrow('SELECTION_SIMULATION_READ_FAILED');
 });
+
+it('allows sent and legacy shared products to renew while preserving explicit interest',async()=>{
+ const {client,tables}=fixture();
+ tables.commercial_sent_products!.push({identity_key:'catalog:MLB1',sent_at:new Date(now).toISOString()});
+ tables.commercial_vertical_feedback!.push({identity_key:'catalog:MLB1',action:'SHARED'});
+ expect((await runSelectionSimulation(client,now)).currentEvaluated[0]!.protected).toBe(false);
+ tables.commercial_vertical_feedback![0].action='INTERESTED';
+ expect((await runSelectionSimulation(client,now)).currentEvaluated[0]!.protected).toBe(true);
+ expect(tables.commercial_sent_products).toHaveLength(1);
+});

@@ -15,7 +15,7 @@ export async function runSelectionSimulation(client:SupabaseClient,now=Date.now(
  return analyzeSelectionInputs(data,now,evaluationLimit);
 }
 export function analyzeSelectionInputs(input:SelectionInputs,now=Date.now(),evaluationLimit=500) {
- const {snapshots,watches,memberships,feedback,sent,changes}=input;
+ const {snapshots,watches,memberships,feedback,changes}=input;
  const ranks=new Map<string,RankSignal[]>();
  for(const r of snapshots) {
   const key=r.type+':'+r.product_id,list=ranks.get(key)??[];
@@ -23,7 +23,7 @@ export function analyzeSelectionInputs(input:SelectionInputs,now=Date.now(),eval
  }
  const bySource=new Map(watches.map(w=>[w.source_key,w]));
  const active=new Set(memberships.filter(m=>m.monitor).map(m=>m.identity_key));
- const protectedIds=new Set([...sent.map(s=>s.identity_key),...feedback.filter(f=>['SHARED','INTERESTED'].includes(f.action)).map(f=>f.identity_key)]);
+ const protectedIds=new Set(feedback.filter(f=>f.action==='INTERESTED').map(f=>f.identity_key));
  const actions=new Map(feedback.map(f=>[f.identity_key,f.action]));
  const monitoringStarts=new Map(changes.map(c=>[c.added_source,c.changed_at]));
  const candidates:SelectionCandidate[]=[...new Set([...ranks.keys(),...memberships.map(m=>m.source_key)])].map(key=>{

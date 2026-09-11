@@ -8,7 +8,7 @@ describe("operational dashboard browser script", () => {
     const node = () => ({ textContent: "", disabled: false, children: [] as any[], handlers: {} as any, value: "", hidden:false, open:false, querySelector(selector:string):any {for(const child of this.children) {if(child.className===selector.slice(1)) return child;const found=child.querySelector(selector);if(found)return found;}return null;}, focus() {}, scrollIntoView() {}, select() {}, attributes:{} as any, setAttribute(key:string,value:string) {this.attributes[key]=value;},
       append(child: any) { this.children.push(child); }, replaceChildren(...children:any[]) { this.children = children; },
       addEventListener(event: string, handler: any) { this.handlers[event] = handler; } });
-    for (const id of ["vertical-title", "vertical-products", ...Array.from({length:10},(_,i)=>"vertical-"+i), "count", "synced", "snapshots", "message", "sweep", "smoke", "refresh", "more", "results-summary", "raw-products", "commercial-results", "commercial-status", "commercial-summary", "commercial-more", "collect-evidence", "rank-APPROVED", "rank-OBSERVING", "rank-ALL", "rank-SENT", "admin-summary", "coupons", "copy-status", "manual-copy", ...["all","discount","tier","coupon","incomplete"].map(f => "filter-" + f)]) elements.set(id, node());
+    for (const id of ["vertical-title", "vertical-products", ...Array.from({length:10},(_,i)=>"vertical-"+i), "count", "synced", "snapshots", "message", "sweep", "smoke", "refresh", "more", "results-summary", "raw-products", "commercial-results", "commercial-status", "commercial-summary", "commercial-more", "collect-evidence", "rank-APPROVED", "rank-ALL", "rank-SENT", "admin-summary", "coupons", "copy-status", "manual-copy", ...["all","discount","tier","coupon","incomplete"].map(f => "filter-" + f)]) elements.set(id, node());
     elements.get("raw-products").open=true;
     const calls: any[] = [];
     const copied: string[] = [];
@@ -106,11 +106,18 @@ describe("operational dashboard browser script", () => {
     expect(evidence).toContain('7 dias no mesmo ranking');
     expect(evidence).toContain('Desconto histórico ainda não confirmado');
     expect(evidence).toContain('2 dias observados · 1 vendedores');
-    const sentAction=()=>elements.get('commercial-results').children[0].querySelector('.product-actions').children.find((n:any)=>n.textContent.includes('Marcar como enviado')||n.textContent==='Desfazer enviado');
+    const sentAction=()=>elements.get('commercial-results').children[0].querySelector('.product-actions').children.find((n:any)=>n.textContent.includes('Marcar como divulgado')||n.textContent==='Desfazer divulgação');
     expect(sentAt).toBeNull();
     await sentAction().handlers.click();
-    expect(sentAt).not.toBeNull();expect(sentAction().textContent).toBe('Desfazer enviado');
+    expect(sentAt).not.toBeNull();expect(sentAction().textContent).toBe('Desfazer divulgação');
     await sentAction().handlers.click();expect(sentAt).toBeNull();
     context.fetch=originalFetch;
   });
+});
+
+it('exposes only monitored, ready and published product tabs',()=>{
+ const html=dashboardPage({authorized:true,userId:'296984475'});
+ expect([...html.matchAll(/<button id="rank-([^"]+)"/g)].map(m=>m[1])).toEqual(['ALL','APPROVED','SENT']);
+ expect(html).toContain('>Monitorados</button>');
+ expect(html).toContain('>✅ Divulgados</button>');
 });
