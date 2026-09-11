@@ -301,7 +301,30 @@ function fillCard(card, snapshot, preview, timeline) {
   const href = safeUrl(preview.url, false) || publicUrl;
   if (href) {
     const link = textNode('a', (preview.status === 'CATALOG' || !preview.url) ? 'Abrir produto e ofertas ↗' : 'Abrir anúncio no Mercado Livre ↗', 'product-link');
-    link.href = href; link.target = '_blank'; link.rel = 'noopener noreferrer'; body.append(link);
+    link.href = href; link.target = '_blank'; link.rel = 'noopener noreferrer';
+    link.addEventListener('click',async event=>{
+      event.preventDefault();
+      if(link.datasetChecking) return;
+      link.datasetChecking=true;
+      const popup=window.open('about:blank','_blank');
+      if(popup) popup.opener=null;
+      link.textContent='Conferindo preço e anúncio…';
+      try {
+        const data=await request('/api/commercial/revalidate?id='+encodeURIComponent(snapshot.product_id)+'&type='+encodeURIComponent(snapshot.type),'POST');
+        const destination=safeUrl(data.preview?.url,false);
+        if(!data.ready || !destination) throw new Error('OFFER_UNAVAILABLE');
+        const changed=data.preview.price!==preview.price;
+        const commercialCard=!!preview.commercial;
+        Object.assign(preview,data.preview);
+        if(commercialCard) await loadCommercial(); else fillCard(card,snapshot,preview,timeline);
+        el('copy-status').textContent=changed?'Preço atualizado. Confira o anúncio e gere o link de afiliado dessa oferta.':'Anúncio da oferta consultado agora. Confira preço e condições no Mercado Livre.';
+        if(popup) popup.location.replace(destination); else window.location.assign(destination);
+      } catch {
+        if(popup) popup.close();
+        el('copy-status').textContent='Não foi possível confirmar o preço e o anúncio agora. Atualize os dados e tente novamente.';
+      } finally {link.datasetChecking=false;link.textContent='Abrir anúncio no Mercado Livre ↗';}
+    });
+    body.append(link);
   } else {
     body.append(textNode('p', preview.status === 'UNAVAILABLE' ? 'Anúncio indisponível no momento.' : 'Link não resolvido: dados indisponíveis ou acesso restrito pelo Mercado Livre.'));
   }

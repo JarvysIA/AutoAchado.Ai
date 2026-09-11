@@ -106,6 +106,14 @@ describe("operational dashboard browser script", () => {
     expect(evidence).toContain('7 dias no mesmo ranking');
     expect(evidence).toContain('Desconto histórico ainda não confirmado');
     expect(evidence).toContain('2 dias observados · 1 vendedores');
+    let opened=''; let closed=false;
+    context.window={open:()=>({opener:null,location:{replace:(url:string)=>{opened=url;}},close:()=>{closed=true;}})};
+    const openAction=()=>elements.get('commercial-results').children[0].querySelector('.product-link');
+    await openAction().handlers.click({preventDefault(){}});
+    expect(opened).toBe('https://produto.mercadolivre.com.br/MLB-123-_JM');
+    opened='';revalidationReady=false;
+    await openAction().handlers.click({preventDefault(){}});
+    expect(opened).toBe('');expect(closed).toBe(true);revalidationReady=true;
     const sentAction=()=>elements.get('commercial-results').children[0].querySelector('.product-actions').children.find((n:any)=>n.textContent.includes('Marcar como divulgado')||n.textContent==='Desfazer divulgação');
     expect(sentAt).toBeNull();
     await sentAction().handlers.click();

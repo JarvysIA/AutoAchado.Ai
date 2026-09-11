@@ -10,6 +10,7 @@ export interface ProductPreview {
   price: number | null;
   currency: string;
   catalog_product_id?: string;
+  offer_item_id?: string;
   seller_id?: string;
   seller_level?: string;
   seller_trusted?: boolean;
@@ -79,6 +80,8 @@ export async function catalogOfferPreview(catalogId: string, base: ProductPrevie
     || !/^\d+$/.test(String(offer.seller_id)) || offer.currency_id !== 'BRL') return null;
   const preview: ProductPreview = {...base, seller_id:String(offer.seller_id), seller_trusted:false, comparable:false};
   delete preview.seller_level;
+  preview.offer_item_id=offer.item_id;
+  preview.url=publicProductUrl(offer.item_id,"ITEM");
   preview.price=null;
   setPrice(preview,offer.price,offer.currency_id,'CATALOG_OFFER',offer.original_price);
   if (!preview.price || (typeof offer.available_quantity === 'number' && offer.available_quantity <= 0)) return null;
@@ -141,6 +144,8 @@ export async function resolveProductPreview(id: string, type: string, read: Prev
       }
     }
     if (typeof itemId !== "string" || !/^MLB\d+$/.test(itemId)) return preview;
+    preview.offer_item_id=itemId;
+    preview.url=publicProductUrl(itemId,"ITEM");
     let item;
     try { item = await read(`/items/${itemId}`); }
     catch {
