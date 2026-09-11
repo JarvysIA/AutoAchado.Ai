@@ -1,5 +1,6 @@
+import {AUTOMOTIVE_MLB_DISCOVERY_TOOLS} from '../../commerce/discovery/automotive-tools.js';
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { AUTOMOTIVE_MLB_DISCOVERY_V1, planDiscoveryRun } from "../../commerce/discovery/planner.js";
+import { planDiscoveryRun } from "../../commerce/discovery/planner.js";
 import type {
   DiscoveryErrorCode,
   DiscoveryEligibleCategory,
@@ -21,9 +22,9 @@ import { runDiscoveryOrchestrator } from "./orchestrator.js";
 
 export const COMMERCE_DISCOVERY_LIVE_SMOKE_CONTRACT = "commerce-discovery-live-smoke/v1" as const;
 export const DISCOVERY_LIVE_SMOKE_OPERATION_ID = "0b3d-b-runtime-smoke-v1" as const;
-const EXPECTED_ELIGIBLE = 144;
+const EXPECTED_ELIGIBLE = 155;
 const EXPECTED_A = 28;
-const EXPECTED_B = 116;
+const EXPECTED_B = 127;
 const SAMPLE_LIMIT = 10;
 const SUPABASE_RUNTIME_TIMEOUT_MS = 10_000;
 
@@ -151,7 +152,7 @@ export async function runDiscoveryLiveSmoke(
     const planningStartedAt = nowMs();
     let plan: DiscoveryRunPlan;
     try {
-      plan = planDiscoveryRun(eligibleCategories, "SMOKE", AUTOMOTIVE_MLB_DISCOVERY_V1);
+      plan = planDiscoveryRun(eligibleCategories, "SMOKE", AUTOMOTIVE_MLB_DISCOVERY_TOOLS);
     } catch {
       throw new DiscoveryLiveSmokeError("DISCOVERY_LIVE_PLAN_MISMATCH");
     }
@@ -250,9 +251,9 @@ export async function runConfiguredDiscoveryLiveSmoke(): Promise<DiscoveryLiveSm
   return runDiscoveryLiveSmoke({
     loadEligibleCategories: () => loadDiscoveryEligibleCategories({
       client: discoveryRegistryReadClientFromSupabase(client),
-      marketplaceKey: AUTOMOTIVE_MLB_DISCOVERY_V1.marketplaceKey,
-      siteId: AUTOMOTIVE_MLB_DISCOVERY_V1.siteId,
-      verticalKey: AUTOMOTIVE_MLB_DISCOVERY_V1.verticalKey,
+      marketplaceKey: AUTOMOTIVE_MLB_DISCOVERY_TOOLS.marketplaceKey,
+      siteId: AUTOMOTIVE_MLB_DISCOVERY_TOOLS.siteId,
+      verticalKey: AUTOMOTIVE_MLB_DISCOVERY_TOOLS.verticalKey,
     }),
     rotateAccessToken: () => rotationService.rotateMeliAccessTokenForRuntimeOperation(DISCOVERY_LIVE_SMOKE_OPERATION_ID),
     createMarketplaceAdapter: (accessToken) => createMeliHighlightsDiscoveryAdapter({

@@ -22743,6 +22743,21 @@ var init_planner = __esm({
   }
 });
 
+// src/commerce/discovery/automotive-tools.ts
+var AUTOMOTIVE_TOOL_CATEGORY_IDS, AUTOMOTIVE_MLB_DISCOVERY_TOOLS;
+var init_automotive_tools = __esm({
+  "src/commerce/discovery/automotive-tools.ts"() {
+    "use strict";
+    init_planner();
+    AUTOMOTIVE_TOOL_CATEGORY_IDS = Object.freeze(["MLB115943", "MLB115944", "MLB115945", "MLB437802", "MLB437783", "MLB437784", "MLB459157", "MLB459347", "MLB459348", "MLB271712", "MLB455313"]);
+    AUTOMOTIVE_MLB_DISCOVERY_TOOLS = Object.freeze({
+      ...AUTOMOTIVE_MLB_DISCOVERY_V1,
+      configVersion: "automotive-mlb-discovery/tools-v2",
+      expectedEligibleCategories: 155
+    });
+  }
+});
+
 // src/meli/highlights-discovery-adapter.ts
 function schemaInvalid(categoryId) {
   throw new DiscoveryError("DISCOVERY_ADAPTER_SCHEMA_INVALID", "Resposta de highlights inválida", { categoryId });
@@ -23298,7 +23313,7 @@ async function runDiscoveryLiveSmoke(dependencies) {
     const planningStartedAt = nowMs();
     let plan;
     try {
-      plan = planDiscoveryRun(eligibleCategories, "SMOKE", AUTOMOTIVE_MLB_DISCOVERY_V1);
+      plan = planDiscoveryRun(eligibleCategories, "SMOKE", AUTOMOTIVE_MLB_DISCOVERY_TOOLS);
     } catch {
       throw new DiscoveryLiveSmokeError("DISCOVERY_LIVE_PLAN_MISMATCH");
     }
@@ -23385,9 +23400,9 @@ async function runConfiguredDiscoveryLiveSmoke() {
   return runDiscoveryLiveSmoke({
     loadEligibleCategories: () => loadDiscoveryEligibleCategories({
       client: discoveryRegistryReadClientFromSupabase(client),
-      marketplaceKey: AUTOMOTIVE_MLB_DISCOVERY_V1.marketplaceKey,
-      siteId: AUTOMOTIVE_MLB_DISCOVERY_V1.siteId,
-      verticalKey: AUTOMOTIVE_MLB_DISCOVERY_V1.verticalKey
+      marketplaceKey: AUTOMOTIVE_MLB_DISCOVERY_TOOLS.marketplaceKey,
+      siteId: AUTOMOTIVE_MLB_DISCOVERY_TOOLS.siteId,
+      verticalKey: AUTOMOTIVE_MLB_DISCOVERY_TOOLS.verticalKey
     }),
     rotateAccessToken: () => rotationService.rotateMeliAccessTokenForRuntimeOperation(DISCOVERY_LIVE_SMOKE_OPERATION_ID),
     createMarketplaceAdapter: (accessToken2) => createMeliHighlightsDiscoveryAdapter({
@@ -23401,6 +23416,7 @@ var COMMERCE_DISCOVERY_LIVE_SMOKE_CONTRACT, DISCOVERY_LIVE_SMOKE_OPERATION_ID, E
 var init_live_smoke = __esm({
   "src/server/discovery/live-smoke.ts"() {
     "use strict";
+    init_automotive_tools();
     init_planner();
     init_client3();
     init_highlights_discovery_adapter();
@@ -23411,9 +23427,9 @@ var init_live_smoke = __esm({
     init_orchestrator();
     COMMERCE_DISCOVERY_LIVE_SMOKE_CONTRACT = "commerce-discovery-live-smoke/v1";
     DISCOVERY_LIVE_SMOKE_OPERATION_ID = "0b3d-b-runtime-smoke-v1";
-    EXPECTED_ELIGIBLE = 144;
+    EXPECTED_ELIGIBLE = 155;
     EXPECTED_A = 28;
-    EXPECTED_B = 116;
+    EXPECTED_B = 127;
     SAMPLE_LIMIT = 10;
     SUPABASE_RUNTIME_TIMEOUT_MS = 1e4;
     DiscoveryLiveSmokeError = class extends Error {
@@ -23710,6 +23726,7 @@ var LiveSmokeDiscoveryAdapter, LiveSmokeDiscoveryRunner;
 var init_operational = __esm({
   "src/server/discovery/operational.ts"() {
     "use strict";
+    init_automotive_tools();
     init_planner();
     init_client2();
     init_config2();
@@ -23739,7 +23756,7 @@ var init_operational = __esm({
       adapter;
       async run(mode) {
         const client = this.adapter.client;
-        const config = { ...AUTOMOTIVE_MLB_DISCOVERY_V1, smokeCategoriesPerTier: 1 };
+        const config = { ...AUTOMOTIVE_MLB_DISCOVERY_TOOLS, smokeCategoriesPerTier: 1 };
         const categories = await loadDiscoveryEligibleCategories({
           client: discoveryRegistryReadClientFromSupabase(client),
           marketplaceKey: config.marketplaceKey,
@@ -24096,7 +24113,7 @@ function commercialProfile(title) {
   const text3 = title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   if (/rastreador|rack de teto|bagageiro|mensalidade|assinatura/.test(text3))
     return { group: "especializado", appeal: 20, ease: 15, reason: "Uso específico ou possível instalação/recorrência; fora do perfil amplo inicial." };
-  if (/\balarme\b|\bstart stop\b|\bpartida remota\b|\bchaveiro\b/.test(text3) || /\bkit macaco\b/.test(text3) && /\bfiat\b|\bargo\b|\bcronos\b/.test(text3))
+  if (/\balarme\b|\bstart stop\b|\bpartida remota\b|\bchaveiro\b|(?:capa|carcaca).*chave|chave.*(?:canivete|codificada|ignicao)/.test(text3) || /\bkit macaco\b/.test(text3) && /\bfiat\b|\bargo\b|\bcronos\b/.test(text3))
     return { group: "avaliar", appeal: 40, ease: 30, reason: null };
   if (/aspirador/.test(text3)) return { group: "aspiracao", appeal: 90, ease: 85, reason: null };
   if (/compressor|calibrador|inflador/.test(text3)) return { group: "pneus", appeal: 85, ease: 75, reason: null };
@@ -24104,7 +24121,7 @@ function commercialProfile(title) {
   if (/carregador|suporte.*celular|cabo usb/.test(text3)) return { group: "celular", appeal: 85, ease: 85, reason: null };
   if (/organizador|lixeira|protetor solar|quebra.sol/.test(text3)) return { group: "organizacao", appeal: 75, ease: 85, reason: null };
   if (/microfibra|shampoo|cera|limpador|limpeza|vonixx|lavagem/.test(text3)) return { group: "limpeza", appeal: 65, ease: 85, reason: null };
-  if (/ferramenta|\bchave\b|lanterna|kit.*reparo/.test(text3)) return { group: "ferramentas", appeal: 75, ease: 75, reason: null };
+  if (/ferramenta|\bchaves?\b|\bsoquetes?\b|\bcatracas?\b|\balicates?\b|\btorquimetro\b|\bmacaco\b|\bcavaletes?\b|(?:luz|espelho).*inspecao|lanterna|kit.*reparo/.test(text3)) return { group: "ferramentas", appeal: 75, ease: 75, reason: null };
   return { group: "avaliar", appeal: 40, ease: 40, reason: null };
 }
 var init_profile = __esm({
@@ -25661,10 +25678,10 @@ function dashboardPage(props) {
 </style></head><body><header><div><h1>AutoAchado.AI</h1><p>Dashboard Operacional · Robô de mineração · MLB / Brasil · 0B3D-C</p></div><div class="badge">${connected ? "● Mercado Livre conectado" : "⚠ Mercado Livre não conectado"}<br><small>ID: 296984475</small> · <a href="/auth/start">Conectar conta</a></div></header>
 <main><section class="stats" aria-label="Indicadores">
 <div class="card">Status do Robô<strong>Operacional ✅</strong><small>Automotivo V1</small></div>
-<div class="card">Verticais Planejadas<strong>10 Verticais</strong><small>Automotivo V1 Ativa com 144 categorias: 28 Tier A + 116 Tier B</small></div>
+<div class="card">Verticais Planejadas<strong>10 Verticais</strong><small>Automotivo V1 Ativa com 155 categorias: 28 Tier A + 127 Tier B</small></div>
 <div class="card">Oportunidades no Banco<strong id="count">—</strong><small>Registros em public.highlight_snapshots</small></div>
 <div class="card">Última Sincronização<strong id="synced">—</strong><small>Atualização automática a cada 30 segundos</small></div></section>
-<section class="panel"><h2>Matriz de Expansão (10 Verticais Estratégicas)</h2><ol class="matrix">${verticals.map(([name, id], i) => `<li><button id="vertical-${i}" class="vertical-button" aria-controls="vertical-products" aria-pressed="${i === 0}">${i + 1}. ${name}<span>${id} · ${i === 0 ? "ATIVO (144 Cats)" : "PLANEJADO"}</span></button></li>`).join("")}</ol></section>
+<section class="panel"><h2>Matriz de Expansão (10 Verticais Estratégicas)</h2><ol class="matrix">${verticals.map(([name, id], i) => `<li><button id="vertical-${i}" class="vertical-button" aria-controls="vertical-products" aria-pressed="${i === 0}">${i + 1}. ${name}<span>${id} · ${i === 0 ? "ATIVO (155 Cats)" : "PLANEJADO"}</span></button></li>`).join("")}</ol></section>
 <section class="panel" id="vertical-products"><h2 id="vertical-title" tabindex="-1">Automotivo — produtos e ofertas</h2><p>Melhores oportunidades primeiro. Monitorados reúne a carteira da categoria; Prontos para divulgar mostra ofertas com histórico e demanda confirmados, ainda não divulgadas.</p><div class="controls filters"><button id="rank-ALL" aria-pressed="true">Monitorados</button><button id="rank-APPROVED" aria-pressed="false">🔥 Prontos para divulgar</button><button id="rank-SENT" aria-pressed="false">✅ Divulgados</button><button id="refresh">🔄 Atualizar</button></div><p id="message" role="status" aria-live="polite"></p><p id="commercial-status" role="status" aria-live="polite"></p><p id="copy-status" role="status" aria-live="polite"></p><textarea id="manual-copy" hidden readonly aria-label="Texto para copiar manualmente"></textarea><p>Para copiar a divulgação, cole no produto o link criado pelo gerador oficial de afiliados.</p><p id="commercial-summary"></p><div id="commercial-results" class="results"></div><button id="commercial-more" hidden>Mostrar mais desta seleção</button></section>${whatsappPanel}<details id="robot-admin" class="panel"><summary>Administração do robô</summary><p>Ferramentas técnicas de coleta e diagnóstico — Automotivo.</p><div class="controls"><button id="sweep">🚀 Executar varredura</button><button id="smoke">⚡ Teste de coleta (2 categorias)</button><button id="collect-evidence">📊 Coletar evidências agora</button></div><p id="admin-summary"></p><details id="raw-products" class="panel"><summary>Explorar todos os registros minerados (sem aprovação comercial)</summary><section><h2>Produtos encontrados</h2><p>Prévia dos destaques minerados: foto, descrição e preço informado pelo Mercado Livre. Preço e disponibilidade podem mudar; os destaques ainda não representam descontos validados.</p><h2>Central de Cupons Ativos</h2><div id="coupons" class="coupon-bar" aria-live="polite">Consultando campanhas verificadas…</div><p>Cupons sugeridos conforme categoria e valor. Confira as restrições e a aplicação no checkout. Para divulgar com comissão, cole em cada produto o link criado no gerador oficial de afiliados do Mercado Livre. Os links ficam salvos somente neste navegador.</p><div class="filters" aria-label="Filtrar produtos"><button id="filter-all" aria-pressed="true">Todas as ofertas completas</button><button id="filter-discount" aria-pressed="false">🔥 Desconto anunciado ≥ 5%</button><button id="filter-tier" aria-pressed="false">⚡ Prioridade Tier A</button><button id="filter-coupon" aria-pressed="false">🏷️ Cupom sugerido</button><button id="filter-incomplete" aria-pressed="false">Registros incompletos</button></div><p id="results-summary"></p><div id="snapshots" class="results" aria-label="Produtos minerados"></div><button id="more" hidden>Mostrar mais produtos</button></section></details></details></main>
 <script>
 const el = id => document.getElementById(id);

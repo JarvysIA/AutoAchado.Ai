@@ -42,7 +42,7 @@ function category(index: number, priorityTier: "A" | "B"): DiscoveryEligibleCate
 function eligibleCategories(): readonly DiscoveryEligibleCategory[] {
   return Object.freeze([
     ...Array.from({ length: 28 }, (_, index) => category(index, "A")),
-    ...Array.from({ length: 116 }, (_, index) => category(index + 28, "B")),
+    ...Array.from({ length: 127 }, (_, index) => category(index + 28, "B")),
   ]);
 }
 
@@ -170,7 +170,7 @@ describe("permanent discovery live-smoke composition", () => {
       status: "COMPLETED",
       mode: "SMOKE",
       persistenceMode: "DRY_RUN",
-      registry: { eligible: 144, tierA: 28, tierB: 116 },
+      registry: { eligible: 155, tierA: 28, tierB: 127 },
       selected: { total: 4, tierA: 2, tierB: 2 },
       oauth: { outcome: "ROTATED" },
       fatalErrorCode: null,

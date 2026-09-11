@@ -1,6 +1,7 @@
+import {AUTOMOTIVE_MLB_DISCOVERY_TOOLS} from '../../commerce/discovery/automotive-tools.js';
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
-import { AUTOMOTIVE_MLB_DISCOVERY_V1, planDiscoveryRun } from "../../commerce/discovery/planner.js";
+import { planDiscoveryRun } from "../../commerce/discovery/planner.js";
 import { createSupabaseServerClient } from "../supabase/client.js";
 import { loadSupabaseServerConfig } from "../supabase/config.js";
 import { createMeliOAuthRuntimeOperationRotationService } from "../oauth/factory.js";
@@ -27,7 +28,7 @@ export class LiveSmokeDiscoveryRunner {
   constructor(readonly adapter: LiveSmokeDiscoveryAdapter) {}
   async run(mode: "SMOKE" | "FULL_SWEEP") {
     const client = this.adapter.client;
-    const config = { ...AUTOMOTIVE_MLB_DISCOVERY_V1, smokeCategoriesPerTier: 1 };
+    const config = { ...AUTOMOTIVE_MLB_DISCOVERY_TOOLS, smokeCategoriesPerTier: 1 };
     const categories = await loadDiscoveryEligibleCategories({ client: discoveryRegistryReadClientFromSupabase(client),
       marketplaceKey: config.marketplaceKey, siteId: config.siteId, verticalKey: config.verticalKey });
     const initialPlan = planDiscoveryRun(categories, mode, config);
