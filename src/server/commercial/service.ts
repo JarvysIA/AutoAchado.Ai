@@ -194,7 +194,7 @@ export async function commercialOpportunities(client:SupabaseClient, view:string
     view==='APPROVED'?approved:view==='OBSERVING'?monitored.filter(e=>e.rank.state!=='APPROVED'&&!e.sent_at):monitored.filter(e=>e.rank.state===view);
   const runs=checked(await client.from('commercial_collection_runs').select('status,started_at,finished_at,collected,failed,explored,exploration_failed')
     .eq('kind','HISTORY').order('started_at',{ascending:false}).limit(1));
-  return {entries:selected.slice(offset,offset+12),total:selected.length,offset,hasMore:offset+12<selected.length,
+  return {entries:selected.slice(offset,offset+50),total:selected.length,offset,hasMore:offset+50<selected.length,
     counts:{approved:approved.length,observing:monitored.filter(e=>e.rank.state!=='APPROVED'&&!e.sent_at).length,
       rejected:monitored.filter(e=>e.rank.state==='REJECTED').length,monitored:monitored.length,sent:evaluated.filter(e=>e.sent_at).length},
     capacity:vertical.monitor_capacity,

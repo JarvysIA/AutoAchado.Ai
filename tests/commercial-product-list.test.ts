@@ -31,14 +31,16 @@ describe('monitored product navigation and explicit sent state',()=>{
   expect(result.entries.slice(0,2).map(e=>e.identity_key)).toEqual(['id:24','id:12']);
   expect(result.entries[0]!.price_timeline.months).toEqual([]);
  });
- it('lists all monitored identities through pagination, including more than 20',async()=>{
-  const {client}=fixture();
+ it('loads 50 products then the remaining monitored products without duplicates',async()=>{
+  const {client,tables}=fixture();
+  tables.commercial_watchlist=Array.from({length:100},(_,i)=>({source_key:'PRODUCT:MLB'+i,identity_key:'id:'+i,monitor:true,
+   snapshot:{product_id:'MLB'+i,type:'PRODUCT'},preview:{title:'Compressor portátil '+i,price:50,currency:'BRL'}}));
   const first=await commercialOpportunities(client,'ALL');
-  const second=await commercialOpportunities(client,'ALL',12);
-  const third=await commercialOpportunities(client,'ALL',24);
-  expect(first.total).toBe(25);expect(first.capacity).toBe(100);
-  expect([...first.entries,...second.entries,...third.entries]).toHaveLength(25);
-  expect(third.hasMore).toBe(false);expect(first.entries.every(e=>e.monitor)).toBe(true);
+  const second=await commercialOpportunities(client,'ALL',50);
+  expect(first.total).toBe(100);expect(first.capacity).toBe(100);
+  expect(first.entries).toHaveLength(50);expect(first.hasMore).toBe(true);
+  expect(second.entries).toHaveLength(50);expect(second.hasMore).toBe(false);
+  expect(new Set([...first.entries,...second.entries].map(e=>e.identity_key)).size).toBe(100);
  });
  it('keeps sent products accessible after monitoring stops and excludes them from follow-up',async()=>{
   const {client}=fixture();
