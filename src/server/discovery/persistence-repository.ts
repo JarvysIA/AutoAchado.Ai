@@ -123,7 +123,7 @@ function timestamp(value: string, code: DiscoveryPersistenceErrorCode): void {
 
 function validatePlan(plan: DiscoveryRunPlan): void {
   if (plan.contractVersion !== COMMERCE_DISCOVERY_RUN_CONTRACT
-    || plan.config.configVersion !== "automotive-mlb-discovery/v1"
+    || !["automotive-mlb-discovery/v1", "automotive-mlb-discovery/tools-v2"].includes(plan.config.configVersion)
     || plan.config.adapterVersion !== "meli-highlights-discovery/v1"
     || plan.config.marketplaceKey !== "MERCADO_LIVRE"
     || plan.config.siteId !== "MLB"

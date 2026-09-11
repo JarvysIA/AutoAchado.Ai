@@ -23462,7 +23462,7 @@ function timestamp(value, code) {
   if (!ISO_TIMESTAMP.test(value) || !Number.isFinite(Date.parse(value))) fail2(code, "Timestamp de persistence inválido");
 }
 function validatePlan(plan) {
-  if (plan.contractVersion !== COMMERCE_DISCOVERY_RUN_CONTRACT || plan.config.configVersion !== "automotive-mlb-discovery/v1" || plan.config.adapterVersion !== "meli-highlights-discovery/v1" || plan.config.marketplaceKey !== "MERCADO_LIVRE" || plan.config.siteId !== "MLB" || plan.config.verticalKey !== "AUTOMOTIVE" || plan.mode !== "SMOKE" && plan.mode !== "FULL_SWEEP" || !SHA256.test(plan.registryDigest)) {
+  if (plan.contractVersion !== COMMERCE_DISCOVERY_RUN_CONTRACT || !["automotive-mlb-discovery/v1", "automotive-mlb-discovery/tools-v2"].includes(plan.config.configVersion) || plan.config.adapterVersion !== "meli-highlights-discovery/v1" || plan.config.marketplaceKey !== "MERCADO_LIVRE" || plan.config.siteId !== "MLB" || plan.config.verticalKey !== "AUTOMOTIVE" || plan.mode !== "SMOKE" && plan.mode !== "FULL_SWEEP" || !SHA256.test(plan.registryDigest)) {
     fail2("DISCOVERY_PERSISTENCE_INVALID_RUN", "Contrato de discovery run inválido");
   }
 }

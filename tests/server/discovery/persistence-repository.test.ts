@@ -1,3 +1,4 @@
+import {AUTOMOTIVE_MLB_DISCOVERY_TOOLS} from '../../../src/commerce/discovery/automotive-tools.js';
 import { describe, expect, it } from "vitest";
 import { AUTOMOTIVE_MLB_DISCOVERY_V1 } from "../../../src/commerce/discovery/planner.js";
 import {
@@ -198,4 +199,11 @@ describe("discovery persistence repository", () => {
       return true;
     });
   });
+});
+
+it('persists tool-expansion runs while rejecting unknown configuration versions',async()=>{
+ const client=new FakeClient(); const repository=createDiscoveryPersistenceRepository(client);
+ const input={plan:{...plan,config:AUTOMOTIVE_MLB_DISCOVERY_TOOLS},scheduledBucket:'2026-09-11T12:00:00Z',shardKey:'TOOLS',startedAt:'2026-09-11T12:00:00Z'};
+ expect((await repository.beginDiscoveryRun(input)).runId).toBe(RUN_1);
+ await expect(repository.beginDiscoveryRun({...input,plan:{...input.plan,config:{...AUTOMOTIVE_MLB_DISCOVERY_TOOLS,configVersion:'unknown'}}})).rejects.toThrow();
 });
