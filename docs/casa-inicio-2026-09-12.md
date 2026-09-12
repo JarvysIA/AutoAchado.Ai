@@ -1,6 +1,6 @@
 # Casa — início da implantação
 
-Estado: configuração e diagnóstico publicados; monitoramento HOME ainda não ativado.
+Estado: configuração publicada e amostra autenticada concluída; monitoramento HOME ainda não ativado.
 
 ## Recorte
 
@@ -22,3 +22,15 @@ POST /api/commercial/home-pilot, protegido por CRON_SECRET, aceita apenas o esco
 4. Ativar HOME na dashboard, configurar destino Casa e validar coleta, histórico, cópia e revisão de envio. Não enviar mensagens de teste sem autorização específica.
 
 Não há cron de Casa ativo nesta entrega. O prazo de formação do histórico começa nas observações efetivamente persistidas, não na criação desta configuração.
+
+## Resultado autenticado após reconexão — 12/09/2026
+
+Amostra concluída em 51,6 segundos, às 12h40 de Brasília. As 29 categorias responderam com sucesso, com 172 produtos distintos avaliados. Foram 161 candidatos tecnicamente elegíveis para o piloto: cozinha 46, organização 35, limpeza 30, lavanderia 32 e banheiro 18. Limitando cada família a 25, permanecem 118 vagas potenciais, suficientes para selecionar 100 com diversidade.
+
+Onze produtos ficaram fora da triagem por reputação não confirmada ou necessidade de revisão editorial. A triagem inicial por título ainda deve ser refinada por atributos e curadoria, e não constitui aprovação comercial definitiva.
+
+Todos os 172 preços foram observados no catálogo; nenhum teve correspondência de anúncio e preço confirmada pela consulta de item. Preservar a identificação de preço observado e a conferência no link no fluxo já aprovado pelo operador. Não anunciar desconto histórico por essa única coleta. A posição de mais vendido foi observada apenas neste dia; não equivale a quantidade de vendas nem demanda recorrente comprovada.
+
+Evidência completa: [amostra autenticada](evidence/casa-piloto-2026-09-12.json). Ela é um registro de diagnóstico, não foi inserida nas tabelas de histórico e não inicia a contagem de dias de monitoramento.
+
+O bloqueio de autenticação desta etapa foi resolvido pela reconexão. O próximo marco é implementar e testar o executor HOME isolado antes de preencher a carteira e ativar o cron.
