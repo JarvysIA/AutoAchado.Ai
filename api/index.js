@@ -23812,6 +23812,7 @@ var product_preview_exports = {};
 __export(product_preview_exports, {
   PreviewUpstreamError: () => PreviewUpstreamError,
   catalogOfferPreview: () => catalogOfferPreview,
+  catalogOfferUrl: () => catalogOfferUrl,
   configuredMeliReader: () => configuredMeliReader,
   configuredProductPreview: () => configuredProductPreview,
   publicProductUrl: () => publicProductUrl,
@@ -23845,6 +23846,14 @@ function publicProductUrl(id, type) {
   if (type === "USER_PRODUCT" && /^MLBU\d+$/.test(id)) return `https://www.mercadolivre.com.br/up/${id}`;
   return null;
 }
+function catalogOfferUrl(catalogId, itemId) {
+  const base = publicProductUrl(catalogId, "PRODUCT");
+  if (!base || !/^MLB\d+$/.test(itemId)) return null;
+  const url = new URL(base);
+  url.searchParams.set("pdp_filters", "item_id:" + itemId);
+  url.hash = "wid=" + itemId;
+  return url.href;
+}
 function setPrice(preview, amount, currency, source, original) {
   if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0 || typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency)) return;
   preview.comparable = false;
@@ -23873,7 +23882,7 @@ async function catalogOfferPreview(catalogId, base, offer, read) {
   const preview = { ...base, seller_id: String(offer.seller_id), seller_trusted: false, comparable: false };
   delete preview.seller_level;
   preview.offer_item_id = offer.item_id;
-  preview.url = publicProductUrl(offer.item_id, "ITEM");
+  preview.url = catalogOfferUrl(catalogId, offer.item_id);
   preview.price = null;
   setPrice(preview, offer.price, offer.currency_id, "CATALOG_OFFER", offer.original_price);
   if (!preview.price || typeof offer.available_quantity === "number" && offer.available_quantity <= 0) return null;
@@ -23939,7 +23948,7 @@ async function resolveProductPreview(id, type, read) {
     }
     if (typeof itemId !== "string" || !/^MLB\d+$/.test(itemId)) return preview;
     preview.offer_item_id = itemId;
-    preview.url = publicProductUrl(itemId, "ITEM");
+    if (type === "PRODUCT") preview.url = catalogOfferUrl(id, itemId);
     let item;
     try {
       item = await read(`/items/${itemId}`);
@@ -25984,6 +25993,10 @@ function fillCard(card, snapshot, preview, timeline) {
       } finally {link.datasetChecking=false;link.textContent='Abrir anúncio no Mercado Livre ↗';}
     });
     body.append(link);
+    if(snapshot.type==='PRODUCT' && publicUrl) {
+      const catalogLink=textNode('a','Ver catálogo e outras ofertas ↗','product-meta');
+      catalogLink.href=publicUrl;catalogLink.target='_blank';catalogLink.rel='noopener noreferrer';body.append(catalogLink);
+    }
   } else {
     body.append(textNode('p', preview.status === 'UNAVAILABLE' ? 'Anúncio indisponível no momento.' : 'Link não resolvido: dados indisponíveis ou acesso restrito pelo Mercado Livre.'));
   }

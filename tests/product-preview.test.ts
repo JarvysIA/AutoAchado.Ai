@@ -38,7 +38,7 @@ describe("preview resolution", () => {
 describe("catalog price fallbacks", () => {
   it("preserves winner price with the specific offer link if item details fail", async () => {
     const result = await resolveProductPreview("MLB456", "PRODUCT", reader({"/products/MLB456":{id:"MLB456",status:"active",permalink:"",buy_box_winner:{item_id:"MLB123",price:19.99,currency_id:"BRL"}}}));
-    expect(result).toMatchObject({url:"https://produto.mercadolivre.com.br/MLB-123-_JM",offer_item_id:"MLB123",price:19.99,priceSource:"CATALOG_OFFER"});
+    expect(result).toMatchObject({url:"https://www.mercadolivre.com.br/p/MLB456?pdp_filters=item_id%3AMLB123#wid=MLB123",offer_item_id:"MLB123",price:19.99,priceSource:"CATALOG_OFFER"});
   });
   it("uses product offers prices independently of restricted item details", async () => {
     const result = await resolveProductPreview("MLB456", "PRODUCT", reader({"/products/MLB456":{id:"MLB456"},"/products/MLB456/items?limit=1":{results:[{item_id:"MLB123",price:25,currency_id:"BRL"}]}}));
@@ -109,5 +109,5 @@ it('binds alternative catalog prices to their own offer, not the catalog or anot
  const {catalogOfferPreview}=await import('../src/server/discovery/product-preview.js');
  const base={title:'Compressor',description:null,image:null,url:'https://www.mercadolivre.com.br/p/MLB20562024',price:199.98,currency:'BRL',status:'CATALOG' as const,catalog_product_id:'MLB20562024',offer_item_id:'MLB999'};
  const result=await catalogOfferPreview('MLB20562024',base,{item_id:'MLB123',seller_id:42,condition:'new',price:61.09,currency_id:'BRL'},reader({}));
- expect(result).toMatchObject({price:61.09,offer_item_id:'MLB123',url:'https://produto.mercadolivre.com.br/MLB-123-_JM'});
+ expect(result).toMatchObject({price:61.09,offer_item_id:'MLB123',url:'https://www.mercadolivre.com.br/p/MLB20562024?pdp_filters=item_id%3AMLB123#wid=MLB123'});
 });

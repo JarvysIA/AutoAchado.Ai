@@ -325,6 +325,10 @@ function fillCard(card, snapshot, preview, timeline) {
       } finally {link.datasetChecking=false;link.textContent='Abrir anúncio no Mercado Livre ↗';}
     });
     body.append(link);
+    if(snapshot.type==='PRODUCT' && publicUrl) {
+      const catalogLink=textNode('a','Ver catálogo e outras ofertas ↗','product-meta');
+      catalogLink.href=publicUrl;catalogLink.target='_blank';catalogLink.rel='noopener noreferrer';body.append(catalogLink);
+    }
   } else {
     body.append(textNode('p', preview.status === 'UNAVAILABLE' ? 'Anúncio indisponível no momento.' : 'Link não resolvido: dados indisponíveis ou acesso restrito pelo Mercado Livre.'));
   }
