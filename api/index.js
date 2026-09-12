@@ -26955,6 +26955,16 @@ async function handleRequest(request, response, overrides = {}) {
       if (homeRun) {
         const { runHome: runHome2 } = await Promise.resolve().then(() => (init_home_service(), home_service_exports));
         const kind = url.searchParams.get("kind") ?? "HISTORY";
+        if (kind === "STATUS") {
+          const offset2 = Number(url.searchParams.get("offset") ?? 0);
+          if (!Number.isSafeInteger(offset2) || offset2 < 0 || offset2 > 1e4) {
+            sendJson(response, 400, { errorCode: "INVALID_VIEW" });
+            return;
+          }
+          const { homeOpportunities: homeOpportunities2 } = await Promise.resolve().then(() => (init_home_service(), home_service_exports));
+          if (!sendJson(response, 200, await homeOpportunities2(client, "ALL", offset2), void 0, 2 * 1024 * 1024)) sendJson(response, 503, { errorCode: "HOME_RESPONSE_TOO_LARGE" });
+          return;
+        }
         if (!["DISCOVERY", "HISTORY"].includes(kind)) {
           sendJson(response, 400, { errorCode: "INVALID_KIND" });
           return;

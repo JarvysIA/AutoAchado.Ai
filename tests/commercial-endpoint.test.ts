@@ -93,3 +93,11 @@ it('routes HOME independently and protects the scheduled executor',async()=>{
  expect((await request('/api/commercial/feedback?vertical=HOME&id=MLB123&type=PRODUCT&action=NOT_RELEVANT','POST',headers)).status).toBe(200);
  expect(home.action).toHaveBeenCalledWith({},'MLB123','PRODUCT','NOT_RELEVANT');expect(calls.feedback).not.toHaveBeenCalled();
 });
+
+it('protects HOME status pagination with the cron secret',async()=>{
+ vi.stubEnv('CRON_SECRET','test-only');
+ expect((await request('/api/commercial/home-run?kind=STATUS','GET')).status).toBe(401);
+ expect((await request('/api/commercial/home-run?kind=STATUS&offset=50','GET',{authorization:'Bearer test-only'})).status).toBe(200);
+ expect(home.list).toHaveBeenCalledWith({},'ALL',50);
+ expect((await request('/api/commercial/home-run?kind=STATUS&offset=-1','GET',{authorization:'Bearer test-only'})).status).toBe(400);
+});
