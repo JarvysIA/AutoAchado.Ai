@@ -25390,6 +25390,70 @@ var init_home_config = __esm({
   }
 });
 
+// src/server/commercial/home-editorial.ts
+function assessHome(title, categoryId) {
+  const category = HOME_CATEGORIES.find((c) => c.id === categoryId);
+  const text3 = title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const reasons = [];
+  const result = (state) => ({ version: HOME_EDITORIAL_VERSION, state, family: category?.family ?? "unknown", reasons });
+  if (!category || !matches[categoryId]) {
+    reasons.push("Categoria ainda não revisada para Casa.");
+    return result("REVIEW");
+  }
+  if (/\bwhey\b|suplemento|colchao|cafeteira|maquina de lavar|\bsofa\b|guarda.?roupa/.test(text3)) {
+    reasons.push("Produto pertence a outro recorte comercial, mesmo aparecendo neste ranking.");
+    return result("EXCLUDE");
+  }
+  if (!matches[categoryId].test(text3)) {
+    reasons.push("Título não confirma correspondência com a categoria de descoberta.");
+    return result("REVIEW");
+  }
+  if (/eletric|\b\d{3}\s*v\b|industrial|lembrancinha|expositora|\bmdf\b/.test(text3)) reasons.push("Uso especializado, alimentação elétrica ou acabamento exige revisão.");
+  if (/magnetic|assento sanitario|suspenso|varao|adesiv|sem fur|sem furo|pegboard/.test(text3)) reasons.push("Conferir medidas, superfície, fixação ou compatibilidade antes de destacar.");
+  if (categoryId === "MLB272180") reasons.push("Utilidade e desempenho precisam de avaliação; a alegação do título não comprova eficácia.");
+  if (/\b95\s*l|\b240\s*m|\b600\s*panos|\b120\s*(pregador|prendedor)/.test(text3)) reasons.push("Volume ou quantidade pode reduzir a adequação à compra doméstica comum.");
+  return result(reasons.length ? "REVIEW" : "CANDIDATE");
+}
+var HOME_EDITORIAL_VERSION, matches;
+var init_home_editorial = __esm({
+  "src/server/commercial/home-editorial.ts"() {
+    "use strict";
+    init_home_config();
+    HOME_EDITORIAL_VERSION = "HOME_EDITORIAL_V1";
+    matches = {
+      MLB244658: /potes?|marmitas?/,
+      MLB194034: /escorredor|tapete.*pia/,
+      MLB455328: /tempero|condimento|moedor/,
+      MLB436305: /organizador|dispenser|porta.*(bucha|esponja)/,
+      MLB271799: /ovos/,
+      MLB271756: /azeite|galheteiro|borrifador|pulverizador/,
+      MLB193618: /tabua/,
+      MLB271797: /alho/,
+      MLB436433: /caixa/,
+      MLB436435: /organizador|porta.*(algodao|cotonete|maquiagem)/,
+      MLB431869: /cabides?|organizador.*roupa/,
+      MLB436416: /organizador|cesto|suporte.*pia|potes?/,
+      MLB186367: /sacos?.*vacuo/,
+      MLB272183: /organizador|porta.*(caneta|lapis)|pegboard|painel.*aramad/,
+      MLB186655: /mop|esfregao/,
+      MLB269712: /panos?|flanela|duramax/,
+      MLB264060: /escova/,
+      MLB272145: /limpador.*vidro|limpa.*vidro|rodo|limpador.*box/,
+      MLB263865: /esponja|bucha|bombril/,
+      MLB186657: /rodo/,
+      MLB268446: /cesto/,
+      MLB271576: /prendedor|pregador/,
+      MLB271687: /saco.*lav|saquinho.*lav/,
+      MLB277691: /dobrar|dobrador|gabarito/,
+      MLB272180: /bolas?|bolinha|esfera|protetor.*sut ia|protetor.*sutia/,
+      MLB436113: /balde|bacia|cesto|cesta/,
+      MLB1616: /banheiro|sanitari|papel higienico|pasta.*dente|sabonete/,
+      MLB186136: /tapete|toalha.*piso/,
+      MLB438954: /varao|cortina/
+    };
+  }
+});
+
 // src/server/commercial/home-pilot.ts
 var home_pilot_exports = {};
 __export(home_pilot_exports, {
@@ -25417,7 +25481,7 @@ async function inspectHomePilot(read, deadline = Date.now() + 21e4) {
         inspected++;
         const p = await resolveProductPreview(entry.id, "PRODUCT", read);
         const complete = !!p.title && p.title !== entry.id && !!safePreviewUrl(p.image, true) && !!safePreviewUrl(p.url) && p.currency === "BRL" && typeof p.price === "number" && p.price > 0 && p.status !== "UNAVAILABLE";
-        const specialized = /chuveiro|torneira|cuba\b|colch[aã]o|sof[aá]|guarda.?roupa|el[eé]tric|\b\d{3}\s*v\b|industrial/i.test(p.title);
+        const assessment = assessHome(p.title, category.id);
         products.push({
           id: entry.id,
           category: category.id,
@@ -25430,8 +25494,9 @@ async function inspectHomePilot(read, deadline = Date.now() + 21e4) {
           comparable: p.comparable === true,
           trusted: p.seller_trusted === true,
           priceLinkVerified: p.priceLinkVerified === true,
-          editorial: specialized ? "REVIEW" : "CANDIDATE",
-          eligibleForPilot: complete && p.comparable === true && p.seller_trusted === true && !specialized
+          editorial: assessment.state,
+          editorialEvidence: assessment,
+          eligibleForPilot: complete && p.comparable === true && p.seller_trusted === true && assessment.state === "CANDIDATE"
         });
       }
     } catch (error) {
@@ -25464,6 +25529,7 @@ var init_home_pilot = __esm({
     "use strict";
     init_product_preview();
     init_home_config();
+    init_home_editorial();
   }
 });
 

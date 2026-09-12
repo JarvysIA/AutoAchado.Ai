@@ -1,6 +1,7 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
 import {configuredMeliReader,resolveProductPreview,safePreviewUrl,PreviewUpstreamError,type PreviewReader} from '../discovery/product-preview.js';
 import {HOME_CATEGORIES,HOME_PILOT} from './home-config.js';
+import {assessHome} from './home-editorial.js';
 
 // A bounded, read-only validation before allocating any live monitoring slots.
 export async function inspectHomePilot(read:PreviewReader,deadline=Date.now()+210000) {
@@ -22,11 +23,11 @@ export async function inspectHomePilot(read:PreviewReader,deadline=Date.now()+21
     seen.add(entry.id);inspected++;
     const p=await resolveProductPreview(entry.id,'PRODUCT',read);
     const complete=!!p.title&&p.title!==entry.id&&!!safePreviewUrl(p.image,true)&&!!safePreviewUrl(p.url)&&p.currency==='BRL'&&typeof p.price==='number'&&p.price>0&&p.status!=='UNAVAILABLE';
-    const specialized=/chuveiro|torneira|cuba\b|colch[aã]o|sof[aá]|guarda.?roupa|el[eé]tric|\b\d{3}\s*v\b|industrial/i.test(p.title);
+    const assessment=assessHome(p.title,category.id);
     products.push({id:entry.id,category:category.id,family:category.family,position:entry.position,title:p.title,
      price:p.price,checkedAt:p.priceCheckedAt,complete,comparable:p.comparable===true,trusted:p.seller_trusted===true,
-     priceLinkVerified:p.priceLinkVerified===true,editorial:specialized?'REVIEW':'CANDIDATE',
-     eligibleForPilot:complete&&p.comparable===true&&p.seller_trusted===true&&!specialized});
+     priceLinkVerified:p.priceLinkVerified===true,editorial:assessment.state,editorialEvidence:assessment,
+     eligibleForPilot:complete&&p.comparable===true&&p.seller_trusted===true&&assessment.state==='CANDIDATE'});
    }
   } catch(error) {categories.push({...category,status:error instanceof PreviewUpstreamError?error.status:0});}
  }
