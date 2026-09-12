@@ -25234,6 +25234,239 @@ var init_service2 = __esm({
   }
 });
 
+// src/server/commercial/home-config.ts
+var HOME_PILOT, HOME_CATEGORIES;
+var init_home_config = __esm({
+  "src/server/commercial/home-config.ts"() {
+    "use strict";
+    HOME_PILOT = { vertical: "HOME", root: "MLB1574", capacity: 100, familyLimit: 25, version: "HOME_PILOT_V1" };
+    HOME_CATEGORIES = [
+      {
+        "id": "MLB244658",
+        "name": "Potes para Alimentos",
+        "family": "cozinha"
+      },
+      {
+        "id": "MLB194034",
+        "name": "Escorredores de Louça",
+        "family": "cozinha"
+      },
+      {
+        "id": "MLB455328",
+        "name": "Armazenamento de Condimentos",
+        "family": "cozinha"
+      },
+      {
+        "id": "MLB436305",
+        "name": "Organizadores para Cozinha",
+        "family": "cozinha"
+      },
+      {
+        "id": "MLB271799",
+        "name": "Porta Ovos",
+        "family": "cozinha"
+      },
+      {
+        "id": "MLB271756",
+        "name": "Pulverizadores de Azeite",
+        "family": "cozinha"
+      },
+      {
+        "id": "MLB193618",
+        "name": "Tábuas de Corte",
+        "family": "cozinha"
+      },
+      {
+        "id": "MLB271797",
+        "name": "Espremedor e Picador de Alho",
+        "family": "cozinha"
+      },
+      {
+        "id": "MLB436433",
+        "name": "Caixas",
+        "family": "organizacao"
+      },
+      {
+        "id": "MLB436435",
+        "name": "Organizadores de Maquiagem",
+        "family": "organizacao"
+      },
+      {
+        "id": "MLB431869",
+        "name": "Organizadores de Roupa",
+        "family": "organizacao"
+      },
+      {
+        "id": "MLB436416",
+        "name": "Organizadores para Cozinha",
+        "family": "organizacao"
+      },
+      {
+        "id": "MLB186367",
+        "name": "Saco a Vácuo",
+        "family": "organizacao"
+      },
+      {
+        "id": "MLB272183",
+        "name": "Organizadores de Escritório",
+        "family": "organizacao"
+      },
+      {
+        "id": "MLB186655",
+        "name": "Mop",
+        "family": "limpeza"
+      },
+      {
+        "id": "MLB269712",
+        "name": "Panos de Limpeza",
+        "family": "limpeza"
+      },
+      {
+        "id": "MLB264060",
+        "name": "Escovas de Limpeza",
+        "family": "limpeza"
+      },
+      {
+        "id": "MLB272145",
+        "name": "Limpa-vidros Magnéticos",
+        "family": "limpeza"
+      },
+      {
+        "id": "MLB263865",
+        "name": "Esponjas",
+        "family": "limpeza"
+      },
+      {
+        "id": "MLB186657",
+        "name": "Rodos",
+        "family": "limpeza"
+      },
+      {
+        "id": "MLB268446",
+        "name": "Cesto de Roupas",
+        "family": "lavanderia"
+      },
+      {
+        "id": "MLB271576",
+        "name": "Prendedores para Roupas",
+        "family": "lavanderia"
+      },
+      {
+        "id": "MLB271687",
+        "name": "Sacos para Lavar Roupas",
+        "family": "lavanderia"
+      },
+      {
+        "id": "MLB277691",
+        "name": "Dobradores de Roupa",
+        "family": "lavanderia"
+      },
+      {
+        "id": "MLB272180",
+        "name": "Bolas para Lavar e Secar",
+        "family": "lavanderia"
+      },
+      {
+        "id": "MLB436113",
+        "name": "Baldes e Bacias",
+        "family": "lavanderia"
+      },
+      {
+        "id": "MLB1616",
+        "name": "Acessórios para Banhos",
+        "family": "banheiro"
+      },
+      {
+        "id": "MLB186136",
+        "name": "Tapetes para Banheiro",
+        "family": "banheiro"
+      },
+      {
+        "id": "MLB438954",
+        "name": "Varões e Cortinas de Banho",
+        "family": "banheiro"
+      }
+    ];
+  }
+});
+
+// src/server/commercial/home-pilot.ts
+var home_pilot_exports = {};
+__export(home_pilot_exports, {
+  inspectConfiguredHomePilot: () => inspectConfiguredHomePilot,
+  inspectHomePilot: () => inspectHomePilot
+});
+async function inspectHomePilot(read, deadline = Date.now() + 21e4) {
+  const categories = [], products = [], seen = /* @__PURE__ */ new Set();
+  for (const category of HOME_CATEGORIES) {
+    if (Date.now() >= deadline) break;
+    try {
+      const data2 = await read("/categories/" + category.id);
+      if (data2.id !== category.id || !Array.isArray(data2.path_from_root) || !data2.path_from_root.some((p) => p.id === HOME_PILOT.root)) {
+        categories.push({ ...category, status: "INVALID_ANCESTRY" });
+        continue;
+      }
+      const ranking = await read("/highlights/MLB/category/" + category.id);
+      const entries = (Array.isArray(ranking.content) ? ranking.content : []).filter((e) => e.type === "PRODUCT" && /^MLB\d+$/.test(e.id) && Number.isInteger(e.position) && e.position >= 1 && e.position <= 20).sort((a, b) => a.position - b.position);
+      categories.push({ ...category, name: data2.name, status: 200, ranked: entries.length });
+      let inspected = 0;
+      for (const entry of entries) {
+        if (inspected >= 6 || Date.now() >= deadline) break;
+        if (seen.has(entry.id)) continue;
+        seen.add(entry.id);
+        inspected++;
+        const p = await resolveProductPreview(entry.id, "PRODUCT", read);
+        const complete = !!p.title && p.title !== entry.id && !!safePreviewUrl(p.image, true) && !!safePreviewUrl(p.url) && p.currency === "BRL" && typeof p.price === "number" && p.price > 0 && p.status !== "UNAVAILABLE";
+        const specialized = /chuveiro|torneira|cuba\b|colch[aã]o|sof[aá]|guarda.?roupa|el[eé]tric|\b\d{3}\s*v\b|industrial/i.test(p.title);
+        products.push({
+          id: entry.id,
+          category: category.id,
+          family: category.family,
+          position: entry.position,
+          title: p.title,
+          price: p.price,
+          checkedAt: p.priceCheckedAt,
+          complete,
+          comparable: p.comparable === true,
+          trusted: p.seller_trusted === true,
+          priceLinkVerified: p.priceLinkVerified === true,
+          editorial: specialized ? "REVIEW" : "CANDIDATE",
+          eligibleForPilot: complete && p.comparable === true && p.seller_trusted === true && !specialized
+        });
+      }
+    } catch (error) {
+      categories.push({ ...category, status: error instanceof PreviewUpstreamError ? error.status : 0 });
+    }
+  }
+  const qualified = products.filter((p) => p.eligibleForPilot);
+  const families = Object.fromEntries([...new Set(HOME_CATEGORIES.map((c) => c.family))].map((f) => [f, qualified.filter((p) => p.family === f).length]));
+  const diverseCapacity = Object.values(families).reduce((sum, n) => sum + Math.min(n, HOME_PILOT.familyLimit), 0);
+  return {
+    checkedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    config: HOME_PILOT,
+    activation: false,
+    scope: "READ_ONLY_PILOT",
+    categories,
+    products,
+    families,
+    qualified: qualified.length,
+    diverseCapacity,
+    hundredCandidatesProven: diverseCapacity >= HOME_PILOT.capacity,
+    historyMature: false,
+    deadlineReached: Date.now() >= deadline
+  };
+}
+async function inspectConfiguredHomePilot(client) {
+  return inspectHomePilot(await configuredMeliReader(client));
+}
+var init_home_pilot = __esm({
+  "src/server/commercial/home-pilot.ts"() {
+    "use strict";
+    init_product_preview();
+    init_home_config();
+  }
+});
+
 // src/server/commercial/home-probe.ts
 var home_probe_exports = {};
 __export(home_probe_exports, {
@@ -26361,10 +26594,11 @@ async function handleRequest(request, response, overrides = {}) {
       const discovering = url.pathname === "/api/commercial/discover";
       const probing = url.pathname === "/api/commercial/probe";
       const preparation = url.pathname === "/api/commercial/pre-home";
+      const homePilot = url.pathname === "/api/commercial/home-pilot";
       const simulation = url.pathname === "/api/commercial/selection-simulation";
       const priority = url.pathname === "/api/commercial/priority";
       const revalidating = url.pathname === "/api/commercial/revalidate";
-      const cron = discovering || probing || preparation || simulation || priority || url.pathname === "/api/commercial/cron";
+      const cron = homePilot || discovering || probing || preparation || simulation || priority || url.pathname === "/api/commercial/cron";
       const feedback = url.pathname === "/api/commercial/feedback";
       const publication = url.pathname === "/api/commercial/sent";
       const listing = url.pathname === "/api/commercial/opportunities";
@@ -26372,7 +26606,7 @@ async function handleRequest(request, response, overrides = {}) {
         sendJson(response, 404, { errorCode: "NOT_FOUND" });
         return;
       }
-      if (method !== (collecting || feedback || publication || probing || preparation || simulation || revalidating ? "POST" : "GET")) {
+      if (method !== (homePilot || collecting || feedback || publication || probing || preparation || simulation || revalidating ? "POST" : "GET")) {
         sendJson(response, 405, { errorCode: "METHOD_NOT_ALLOWED" });
         return;
       }
@@ -26405,6 +26639,11 @@ async function handleRequest(request, response, overrides = {}) {
       }
       const { createOperationalDiscoveryAdapter: createOperationalDiscoveryAdapter2 } = await Promise.resolve().then(() => (init_operational(), operational_exports));
       const client = createOperationalDiscoveryAdapter2().client;
+      if (homePilot) {
+        const { inspectConfiguredHomePilot: inspectConfiguredHomePilot2 } = await Promise.resolve().then(() => (init_home_pilot(), home_pilot_exports));
+        sendJson(response, 200, await inspectConfiguredHomePilot2(client));
+        return;
+      }
       if (simulation) {
         const { runSelectionSimulation: runSelectionSimulation2 } = await Promise.resolve().then(() => (init_selection_simulation(), selection_simulation_exports));
         const result = await runSelectionSimulation2(client);
