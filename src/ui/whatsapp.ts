@@ -41,10 +41,11 @@ async function loadWhatsApp() {
  }catch(e){el('wa-status').textContent=e.message;}
 }
 function whatsappSendButton(snapshot,input) {
- const button=textNode('button','📤 Revisar envio para '+verticalNames[selectedVertical],'copy-button');
+ const cardVertical=snapshot.vertical_key==='HOME'?1:0;
+ const button=textNode('button','📤 Revisar envio para '+verticalNames[cardVertical],'copy-button');
  button.addEventListener('click',async()=>{
   button.disabled=true;el('copy-status').textContent='Revalidando a oferta e preparando a mensagem…';
-  try{waDraft=await waRequest('prepare',{vertical:waVerticals[selectedVertical],id:snapshot.product_id,type:snapshot.type,link:input.value.trim()});el('wa-target').textContent='Destino: '+waDraft.group_name;el('wa-copy').textContent=waDraft.message;el('wa-preview').showModal();el('copy-status').textContent='';}
+  try{waDraft=await waRequest('prepare',{vertical:waVerticals[cardVertical],id:snapshot.product_id,type:snapshot.type,link:input.value.trim()});el('wa-target').textContent='Destino: '+waDraft.group_name;el('wa-copy').textContent=waDraft.message;el('wa-preview').showModal();el('copy-status').textContent='';}
   catch(e){el('copy-status').textContent=e.message;}finally{button.disabled=false;}
  });return button;
 }

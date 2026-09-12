@@ -47,15 +47,15 @@ export async function outboxAction(client:SupabaseClient,action:string,b:any,ori
   data(await client.rpc('whatsapp_bind',{v:b.vertical,g:g.id,n:g.name,e:b.enabled}));return {saved:true};
  }
  if(action==='prepare') {
-  if(b.vertical!=='AUTOMOTIVE') throw new OutboxError(400,'VERTICAL_NOT_ACTIVE');
+  if(!['AUTOMOTIVE','HOME'].includes(b.vertical)) throw new OutboxError(400,'VERTICAL_NOT_ACTIVE');
   if(!['ITEM','PRODUCT','USER_PRODUCT'].includes(b.type)||!/^MLBU?\d{1,20}$/.test(b.id??'')) throw new OutboxError(400,'INVALID_PRODUCT');
   const link=affiliateLink(b.link);
   const destination=data(await client.from('whatsapp_destinations').select('*').eq('vertical_key',b.vertical).eq('enabled',true).maybeSingle());
   if(!destination) throw new OutboxError(409,'DESTINATION_NOT_CONFIGURED');
   const c=data(await client.from('whatsapp_connector').select('generation').eq('id',1).single());
-  const watch=data(await client.from('commercial_watchlist').select('identity_key,monitor').eq('source_key',b.type+':'+b.id).maybeSingle());
+  const watch=data(await client.from(b.vertical==='HOME'?'home_candidates':'commercial_watchlist').select('identity_key,monitor').eq('source_key',b.type+':'+b.id).maybeSingle());
   if(!watch?.monitor) throw new OutboxError(409,'PRODUCT_NOT_MONITORED');
-  const fresh=await revalidateProduct(client,b.id,b.type);
+  const fresh=b.vertical==='HOME'?await (await import('../commercial/home-service.js')).revalidateHome(client,b.id,b.type):await revalidateProduct(client,b.id,b.type);
   if(!fresh.ready||productIdentity(b.id,b.type,fresh.preview)!==watch.identity_key) throw new OutboxError(409,'OFFER_CHANGED');
   const job=data(await client.from('whatsapp_outbox').insert({generation:c!.generation,vertical_key:b.vertical,identity_key:watch.identity_key,
    product_id:b.id,product_type:b.type,affiliate_url:link,group_id:destination.group_id,group_name:destination.group_name,
@@ -77,7 +77,7 @@ export async function outboxAction(client:SupabaseClient,action:string,b:any,ori
  if(action==='claim') {
   const job=data(await client.rpc('whatsapp_claim',{gen:generation}))?.[0];if(!job)return {job:null};
   try {
-   const fresh=await revalidateProduct(client,job.product_id,job.product_type);
+   const fresh=job.vertical_key==='HOME'?await (await import('../commercial/home-service.js')).revalidateHome(client,job.product_id,job.product_type):await revalidateProduct(client,job.product_id,job.product_type);
    if(!fresh.ready||productIdentity(job.product_id,job.product_type,fresh.preview)!==job.identity_key||offerMessage(fresh.preview,job.affiliate_url)!==job.message) throw new Error('OFFER_CHANGED');
   } catch {
    data(await client.rpc('whatsapp_finish',{job:job.id,gen:generation,claim:job.claim_token,result:'FAILED',provider_id:null,reason:'OFFER_REQUIRES_REVIEW'}));return {job:null};

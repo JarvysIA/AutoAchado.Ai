@@ -53,9 +53,11 @@ export function orderCommercialFamilies<T extends {rank:Pick<CommercialRank,'sta
  return result;
 }
 
-export function rankProduct(preview: ProductPreview, history: Observation[], feedback: string | null = null, now = Date.now()): CommercialRank {
-  const profile = commercialProfile(preview.title);
-  const editorial=assessAutomotive(preview);
+export function rankProduct(preview: ProductPreview, history: Observation[], feedback: string | null = null, now = Date.now(), context?: {
+ profile:{appeal:number;ease:number;reason:string|null};editorial:{state:string;family:string;reason:string}
+}): CommercialRank {
+  const profile = context?.profile ?? commercialProfile(preview.title);
+  const editorial=context?.editorial ?? assessAutomotive(preview);
   const reasons: string[] = [], evidence: string[] = [];
   let rejected = false;
   const fail = (text: string, hard = false) => { reasons.push(text); rejected ||= hard; };

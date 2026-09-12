@@ -61,7 +61,10 @@ describe("operational dashboard browser script", () => {
     await elements.get("smoke").handlers.click();
     expect(calls.filter(call => call.options.method === "POST" && !call.path.includes("/revalidate?")).map(call => call.path)).toEqual(["/api/discovery/sweep", "/api/discovery/smoke"]);
     expect(calls.every(call => call.options.cache === "no-store")).toBe(true);
-    for(let i=1;i<10;i++) {
+    await elements.get('vertical-1').handlers.click();
+    expect(calls.at(-1).path).toContain('vertical=HOME');
+    expect(elements.get('raw-products').hidden).toBe(true);
+    for(let i=2;i<10;i++) {
       const before=calls.length;
       await elements.get('vertical-'+i).handlers.click();
       expect(calls.length).toBe(before);
@@ -80,10 +83,10 @@ describe("operational dashboard browser script", () => {
     let resolveRequest:any;
     context.fetch=()=>new Promise(resolve=>{resolveRequest=resolve;});
     const pending=elements.get('vertical-0').handlers.click();
-    await elements.get('vertical-1').handlers.click();
+    await elements.get('vertical-2').handlers.click();
     resolveRequest({ok:true,json:async()=>({entries:[],counts:{},total:0})});
     await pending;
-    expect(elements.get('commercial-results').children[0].textContent).toContain('Casa');
+    expect(elements.get('commercial-results').children[0].textContent).toContain('Eletrodomésticos');
     expect(elements.get('commercial-summary').textContent).toContain('Vertical planejada');
     let sentAt:string|null=null;
     context.fetch=async(path:string,options:any)=>{

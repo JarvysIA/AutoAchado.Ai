@@ -275,10 +275,12 @@ export async function handleRequest(
       const probing=url.pathname === '/api/commercial/probe';
       const preparation=url.pathname === '/api/commercial/pre-home';
       const homePilot=url.pathname === '/api/commercial/home-pilot';
+      const homeRun=url.pathname === '/api/commercial/home-run';
+      const vertical=url.searchParams.get('vertical')??'AUTOMOTIVE';
       const simulation=url.pathname === '/api/commercial/selection-simulation';
       const priority=url.pathname === '/api/commercial/priority';
       const revalidating=url.pathname === '/api/commercial/revalidate';
-      const cron=homePilot || discovering || probing || preparation || simulation || priority || url.pathname === "/api/commercial/cron";
+      const cron=homeRun || homePilot || discovering || probing || preparation || simulation || priority || url.pathname === "/api/commercial/cron";
       const feedback=url.pathname === "/api/commercial/feedback";
       const publication=url.pathname === '/api/commercial/sent';
       const listing=url.pathname === "/api/commercial/opportunities";
@@ -294,12 +296,13 @@ export async function handleRequest(
         if((collecting || feedback || publication || revalidating) && request.headers.origin!==new URL(config.redirectUri).origin) {sendJson(response,403,{errorCode:"ORIGIN_NOT_ALLOWED"});return;}
       }
       // Until scoped executors are activated, never silently treat another public as Automotive.
-      if(url.searchParams.has('vertical') && url.searchParams.get('vertical')!=='AUTOMOTIVE') {
+      if(!['AUTOMOTIVE','HOME'].includes(vertical) || (vertical==='HOME' && (discovering||probing||preparation||simulation||priority))) {
         sendJson(response,400,{errorCode:'VERTICAL_NOT_ACTIVE'});return;
       }
       if(discovering) { const {runConfiguredDiscoveryLiveSmoke}=await import("./server/discovery/operational.js");sendJson(response,200,await runConfiguredDiscoveryLiveSmoke("FULL_SWEEP"));return;}
       const {createOperationalDiscoveryAdapter}=await import("./server/discovery/operational.js");
       const client=createOperationalDiscoveryAdapter().client;
+      if(homeRun) {const {runHome}=await import('./server/commercial/home-service.js');const kind=url.searchParams.get('kind')??'HISTORY';if(!['DISCOVERY','HISTORY'].includes(kind)){sendJson(response,400,{errorCode:'INVALID_KIND'});return;}sendJson(response,200,await runHome(client,kind as 'DISCOVERY'|'HISTORY'));return;}
       if(homePilot) {
         try {const {inspectConfiguredHomePilot}=await import('./server/commercial/home-pilot.js');sendJson(response,200,await inspectConfiguredHomePilot(client));}
         catch(error) {sendJson(response,503,{errorCode:error instanceof Error&&error.message==='PREVIEW_AUTH_UNAVAILABLE'?'MELI_AUTH_UNAVAILABLE':'HOME_PILOT_UNAVAILABLE'});}
@@ -328,25 +331,25 @@ export async function handleRequest(
       if(revalidating) {
         const id=url.searchParams.get('id')??'',type=url.searchParams.get('type')??'';
         if(!(type==='USER_PRODUCT'?/^MLBU[0-9]{1,20}$/.test(id):['ITEM','PRODUCT'].includes(type)&&/^MLB[0-9]{1,20}$/.test(id))) {sendJson(response,400,{errorCode:'INVALID_PRODUCT'});return;}
-        const {revalidateProduct}=await import('./server/commercial/revalidate.js');sendJson(response,200,await revalidateProduct(client,id,type));return;
+        const {revalidateProduct}=await import('./server/commercial/revalidate.js');sendJson(response,200,vertical==='HOME'?await (await import('./server/commercial/home-service.js')).revalidateHome(client,id,type):await revalidateProduct(client,id,type));return;
       }
       const service=await import("./server/commercial/service.js");
       if(publication) {
         const id=url.searchParams.get('id')??'',type=url.searchParams.get('type')??'',sent=url.searchParams.get('sent');
         if(!(type==='USER_PRODUCT'?/^MLBU[0-9]{1,20}$/.test(id):['ITEM','PRODUCT'].includes(type)&&/^MLB[0-9]{1,20}$/.test(id))
           || !['true','false'].includes(sent??'')) {sendJson(response,400,{errorCode:'INVALID_PUBLICATION'});return;}
-        sendJson(response,200,await service.markCommercialSent(client,id,type,sent==='true'));return;
+        sendJson(response,200,vertical==='HOME'?await (await import('./server/commercial/home-service.js')).homeAction(client,id,type,'sent',sent==='true'):await service.markCommercialSent(client,id,type,sent==='true'));return;
       }
-      if(collecting || cron) {sendJson(response,200,await service.collectCommercialEvidence(client));return;}
+      if(collecting || cron) {sendJson(response,200,vertical==='HOME'?await (await import('./server/commercial/home-service.js')).runHome(client,'HISTORY'):await service.collectCommercialEvidence(client));return;}
       if(feedback) {
         const id=url.searchParams.get('id')??'',type=url.searchParams.get('type')??'',action=url.searchParams.get('action')??'';
         if(!(type==='USER_PRODUCT' ? /^MLBU[0-9]{1,20}$/.test(id) : ['ITEM','PRODUCT'].includes(type) && /^MLB[0-9]{1,20}$/.test(id))
           || !['SHARED','INTERESTED','NOT_RELEVANT','RESET'].includes(action)) {sendJson(response,400,{errorCode:'INVALID_FEEDBACK'});return;}
-        sendJson(response,200,await service.saveCommercialFeedback(client,id,type,action));return;
+        sendJson(response,200,vertical==='HOME'?await (await import('./server/commercial/home-service.js')).homeAction(client,id,type,action):await service.saveCommercialFeedback(client,id,type,action));return;
       }
       const view=url.searchParams.get('view')??'ALL',offset=Number(url.searchParams.get('offset')??0);
       if(!['ALL','SENT','APPROVED','OBSERVING','REJECTED'].includes(view) || !Number.isSafeInteger(offset) || offset<0 || offset>10000) {sendJson(response,400,{errorCode:'INVALID_VIEW'});return;}
-      if(!sendJson(response,200,await service.commercialOpportunities(client,view,offset),undefined,2*1024*1024))
+      if(!sendJson(response,200,vertical==='HOME'?await (await import('./server/commercial/home-service.js')).homeOpportunities(client,view,offset):await service.commercialOpportunities(client,view,offset),undefined,2*1024*1024))
         sendJson(response,503,{errorCode:'COMMERCIAL_RESPONSE_TOO_LARGE'});
     } catch {sendJson(response,503,{errorCode:'COMMERCIAL_UNAVAILABLE'});}
     return;

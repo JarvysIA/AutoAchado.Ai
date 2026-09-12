@@ -5,6 +5,8 @@ import {createAuthorizationCookie} from '../src/oauth/session.js';
 const calls=vi.hoisted(()=>({sent:vi.fn(async()=>({saved:true})),collect:vi.fn(async()=>({status:'COMPLETED',collected:2,failed:0})),feedback:vi.fn(async()=>({saved:true})),list:vi.fn(async()=>({entries:[]}))}));
 vi.mock('../src/server/discovery/operational.js',()=>({createOperationalDiscoveryAdapter:()=>({client:{}})}));
 vi.mock('../src/server/commercial/service.js',()=>({collectCommercialEvidence:calls.collect,commercialOpportunities:calls.list,saveCommercialFeedback:calls.feedback,markCommercialSent:calls.sent}));
+const home=vi.hoisted(()=>({list:vi.fn(async()=>({entries:[]})),run:vi.fn(async()=>({status:'COMPLETED'})),action:vi.fn(async()=>({saved:true}))}));
+vi.mock('../src/server/commercial/home-service.js',()=>({homeOpportunities:home.list,runHome:home.run,homeAction:home.action}));
 const config={clientId:'fake',clientSecret:'fake',redirectUri:'https://autoachado-ai.vercel.app/auth/mercadolivre/callback',sessionSecret:'fake-test-session-secret-123456789012345'};
 const simulation = vi.hoisted(()=>vi.fn<()=>Promise<unknown>>());
 vi.mock('../src/server/commercial/selection-simulation.js',()=>({runSelectionSimulation:simulation}));
@@ -44,7 +46,7 @@ describe('commercial endpoint boundaries',()=>{
  });
  it('does not apply Automotive feedback or rankings to an inactive vertical',async()=>{
   const headers={cookie:cookie(),origin:'https://autoachado-ai.vercel.app'};
-  const result=await request('/api/commercial/feedback?id=MLB123&type=ITEM&action=NOT_RELEVANT&vertical=HOME','POST',headers);
+  const result=await request('/api/commercial/feedback?id=MLB123&type=ITEM&action=NOT_RELEVANT&vertical=APPLIANCES','POST',headers);
   expect(result.status).toBe(400);expect(JSON.parse(result.body).errorCode).toBe('VERTICAL_NOT_ACTIVE');
   expect((await request('/api/commercial/opportunities?vertical=PET','GET',headers)).status).toBe(400);
   expect(calls.feedback).not.toHaveBeenCalled();expect(calls.list).not.toHaveBeenCalled();
@@ -79,4 +81,15 @@ describe('commercial endpoint boundaries',()=>{
   expect((await request('/api/commercial/feedback?id=MLB123&type=ITEM&action=INTERESTED','POST',headers)).status).toBe(200);
   expect(calls.feedback).toHaveBeenCalledWith({},'MLB123','ITEM','INTERESTED');
  });
+});
+
+it('routes HOME independently and protects the scheduled executor',async()=>{
+ const headers={cookie:cookie(),origin:'https://autoachado-ai.vercel.app'};
+ expect((await request('/api/commercial/opportunities?vertical=HOME','GET',headers)).status).toBe(200);
+ expect(home.list).toHaveBeenCalledWith({},'ALL',0);expect(calls.list).not.toHaveBeenCalled();
+ expect((await request('/api/commercial/collect?vertical=HOME','POST',headers)).status).toBe(200);
+ expect(home.run).toHaveBeenCalledWith({},'HISTORY');expect(calls.collect).not.toHaveBeenCalled();
+ expect((await request('/api/commercial/home-run','GET',headers)).status).toBe(401);
+ expect((await request('/api/commercial/feedback?vertical=HOME&id=MLB123&type=PRODUCT&action=NOT_RELEVANT','POST',headers)).status).toBe(200);
+ expect(home.action).toHaveBeenCalledWith({},'MLB123','PRODUCT','NOT_RELEVANT');expect(calls.feedback).not.toHaveBeenCalled();
 });
