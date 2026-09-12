@@ -7,7 +7,7 @@ const client={from:()=>{
  const q:any={select:()=>q,eq:()=>q,gte:()=>q,order:()=>q,range:()=>Promise.resolve({data:[],error:null}),
   maybeSingle:()=>Promise.resolve({data:null,error:null}),update:()=>q,then:(resolve:any)=>resolve({data:[],error:null})};return q;
 }} as unknown as SupabaseClient;
-const preview={title:'Compressor portátil',image:'https://http2.mlstatic.com/a.jpg',description:null,
+const preview={priceLinkVerified:true,title:'Compressor portátil',image:'https://http2.mlstatic.com/a.jpg',description:null,
  url:'https://www.mercadolivre.com.br/p/MLB123',price:60,currency:'BRL',status:'CATALOG',priceCheckedAt:new Date().toISOString()};
 describe('sharing revalidation',()=>{
  it('bypasses the preview cache and does not invent historical approval',async()=>{
@@ -20,4 +20,9 @@ describe('sharing revalidation',()=>{
   mocks.preview.mockResolvedValue({...preview,price:null,status:'UNAVAILABLE'});
   expect((await revalidateProduct(client,'MLB123','PRODUCT')).ready).toBe(false);
  });
+});
+
+it('blocks sharing catalog-only prices without a confirmed listing',async()=>{
+ mocks.preview.mockResolvedValue({...preview,priceLinkVerified:false});
+ expect((await revalidateProduct(client,'MLB123','PRODUCT')).ready).toBe(false);
 });

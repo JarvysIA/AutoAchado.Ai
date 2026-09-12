@@ -11,6 +11,7 @@ export interface ProductPreview {
   currency: string;
   catalog_product_id?: string;
   offer_item_id?: string;
+  priceLinkVerified?: boolean;
   seller_id?: string;
   seller_level?: string;
   seller_trusted?: boolean;
@@ -55,14 +56,12 @@ export function publicProductUrl(id: string, type: string): string | null {
 export function catalogOfferUrl(catalogId:string,itemId:string):string|null {
   const base=publicProductUrl(catalogId,'PRODUCT');
   if(!base || !/^MLB\d+$/.test(itemId)) return null;
-  const url=new URL(base);
-  url.searchParams.set('pdp_filters','item_id:'+itemId);
-  url.hash='wid='+itemId;
-  return url.href;
+  return base;
 }
 function setPrice(preview: ProductPreview, amount: unknown, currency: unknown, source: NonNullable<ProductPreview["priceSource"]>, original?: unknown) {
   if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0 || typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency)) return;
   preview.comparable = false;
+  preview.priceLinkVerified = false;
   delete preview.original_price;
   if (typeof original === "number" && Number.isFinite(original) && original > amount) preview.original_price = original;
   preview.price = amount; preview.currency = currency; preview.priceSource = source;
@@ -155,7 +154,15 @@ export async function resolveProductPreview(id: string, type: string, read: Prev
     preview.offer_item_id=itemId;
     if(type === "PRODUCT") preview.url=catalogOfferUrl(id,itemId);
     let item;
-    try { item = await read(`/items/${itemId}`); }
+    try {
+      try { item = await read(`/items/${itemId}`); }
+      catch {
+        const batch=await read(`/items?ids=${itemId}`);
+        const entry=Array.isArray(batch)?batch.find(e=>e.code===200&&e.body?.id===itemId):null;
+        if(!entry) throw new Error("ITEM_DETAILS_UNAVAILABLE");
+        item=entry.body;
+      }
+    }
     catch {
       try {
         const sale = await read(`/items/${itemId}/sale_price`);
@@ -184,6 +191,7 @@ export async function resolveProductPreview(id: string, type: string, read: Prev
     if (preview.price === null) {
       try { const sale = await read(`/items/${itemId}/sale_price`); setPrice(preview, sale.amount, sale.currency_id, "SALE_PRICE", sale.regular_amount); } catch { /* Price unavailable. */ }
     }
+    preview.priceLinkVerified=!!url && preview.priceSource==="ITEM" && preview.price!==null && Array.isArray(item.variations) && item.variations.length<=1;
     preview.comparable = !!preview.catalog_product_id && item.condition === "new"
       && Array.isArray(item.variations) && item.variations.length <= 1 && preview.priceSource === "ITEM";
     await sellerEvidence(preview,read);

@@ -23849,14 +23849,12 @@ function publicProductUrl(id, type) {
 function catalogOfferUrl(catalogId, itemId) {
   const base = publicProductUrl(catalogId, "PRODUCT");
   if (!base || !/^MLB\d+$/.test(itemId)) return null;
-  const url = new URL(base);
-  url.searchParams.set("pdp_filters", "item_id:" + itemId);
-  url.hash = "wid=" + itemId;
-  return url.href;
+  return base;
 }
 function setPrice(preview, amount, currency, source, original) {
   if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0 || typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency)) return;
   preview.comparable = false;
+  preview.priceLinkVerified = false;
   delete preview.original_price;
   if (typeof original === "number" && Number.isFinite(original) && original > amount) preview.original_price = original;
   preview.price = amount;
@@ -23951,7 +23949,14 @@ async function resolveProductPreview(id, type, read) {
     if (type === "PRODUCT") preview.url = catalogOfferUrl(id, itemId);
     let item;
     try {
-      item = await read(`/items/${itemId}`);
+      try {
+        item = await read(`/items/${itemId}`);
+      } catch {
+        const batch = await read(`/items?ids=${itemId}`);
+        const entry = Array.isArray(batch) ? batch.find((e) => e.code === 200 && e.body?.id === itemId) : null;
+        if (!entry) throw new Error("ITEM_DETAILS_UNAVAILABLE");
+        item = entry.body;
+      }
     } catch {
       try {
         const sale = await read(`/items/${itemId}/sale_price`);
@@ -23998,6 +24003,7 @@ async function resolveProductPreview(id, type, read) {
       } catch {
       }
     }
+    preview.priceLinkVerified = !!url && preview.priceSource === "ITEM" && preview.price !== null && Array.isArray(item.variations) && item.variations.length <= 1;
     preview.comparable = !!preview.catalog_product_id && item.condition === "new" && Array.isArray(item.variations) && item.variations.length <= 1 && preview.priceSource === "ITEM";
     await sellerEvidence(preview, read);
     try {
@@ -24243,6 +24249,7 @@ function rankProduct(preview, history, feedback = null, now = Date.now()) {
   };
   const currentTime = Date.parse(preview.priceCheckedAt ?? "");
   const complete = !!preview.title.trim() && !/^MLBU?\d+$/.test(preview.title.trim()) && !!safePreviewUrl(preview.image, true) && !!safePreviewUrl(preview.url) && typeof preview.price === "number" && Number.isFinite(preview.price) && preview.price > 0 && preview.currency === "BRL";
+  if (preview.priceLinkVerified !== true) fail3("Preço de compra e anúncio correspondente ainda não confirmados.");
   if (!complete) fail3("Faltam título, foto, preço em BRL ou link utilizável.");
   if (!(currentTime <= now && currentTime >= now - DAY2)) fail3("Preço precisa ser consultado novamente (validade de 24 horas).");
   if (preview.status === "UNAVAILABLE") fail3("Oferta indisponível.", true);
@@ -25064,7 +25071,7 @@ async function revalidateProduct(client, id, type) {
   const feedback = checked3(await client.from("commercial_vertical_feedback").select("action").eq("vertical_key", "AUTOMOTIVE").eq("identity_key", identity).maybeSingle());
   const commercial = rankProduct(preview, rows, feedback?.action ?? null);
   checked3(await client.from("commercial_watchlist").update({ preview, identity_key: identity }).eq("source_key", type + ":" + id));
-  const ready = preview.status !== "UNAVAILABLE" && !!preview.title && preview.title !== id && !!safePreviewUrl(preview.image, true) && !!safePreviewUrl(preview.url) && !!preview.price && preview.currency === "BRL" && Date.parse(preview.priceCheckedAt ?? "") >= Date.now() - 6e4;
+  const ready = preview.priceLinkVerified === true && preview.status !== "UNAVAILABLE" && !!preview.title && preview.title !== id && !!safePreviewUrl(preview.image, true) && !!safePreviewUrl(preview.url) && !!preview.price && preview.currency === "BRL" && Date.parse(preview.priceCheckedAt ?? "") >= Date.now() - 6e4;
   return { ready, preview: { ...preview, ...affiliateIntelligence(preview), commercial } };
 }
 var init_revalidate = __esm({
@@ -25381,6 +25388,10 @@ __export(feasibility_probe_exports, {
 async function probeOfficialSources(client) {
   const read = await configuredMeliReader(client);
   const paths = [
+    "/items/MLB7076442330",
+    "/items?ids=MLB7076442330",
+    "/items/MLB6433211634",
+    "/items?ids=MLB6433211634",
     "/products/MLB57468821",
     "/products/MLB57468821/items?limit=3",
     "/highlights/MLB/product/MLB57468821",
@@ -25398,6 +25409,7 @@ async function probeOfficialSources(client) {
         ms: Date.now() - start,
         fields: Object.keys(data2).slice(0, 25),
         count: Array.isArray(data2.results) ? data2.results.length : null,
+        itemAccess: Array.isArray(data2) ? data2.map((e) => ({ code: e.code, id: e.body?.id, hasPermalink: typeof e.body?.permalink === "string" })) : void 0,
         hasDeadline: !!(data2.finish_date || data2.end_date || data2.end_time),
         position: Number.isInteger(data2.position) ? data2.position : null
       });
@@ -25849,7 +25861,7 @@ async function copyText(text, button) {
   }
 }
 function productCopy(snapshot, preview, link) {
-  if (!complete(snapshot, preview) || !affiliateUrl(link)) return null;
+  if (preview.priceLinkVerified !== true || !complete(snapshot, preview) || !affiliateUrl(link)) return null;
   const lines = ['🔥 ACHADO NO MERCADO LIVRE!', '📦 ' + preview.title];
   if (Number.isFinite(preview.original_price) && preview.original_price > preview.price) lines.push('~De: ' + money(preview.original_price, preview.currency) + '~');
   lines.push('💥 Por: ' + money(preview.price, preview.currency) + (preview.has_advertised_discount ? ' (' + preview.discount_percent + '% de desconto anunciado)' : ''));
@@ -25948,59 +25960,38 @@ function fillCard(card, snapshot, preview, timeline) {
   const details=textNode('details','','product-details');
   details.append(textNode('summary','Mais informações'));
   details.append(textNode('p', preview.description || 'Descrição não disponibilizada pela API.'));
-  let price = 'Consultar preço no Mercado Livre';
-  if (typeof preview.price === 'number' && Number.isFinite(preview.price)) {
+  const confirmedOffer=preview.priceLinkVerified===true;
+  let price = 'Preço de compra a confirmar';
+  if (confirmedOffer && typeof preview.price === 'number' && Number.isFinite(preview.price)) {
     try { price = new Intl.NumberFormat('pt-BR', {style:'currency',currency:preview.currency || 'BRL'}).format(preview.price); } catch { /* Keep fallback. */ }
   }
-  if (Number.isFinite(preview.original_price) && preview.original_price > preview.price) body.append(textNode('del', money(preview.original_price, preview.currency)));
+  if (confirmedOffer && Number.isFinite(preview.original_price) && preview.original_price > preview.price) body.append(textNode('del', money(preview.original_price, preview.currency)));
   body.append(textNode('strong', price, 'product-price'));
-  if (preview.has_advertised_discount) details.append(textNode('strong', '-' + preview.discount_percent + '% · Desconto anunciado', 'badge'));
+  if(!confirmedOffer) {
+    body.append(textNode('p','O catálogo pode abrir outra oferta. O preço da API não foi confirmado no anúncio.'));
+    if(Number.isFinite(preview.price)) details.append(textNode('p','Preço observado na API: '+money(preview.price)+' · '+date(preview.priceCheckedAt)));
+  }
+  if (confirmedOffer && preview.has_advertised_discount) details.append(textNode('strong', '-' + preview.discount_percent + '% · Desconto anunciado', 'badge'));
   if (preview.matched_coupon && Date.parse(preview.matched_coupon.expiresAt) > Date.now()) details.append(textNode('p', '🏷️ Cupom sugerido: ' + preview.matched_coupon.code + ' · Confira as condições no checkout.'));
   if (preview.priceSource) details.append(textNode('span', (preview.priceSource === 'CATALOG_OFFER' ? 'Preço da oferta de catálogo' : 'Preço informado pelo anúncio') + (preview.priceCheckedAt ? ' · Consultado em ' + date(preview.priceCheckedAt) : ''), 'product-meta'));
   details.append(textNode('span', snapshot.product_id + ' · ' + snapshot.type + ' · Tier ' + (snapshot.priority_tier || '—') + ' · Posição ' + (snapshot.position || '—'), 'product-meta'));
   details.append(textNode('span', 'Coletado em ' + date(snapshot.observed_at), 'product-meta'));
-  if(timeline) body.append(historyPanel(timeline));
+  if(timeline) body.append(historyPanel(confirmedOffer?timeline:{...timeline,current_verified:false,lowest_observed:false}));
   const publicUrl = snapshot.type === 'PRODUCT' && /^MLB[0-9]+$/.test(snapshot.product_id)
     ? 'https://www.mercadolivre.com.br/p/' + snapshot.product_id
     : snapshot.type === 'USER_PRODUCT' && /^MLBU[0-9]+$/.test(snapshot.product_id)
       ? 'https://www.mercadolivre.com.br/up/' + snapshot.product_id
-      : snapshot.type === 'ITEM' && /^MLB[0-9]+$/.test(snapshot.product_id)
-        ? 'https://produto.mercadolivre.com.br/MLB-' + snapshot.product_id.slice(3) + '-_JM' : null;
-  const href = safeUrl(preview.url, false) || publicUrl;
+      : /^MLB[0-9]+$/.test(preview.catalog_product_id||'') ? 'https://www.mercadolivre.com.br/p/'+preview.catalog_product_id : null;
+  const href = confirmedOffer ? safeUrl(preview.url,false) : publicUrl;
   if (href) {
-    const link = textNode('a', (preview.status === 'CATALOG' || !preview.url) ? 'Abrir produto e ofertas ↗' : 'Abrir anúncio no Mercado Livre ↗', 'product-link');
+    const link = textNode('a', !confirmedOffer ? 'Ver catálogo e outras ofertas ↗' : 'Abrir anúncio no Mercado Livre ↗', 'product-link');
     link.href = href; link.target = '_blank'; link.rel = 'noopener noreferrer';
-    link.addEventListener('click',async event=>{
-      event.preventDefault();
-      if(link.datasetChecking) return;
-      link.datasetChecking=true;
-      const popup=window.open('about:blank','_blank');
-      if(popup) popup.opener=null;
-      link.textContent='Conferindo preço e anúncio…';
-      try {
-        const data=await request('/api/commercial/revalidate?id='+encodeURIComponent(snapshot.product_id)+'&type='+encodeURIComponent(snapshot.type),'POST');
-        const destination=safeUrl(data.preview?.url,false);
-        if(!data.ready || !destination) throw new Error('OFFER_UNAVAILABLE');
-        const changed=data.preview.price!==preview.price;
-        const commercialCard=!!preview.commercial;
-        Object.assign(preview,data.preview);
-        if(commercialCard) await loadCommercial(); else fillCard(card,snapshot,preview,timeline);
-        el('copy-status').textContent=changed?'Preço atualizado. Confira o anúncio e gere o link de afiliado dessa oferta.':'Anúncio da oferta consultado agora. Confira preço e condições no Mercado Livre.';
-        if(popup) popup.location.replace(destination); else window.location.assign(destination);
-      } catch {
-        if(popup) popup.close();
-        el('copy-status').textContent='Não foi possível confirmar o preço e o anúncio agora. Atualize os dados e tente novamente.';
-      } finally {link.datasetChecking=false;link.textContent='Abrir anúncio no Mercado Livre ↗';}
-    });
     body.append(link);
-    if(snapshot.type==='PRODUCT' && publicUrl) {
-      const catalogLink=textNode('a','Ver catálogo e outras ofertas ↗','product-meta');
-      catalogLink.href=publicUrl;catalogLink.target='_blank';catalogLink.rel='noopener noreferrer';body.append(catalogLink);
-    }
+
   } else {
     body.append(textNode('p', preview.status === 'UNAVAILABLE' ? 'Anúncio indisponível no momento.' : 'Link não resolvido: dados indisponíveis ou acesso restrito pelo Mercado Livre.'));
   }
-  if (complete(snapshot, preview)) {
+  if (complete(snapshot, preview) && confirmedOffer) {
     const key = snapshot.type + ':' + snapshot.product_id;
     const label = textNode('label', 'Link oficial de afiliado deste produto');
     const input = document.createElement('input'); input.type = 'url'; input.className = 'affiliate-input';

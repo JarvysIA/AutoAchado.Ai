@@ -181,7 +181,7 @@ async function copyText(text, button) {
   }
 }
 function productCopy(snapshot, preview, link) {
-  if (!complete(snapshot, preview) || !affiliateUrl(link)) return null;
+  if (preview.priceLinkVerified !== true || !complete(snapshot, preview) || !affiliateUrl(link)) return null;
   const lines = ['🔥 ACHADO NO MERCADO LIVRE!', '📦 ' + preview.title];
   if (Number.isFinite(preview.original_price) && preview.original_price > preview.price) lines.push('~De: ' + money(preview.original_price, preview.currency) + '~');
   lines.push('💥 Por: ' + money(preview.price, preview.currency) + (preview.has_advertised_discount ? ' (' + preview.discount_percent + '% de desconto anunciado)' : ''));
@@ -280,59 +280,38 @@ function fillCard(card, snapshot, preview, timeline) {
   const details=textNode('details','','product-details');
   details.append(textNode('summary','Mais informações'));
   details.append(textNode('p', preview.description || 'Descrição não disponibilizada pela API.'));
-  let price = 'Consultar preço no Mercado Livre';
-  if (typeof preview.price === 'number' && Number.isFinite(preview.price)) {
+  const confirmedOffer=preview.priceLinkVerified===true;
+  let price = 'Preço de compra a confirmar';
+  if (confirmedOffer && typeof preview.price === 'number' && Number.isFinite(preview.price)) {
     try { price = new Intl.NumberFormat('pt-BR', {style:'currency',currency:preview.currency || 'BRL'}).format(preview.price); } catch { /* Keep fallback. */ }
   }
-  if (Number.isFinite(preview.original_price) && preview.original_price > preview.price) body.append(textNode('del', money(preview.original_price, preview.currency)));
+  if (confirmedOffer && Number.isFinite(preview.original_price) && preview.original_price > preview.price) body.append(textNode('del', money(preview.original_price, preview.currency)));
   body.append(textNode('strong', price, 'product-price'));
-  if (preview.has_advertised_discount) details.append(textNode('strong', '-' + preview.discount_percent + '% · Desconto anunciado', 'badge'));
+  if(!confirmedOffer) {
+    body.append(textNode('p','O catálogo pode abrir outra oferta. O preço da API não foi confirmado no anúncio.'));
+    if(Number.isFinite(preview.price)) details.append(textNode('p','Preço observado na API: '+money(preview.price)+' · '+date(preview.priceCheckedAt)));
+  }
+  if (confirmedOffer && preview.has_advertised_discount) details.append(textNode('strong', '-' + preview.discount_percent + '% · Desconto anunciado', 'badge'));
   if (preview.matched_coupon && Date.parse(preview.matched_coupon.expiresAt) > Date.now()) details.append(textNode('p', '🏷️ Cupom sugerido: ' + preview.matched_coupon.code + ' · Confira as condições no checkout.'));
   if (preview.priceSource) details.append(textNode('span', (preview.priceSource === 'CATALOG_OFFER' ? 'Preço da oferta de catálogo' : 'Preço informado pelo anúncio') + (preview.priceCheckedAt ? ' · Consultado em ' + date(preview.priceCheckedAt) : ''), 'product-meta'));
   details.append(textNode('span', snapshot.product_id + ' · ' + snapshot.type + ' · Tier ' + (snapshot.priority_tier || '—') + ' · Posição ' + (snapshot.position || '—'), 'product-meta'));
   details.append(textNode('span', 'Coletado em ' + date(snapshot.observed_at), 'product-meta'));
-  if(timeline) body.append(historyPanel(timeline));
+  if(timeline) body.append(historyPanel(confirmedOffer?timeline:{...timeline,current_verified:false,lowest_observed:false}));
   const publicUrl = snapshot.type === 'PRODUCT' && /^MLB[0-9]+$/.test(snapshot.product_id)
     ? 'https://www.mercadolivre.com.br/p/' + snapshot.product_id
     : snapshot.type === 'USER_PRODUCT' && /^MLBU[0-9]+$/.test(snapshot.product_id)
       ? 'https://www.mercadolivre.com.br/up/' + snapshot.product_id
-      : snapshot.type === 'ITEM' && /^MLB[0-9]+$/.test(snapshot.product_id)
-        ? 'https://produto.mercadolivre.com.br/MLB-' + snapshot.product_id.slice(3) + '-_JM' : null;
-  const href = safeUrl(preview.url, false) || publicUrl;
+      : /^MLB[0-9]+$/.test(preview.catalog_product_id||'') ? 'https://www.mercadolivre.com.br/p/'+preview.catalog_product_id : null;
+  const href = confirmedOffer ? safeUrl(preview.url,false) : publicUrl;
   if (href) {
-    const link = textNode('a', (preview.status === 'CATALOG' || !preview.url) ? 'Abrir produto e ofertas ↗' : 'Abrir anúncio no Mercado Livre ↗', 'product-link');
+    const link = textNode('a', !confirmedOffer ? 'Ver catálogo e outras ofertas ↗' : 'Abrir anúncio no Mercado Livre ↗', 'product-link');
     link.href = href; link.target = '_blank'; link.rel = 'noopener noreferrer';
-    link.addEventListener('click',async event=>{
-      event.preventDefault();
-      if(link.datasetChecking) return;
-      link.datasetChecking=true;
-      const popup=window.open('about:blank','_blank');
-      if(popup) popup.opener=null;
-      link.textContent='Conferindo preço e anúncio…';
-      try {
-        const data=await request('/api/commercial/revalidate?id='+encodeURIComponent(snapshot.product_id)+'&type='+encodeURIComponent(snapshot.type),'POST');
-        const destination=safeUrl(data.preview?.url,false);
-        if(!data.ready || !destination) throw new Error('OFFER_UNAVAILABLE');
-        const changed=data.preview.price!==preview.price;
-        const commercialCard=!!preview.commercial;
-        Object.assign(preview,data.preview);
-        if(commercialCard) await loadCommercial(); else fillCard(card,snapshot,preview,timeline);
-        el('copy-status').textContent=changed?'Preço atualizado. Confira o anúncio e gere o link de afiliado dessa oferta.':'Anúncio da oferta consultado agora. Confira preço e condições no Mercado Livre.';
-        if(popup) popup.location.replace(destination); else window.location.assign(destination);
-      } catch {
-        if(popup) popup.close();
-        el('copy-status').textContent='Não foi possível confirmar o preço e o anúncio agora. Atualize os dados e tente novamente.';
-      } finally {link.datasetChecking=false;link.textContent='Abrir anúncio no Mercado Livre ↗';}
-    });
     body.append(link);
-    if(snapshot.type==='PRODUCT' && publicUrl) {
-      const catalogLink=textNode('a','Ver catálogo e outras ofertas ↗','product-meta');
-      catalogLink.href=publicUrl;catalogLink.target='_blank';catalogLink.rel='noopener noreferrer';body.append(catalogLink);
-    }
+
   } else {
     body.append(textNode('p', preview.status === 'UNAVAILABLE' ? 'Anúncio indisponível no momento.' : 'Link não resolvido: dados indisponíveis ou acesso restrito pelo Mercado Livre.'));
   }
-  if (complete(snapshot, preview)) {
+  if (complete(snapshot, preview) && confirmedOffer) {
     const key = snapshot.type + ':' + snapshot.product_id;
     const label = textNode('label', 'Link oficial de afiliado deste produto');
     const input = document.createElement('input'); input.type = 'url'; input.className = 'affiliate-input';

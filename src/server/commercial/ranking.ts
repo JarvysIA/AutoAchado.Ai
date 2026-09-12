@@ -63,6 +63,7 @@ export function rankProduct(preview: ProductPreview, history: Observation[], fee
   const complete = !!preview.title.trim() && !/^MLBU?\d+$/.test(preview.title.trim())
     && !!safePreviewUrl(preview.image, true) && !!safePreviewUrl(preview.url)
     && typeof preview.price === "number" && Number.isFinite(preview.price) && preview.price > 0 && preview.currency === "BRL";
+  if (preview.priceLinkVerified!==true) fail("Preço de compra e anúncio correspondente ainda não confirmados.");
   if (!complete) fail("Faltam título, foto, preço em BRL ou link utilizável.");
   if (!(currentTime <= now && currentTime >= now - DAY)) fail("Preço precisa ser consultado novamente (validade de 24 horas).");
   if (preview.status === "UNAVAILABLE") fail("Oferta indisponível.", true);
