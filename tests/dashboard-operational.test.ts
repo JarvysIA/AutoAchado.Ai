@@ -20,7 +20,7 @@ describe("operational dashboard browser script", () => {
         calls.push({path, options});
         return { ok: true, json: async () => path.endsWith("latest-snapshots") ? {
           total: 345, syncedAt: "2026-09-05T00:00:00Z", snapshots: [{product_id:"MLBU999",type:"USER_PRODUCT"}, { product_id: "MLB123", type:"ITEM", priority_tier:"A", observed_at: "2026-09-05T00:00:00Z" }]
-        } : path.includes("/commercial/revalidate?") ? {ready:revalidationReady,preview:{title:"<script>alert(1)</script>",url:"https://produto.mercadolivre.com.br/MLB-123-_JM",price:revalidationPrice,original_price:150,currency:"BRL",image:"https://http2.mlstatic.com/test.jpg",status:"AVAILABLE",priceLinkVerified:true}} : path.includes("/commercial/opportunities") ? {entries:[],counts:{approved:0,observing:0,rejected:0,monitored:0},total:0,hasMore:false,lastCollection:null} : path.endsWith("/coupons") ? {coupons:[]} : path.includes("MLBU999") ? {title:"MLBU999",url:"https://www.mercadolivre.com.br/up/MLBU999"} : path.includes("/preview?") ? { title: "<script>alert(1)</script>", url: "https://produto.mercadolivre.com.br/MLB-123-_JM", price: 123, original_price: 150, currency: "BRL", image:"https://http2.mlstatic.com/test.jpg", status: "AVAILABLE", priceLinkVerified:true } : { status: "COMPLETED", persisted: 2 } };
+        } : path.includes("/commercial/revalidate?") ? {ready:revalidationReady,preview:{title:"<script>alert(1)</script>",url:"https://produto.mercadolivre.com.br/MLB-123-_JM",price:revalidationPrice,original_price:150,currency:"BRL",image:"https://http2.mlstatic.com/test.jpg",status:"AVAILABLE",priceLinkVerified:false}} : path.includes("/commercial/opportunities") ? {entries:[],counts:{approved:0,observing:0,rejected:0,monitored:0},total:0,hasMore:false,lastCollection:null} : path.endsWith("/coupons") ? {coupons:[]} : path.includes("MLBU999") ? {title:"MLBU999",url:"https://www.mercadolivre.com.br/up/MLBU999"} : path.includes("/preview?") ? { title: "<script>alert(1)</script>", url: "https://produto.mercadolivre.com.br/MLB-123-_JM", price: 123, original_price: 150, currency: "BRL", image:"https://http2.mlstatic.com/test.jpg", status: "AVAILABLE", priceLinkVerified:false } : { status: "COMPLETED", persisted: 2 } };
       } });
     const html = dashboardPage({authorized: true, userId: "296984475"});
     new Script(html.match(/<script>([\s\S]*?)<\/script>/)![1]!).runInContext(context);
@@ -38,7 +38,7 @@ describe("operational dashboard browser script", () => {
     const input = body.children.find((n:any) => n.children[0]?.type === "url").children[0];
     await button.handlers.click(); expect(copied).toEqual([]);
     input.value="https://meli.la/test-link"; input.handlers.change(); await button.handlers.click();
-    expect(copied[0]).toContain("R$ 123,00"); expect(copied[0]).toContain("~De: R$ 150,00~"); expect(copied[0]).toContain("\n📦");
+    expect(copied[0]).toContain("Preço observado no catálogo; confirme o valor no link."); expect(copied[0]).toContain("R$ 123,00"); expect(copied[0]).toContain("~De: R$ 150,00~"); expect(copied[0]).toContain("\n📦");
     expect(copied[0]).not.toContain("Link de afiliado — posso receber comissão."); expect(copied[0]).toContain("Preço e estoque podem mudar. Confira a oferta e aproveite! 🛒"); expect(storage.size).toBe(1);
     input.value="https://mercadolivre.com.br.evil.test/"; await button.handlers.click(); expect(copied).toHaveLength(1);
     input.value="https://meli.la/test-link";
@@ -92,7 +92,7 @@ describe("operational dashboard browser script", () => {
         return {ok:true,json:async()=>({saved:true})};
       }
       if(path.includes('/commercial/opportunities')) return {ok:true,json:async()=>({entries:[{
-        snapshot:{product_id:'MLB123',type:'PRODUCT'},preview:{title:'Compressor portátil',price:123,original_price:150,currency:'BRL'},sent_at:sentAt,
+        snapshot:{product_id:'MLB123',type:'PRODUCT'},preview:{title:'Compressor portátil',price:123,original_price:150,currency:'BRL',url:'https://www.mercadolivre.com.br/p/MLB123',image:'https://http2.mlstatic.com/test.jpg'},sent_at:sentAt,
         selection:{score:72,demand:{days:7,median_position:3},assessed_at:'2026-09-09T12:00:00Z',eligible:true,reasons:[],components:{demand:30,utility:17,ease:12,seller:10,ticket:3}},
         price_analysis:{historical_discount_confirmed:false,state:'INSUFFICIENT_HISTORY',rolling:{days:2,sellers:1},reference_price:null,campaign:null},
         rank:{state:'OBSERVING',score:20,history_days:1,seller_count:1,demand_days:1,historical_discount_percent:null,reasons:[],evidence:[]}
@@ -107,11 +107,12 @@ describe("operational dashboard browser script", () => {
     expect(evidence).toContain('Desconto histórico ainda não confirmado');
     expect(evidence).toContain('2 dias observados · 1 vendedores');
     const card=elements.get('commercial-results').children[0];
-    expect(card.querySelector('.product-price').textContent).toBe('Preço de compra a confirmar');
-    expect(card.querySelector('.copy-button')).toBeNull();
+    expect(card.querySelector('.product-price').textContent).toBe('R$ 123,00');
+    expect(card.querySelector('.copy-button')).not.toBeNull();
+    expect(card.querySelector('.affiliate-input')).not.toBeNull();
     expect(card.querySelector('.product-link').href).toBe('https://www.mercadolivre.com.br/p/MLB123');
     expect(card.querySelector('.product-link').handlers.click).toBeUndefined();
-    expect(card.children[1].children.some((n:any)=>n.textContent==='R$ 150,00')).toBe(false);
+    expect(card.children[1].children.some((n:any)=>n.textContent==='R$ 150,00')).toBe(true);
     const sentAction=()=>elements.get('commercial-results').children[0].querySelector('.product-actions').children.find((n:any)=>n.textContent.includes('Marcar como divulgado')||n.textContent==='Desfazer divulgação');
     expect(sentAt).toBeNull();
     await sentAction().handlers.click();

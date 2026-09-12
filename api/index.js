@@ -25071,7 +25071,7 @@ async function revalidateProduct(client, id, type) {
   const feedback = checked3(await client.from("commercial_vertical_feedback").select("action").eq("vertical_key", "AUTOMOTIVE").eq("identity_key", identity).maybeSingle());
   const commercial = rankProduct(preview, rows, feedback?.action ?? null);
   checked3(await client.from("commercial_watchlist").update({ preview, identity_key: identity }).eq("source_key", type + ":" + id));
-  const ready = preview.priceLinkVerified === true && preview.status !== "UNAVAILABLE" && !!preview.title && preview.title !== id && !!safePreviewUrl(preview.image, true) && !!safePreviewUrl(preview.url) && !!preview.price && preview.currency === "BRL" && Date.parse(preview.priceCheckedAt ?? "") >= Date.now() - 6e4;
+  const ready = preview.status !== "UNAVAILABLE" && !!preview.title && preview.title !== id && !!safePreviewUrl(preview.image, true) && !!safePreviewUrl(preview.url) && !!preview.price && preview.currency === "BRL" && Date.parse(preview.priceCheckedAt ?? "") >= Date.now() - 6e4;
   return { ready, preview: { ...preview, ...affiliateIntelligence(preview), commercial } };
 }
 var init_revalidate = __esm({
@@ -25112,6 +25112,7 @@ function offerMessage(p, link) {
   const lines = ["🔥 ACHADO NO MERCADO LIVRE!", "📦 " + p.title];
   if (Number.isFinite(p.original_price) && p.original_price > p.price) lines.push("~De: " + money(p.original_price) + "~");
   lines.push("💥 Por: " + money(p.price) + (p.has_advertised_discount ? " (" + p.discount_percent + "% de desconto anunciado)" : ""));
+  if (p.priceLinkVerified !== true) lines.push("Preço observado no catálogo; confirme o valor no link.");
   const c = p.matched_coupon;
   if (c && Date.parse(c.expiresAt) > Date.now()) {
     lines.push("🏷️ Cupom sugerido: *" + c.code + "* (" + c.discountValue + ")");
@@ -25861,10 +25862,11 @@ async function copyText(text, button) {
   }
 }
 function productCopy(snapshot, preview, link) {
-  if (preview.priceLinkVerified !== true || !complete(snapshot, preview) || !affiliateUrl(link)) return null;
+  if (!complete(snapshot, preview) || !affiliateUrl(link)) return null;
   const lines = ['🔥 ACHADO NO MERCADO LIVRE!', '📦 ' + preview.title];
   if (Number.isFinite(preview.original_price) && preview.original_price > preview.price) lines.push('~De: ' + money(preview.original_price, preview.currency) + '~');
   lines.push('💥 Por: ' + money(preview.price, preview.currency) + (preview.has_advertised_discount ? ' (' + preview.discount_percent + '% de desconto anunciado)' : ''));
+  if(preview.priceLinkVerified!==true) lines.push('Preço observado no catálogo; confirme o valor no link.');
   const coupon = preview.matched_coupon;
   if (coupon && Date.parse(coupon.expiresAt) > Date.now()) {
     lines.push('🏷️ Cupom sugerido: *' + coupon.code + '* (' + coupon.discountValue + ')');
@@ -25961,17 +25963,18 @@ function fillCard(card, snapshot, preview, timeline) {
   details.append(textNode('summary','Mais informações'));
   details.append(textNode('p', preview.description || 'Descrição não disponibilizada pela API.'));
   const confirmedOffer=preview.priceLinkVerified===true;
-  let price = 'Preço de compra a confirmar';
-  if (confirmedOffer && typeof preview.price === 'number' && Number.isFinite(preview.price)) {
+  let price = 'Preço não disponível';
+  if (typeof preview.price === 'number' && Number.isFinite(preview.price)) {
     try { price = new Intl.NumberFormat('pt-BR', {style:'currency',currency:preview.currency || 'BRL'}).format(preview.price); } catch { /* Keep fallback. */ }
   }
-  if (confirmedOffer && Number.isFinite(preview.original_price) && preview.original_price > preview.price) body.append(textNode('del', money(preview.original_price, preview.currency)));
+  if (Number.isFinite(preview.original_price) && preview.original_price > preview.price) body.append(textNode('del', money(preview.original_price, preview.currency)));
   body.append(textNode('strong', price, 'product-price'));
   if(!confirmedOffer) {
-    body.append(textNode('p','O catálogo pode abrir outra oferta. O preço da API não foi confirmado no anúncio.'));
+    body.append(textNode('span','Preço observado no catálogo · Confira no link', 'product-meta'));
+    details.append(textNode('p','O catálogo pode selecionar outro vendedor ou variação. Confira o preço no link de afiliado antes de divulgar.'));
     if(Number.isFinite(preview.price)) details.append(textNode('p','Preço observado na API: '+money(preview.price)+' · '+date(preview.priceCheckedAt)));
   }
-  if (confirmedOffer && preview.has_advertised_discount) details.append(textNode('strong', '-' + preview.discount_percent + '% · Desconto anunciado', 'badge'));
+  if (preview.has_advertised_discount) details.append(textNode('strong', '-' + preview.discount_percent + '% · Desconto anunciado', 'badge'));
   if (preview.matched_coupon && Date.parse(preview.matched_coupon.expiresAt) > Date.now()) details.append(textNode('p', '🏷️ Cupom sugerido: ' + preview.matched_coupon.code + ' · Confira as condições no checkout.'));
   if (preview.priceSource) details.append(textNode('span', (preview.priceSource === 'CATALOG_OFFER' ? 'Preço da oferta de catálogo' : 'Preço informado pelo anúncio') + (preview.priceCheckedAt ? ' · Consultado em ' + date(preview.priceCheckedAt) : ''), 'product-meta'));
   details.append(textNode('span', snapshot.product_id + ' · ' + snapshot.type + ' · Tier ' + (snapshot.priority_tier || '—') + ' · Posição ' + (snapshot.position || '—'), 'product-meta'));
@@ -25991,7 +25994,7 @@ function fillCard(card, snapshot, preview, timeline) {
   } else {
     body.append(textNode('p', preview.status === 'UNAVAILABLE' ? 'Anúncio indisponível no momento.' : 'Link não resolvido: dados indisponíveis ou acesso restrito pelo Mercado Livre.'));
   }
-  if (complete(snapshot, preview) && confirmedOffer) {
+  if (complete(snapshot, preview)) {
     const key = snapshot.type + ':' + snapshot.product_id;
     const label = textNode('label', 'Link oficial de afiliado deste produto');
     const input = document.createElement('input'); input.type = 'url'; input.className = 'affiliate-input';

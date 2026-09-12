@@ -22,7 +22,8 @@ describe('sharing revalidation',()=>{
  });
 });
 
-it('blocks sharing catalog-only prices without a confirmed listing',async()=>{
+it('allows fresh catalog prices for manual review without historical approval',async()=>{
  mocks.preview.mockResolvedValue({...preview,priceLinkVerified:false});
- expect((await revalidateProduct(client,'MLB123','PRODUCT')).ready).toBe(false);
+ const result=await revalidateProduct(client,'MLB123','PRODUCT');
+ expect(result.ready).toBe(true);expect(result.preview.priceLinkVerified).toBe(false);expect(result.preview.commercial.state).not.toBe('APPROVED');
 });

@@ -21,7 +21,7 @@ export async function revalidateProduct(client:SupabaseClient,id:string,type:str
  const feedback=checked(await client.from('commercial_vertical_feedback').select('action').eq('vertical_key','AUTOMOTIVE').eq('identity_key',identity).maybeSingle());
  const commercial=rankProduct(preview,rows,feedback?.action??null);
  checked(await client.from('commercial_watchlist').update({preview,identity_key:identity}).eq('source_key',type+':'+id));
- const ready=preview.priceLinkVerified===true&&preview.status!=='UNAVAILABLE'&&!!preview.title&&preview.title!==id&&!!safePreviewUrl(preview.image,true)
+ const ready=preview.status!=='UNAVAILABLE'&&!!preview.title&&preview.title!==id&&!!safePreviewUrl(preview.image,true)
   &&!!safePreviewUrl(preview.url)&&!!preview.price&&preview.currency==='BRL'&&Date.parse(preview.priceCheckedAt??'')>=Date.now()-60000;
  return {ready,preview:{...preview,...affiliateIntelligence(preview),commercial}};
 }
