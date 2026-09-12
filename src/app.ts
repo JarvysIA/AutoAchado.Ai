@@ -300,7 +300,11 @@ export async function handleRequest(
       if(discovering) { const {runConfiguredDiscoveryLiveSmoke}=await import("./server/discovery/operational.js");sendJson(response,200,await runConfiguredDiscoveryLiveSmoke("FULL_SWEEP"));return;}
       const {createOperationalDiscoveryAdapter}=await import("./server/discovery/operational.js");
       const client=createOperationalDiscoveryAdapter().client;
-      if(homePilot) {const {inspectConfiguredHomePilot}=await import('./server/commercial/home-pilot.js');sendJson(response,200,await inspectConfiguredHomePilot(client));return;}
+      if(homePilot) {
+        try {const {inspectConfiguredHomePilot}=await import('./server/commercial/home-pilot.js');sendJson(response,200,await inspectConfiguredHomePilot(client));}
+        catch(error) {sendJson(response,503,{errorCode:error instanceof Error&&error.message==='PREVIEW_AUTH_UNAVAILABLE'?'MELI_AUTH_UNAVAILABLE':'HOME_PILOT_UNAVAILABLE'});}
+        return;
+      }
       if(simulation) {
         const {runSelectionSimulation}=await import('./server/commercial/selection-simulation.js');
         const result = await runSelectionSimulation(client);

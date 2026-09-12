@@ -26640,8 +26640,12 @@ async function handleRequest(request, response, overrides = {}) {
       const { createOperationalDiscoveryAdapter: createOperationalDiscoveryAdapter2 } = await Promise.resolve().then(() => (init_operational(), operational_exports));
       const client = createOperationalDiscoveryAdapter2().client;
       if (homePilot) {
-        const { inspectConfiguredHomePilot: inspectConfiguredHomePilot2 } = await Promise.resolve().then(() => (init_home_pilot(), home_pilot_exports));
-        sendJson(response, 200, await inspectConfiguredHomePilot2(client));
+        try {
+          const { inspectConfiguredHomePilot: inspectConfiguredHomePilot2 } = await Promise.resolve().then(() => (init_home_pilot(), home_pilot_exports));
+          sendJson(response, 200, await inspectConfiguredHomePilot2(client));
+        } catch (error) {
+          sendJson(response, 503, { errorCode: error instanceof Error && error.message === "PREVIEW_AUTH_UNAVAILABLE" ? "MELI_AUTH_UNAVAILABLE" : "HOME_PILOT_UNAVAILABLE" });
+        }
         return;
       }
       if (simulation) {
