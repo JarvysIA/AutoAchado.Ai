@@ -1,5 +1,7 @@
 # Casa — critérios de relevância e revisão editorial
 
+> Atualização: [Casa foi ativada em 12/09/2026](casa-operacional-2026-09-12.md). O texto abaixo registra a etapa anterior.
+
 Amostra oficial de 12/09/2026: 29 categorias e 172 produtos distintos. A revisão editorial usa essa mesma amostra; não é uma nova coleta e não gera dias históricos adicionais.
 
 ## Resultado

@@ -1,5 +1,7 @@
 # Casa — início da implantação
 
+> Atualização: [Casa foi ativada em 12/09/2026](casa-operacional-2026-09-12.md). O texto abaixo registra a etapa anterior.
+
 Estado: configuração publicada e amostra autenticada concluída; monitoramento HOME ainda não ativado.
 
 ## Recorte
