@@ -107,7 +107,7 @@ describe("operational dashboard browser script", () => {
     expect(evidence).toContain('Desconto histórico ainda não confirmado');
     expect(evidence).toContain('2 dias observados · 1 vendedores');
     const card=elements.get('commercial-results').children[0];
-    expect(card.querySelector('.product-price').textContent).toBe('R$ 123,00');
+    expect(card.querySelector('.product-price').textContent).toBe('R$ 123,00 · -18% (anunciado)');
     expect(card.querySelector('.copy-button')).not.toBeNull();
     expect(card.querySelector('.affiliate-input')).not.toBeNull();
     expect(card.querySelector('.product-link').href).toBe('https://www.mercadolivre.com.br/p/MLB123');

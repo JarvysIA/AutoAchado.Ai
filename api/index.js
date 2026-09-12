@@ -25968,7 +25968,9 @@ function fillCard(card, snapshot, preview, timeline) {
     try { price = new Intl.NumberFormat('pt-BR', {style:'currency',currency:preview.currency || 'BRL'}).format(preview.price); } catch { /* Keep fallback. */ }
   }
   if (Number.isFinite(preview.original_price) && preview.original_price > preview.price) body.append(textNode('del', money(preview.original_price, preview.currency)));
-  body.append(textNode('strong', price, 'product-price'));
+  const discount = Number.isFinite(preview.price) && preview.price > 0 && Number.isFinite(preview.original_price) && preview.original_price > preview.price
+    ? Math.round((1 - preview.price / preview.original_price) * 100) : 0;
+  body.append(textNode('strong', price + (discount > 0 ? ' · -' + discount + '% (anunciado)' : ''), 'product-price'));
   if(!confirmedOffer) {
     body.append(textNode('span','Preço observado no catálogo · Confira no link', 'product-meta'));
     details.append(textNode('p','O catálogo pode selecionar outro vendedor ou variação. Confira o preço no link de afiliado antes de divulgar.'));
