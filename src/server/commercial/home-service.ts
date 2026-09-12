@@ -27,8 +27,8 @@ async function history(client:SupabaseClient,ids:string[]) {
  const result:(Observation&{identity_key:string;category_id?:string})[]=[];
  if(!ids.length)return result;
  const start=new Date(Math.min(priceHistoryStart(Date.now()),timelineStart(Date.now()))).toISOString();
- for(const table of ['home_observations','home_rank_observations']) for(let page=0;;page++) {
-  const rows=checked(await client.from(table).select('*').in('identity_key',ids).gte('observed_at',start)
+ for(let startIndex=0;startIndex<ids.length;startIndex+=100) for(const table of ['home_observations','home_rank_observations']) for(let page=0;;page++) {
+  const rows=checked(await client.from(table).select('*').in('identity_key',ids.slice(startIndex,startIndex+100)).gte('observed_at',start)
    .order('observed_at').order('identity_key').order(table==='home_observations'?'source_key':'category_id').range(page*1000,page*1000+999));
   result.push(...(rows??[]).map(r=>table==='home_observations'?{...r,price:r.price===null?null:Number(r.price),position:null}:
    {...r,price:null,currency:'BRL',seller_id:null,comparable:false,trusted:false,demand_category:r.category_id}));
@@ -87,7 +87,10 @@ export async function runHome(client:SupabaseClient,kind:'DISCOVERY'|'HISTORY') 
      if(c.id!==category.id||!c.path_from_root?.some((p:any)=>p.id==='MLB1574'))throw new Error('HOME_ANCESTRY');
      const ranking=await read('/highlights/MLB/category/'+category.id);
      let complete=true;
-     for(const entry of (Array.isArray(ranking.content)?ranking.content:[])) {
+     const pending=[...(Array.isArray(ranking.content)?ranking.content:[])];
+     const workers=await Promise.allSettled(Array.from({length:3},async()=>{
+     while(pending.length) {
+      const entry=pending.shift();
       if(Date.now()>=deadline){complete=false;break;}
       if(entry.type!=='PRODUCT'||!/^MLB\d+$/.test(entry.id)||!Number.isInteger(entry.position)||entry.position<1||entry.position>20)continue;
       checked(await client.from('home_rank_observations').upsert({identity_key:identity(entry.id),category_id:category.id,position:entry.position,observed_at:new Date().toISOString()}));
@@ -101,6 +104,8 @@ export async function runHome(client:SupabaseClient,kind:'DISCOVERY'|'HISTORY') 
       if(e.state==='CANDIDATE')await observe(client,entry.id,category.id,read,p);
       collected++;
      }
+     }));
+     if(workers.some(w=>w.status==='rejected'))throw new Error('HOME_CATEGORY_PARTIAL');
      if(complete)checked(await client.from('home_category_checks').upsert({category_id:category.id,checked_at:new Date().toISOString(),status:200}));
     }catch {failed++;checked(await client.from('home_category_checks').upsert({category_id:category.id,checked_at:new Date().toISOString(),status:503}));}
    }

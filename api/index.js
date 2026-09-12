@@ -25337,8 +25337,8 @@ async function history(client, ids) {
   const result = [];
   if (!ids.length) return result;
   const start = new Date(Math.min(priceHistoryStart(Date.now()), timelineStart(Date.now()))).toISOString();
-  for (const table of ["home_observations", "home_rank_observations"]) for (let page = 0; ; page++) {
-    const rows = checked4(await client.from(table).select("*").in("identity_key", ids).gte("observed_at", start).order("observed_at").order("identity_key").order(table === "home_observations" ? "source_key" : "category_id").range(page * 1e3, page * 1e3 + 999));
+  for (let startIndex = 0; startIndex < ids.length; startIndex += 100) for (const table of ["home_observations", "home_rank_observations"]) for (let page = 0; ; page++) {
+    const rows = checked4(await client.from(table).select("*").in("identity_key", ids.slice(startIndex, startIndex + 100)).gte("observed_at", start).order("observed_at").order("identity_key").order(table === "home_observations" ? "source_key" : "category_id").range(page * 1e3, page * 1e3 + 999));
     result.push(...(rows ?? []).map((r) => table === "home_observations" ? { ...r, price: r.price === null ? null : Number(r.price), position: null } : { ...r, price: null, currency: "BRL", seller_id: null, comparable: false, trusted: false, demand_category: r.category_id }));
     if (!rows || rows.length < 1e3) break;
     if (page >= 99) throw new Error("HOME_HISTORY_LIMIT");
@@ -25416,25 +25416,30 @@ async function runHome(client, kind) {
           if (c.id !== category.id || !c.path_from_root?.some((p) => p.id === "MLB1574")) throw new Error("HOME_ANCESTRY");
           const ranking = await read("/highlights/MLB/category/" + category.id);
           let complete = true;
-          for (const entry of Array.isArray(ranking.content) ? ranking.content : []) {
-            if (Date.now() >= deadline) {
-              complete = false;
-              break;
+          const pending = [...Array.isArray(ranking.content) ? ranking.content : []];
+          const workers = await Promise.allSettled(Array.from({ length: 3 }, async () => {
+            while (pending.length) {
+              const entry = pending.shift();
+              if (Date.now() >= deadline) {
+                complete = false;
+                break;
+              }
+              if (entry.type !== "PRODUCT" || !/^MLB\d+$/.test(entry.id) || !Number.isInteger(entry.position) || entry.position < 1 || entry.position > 20) continue;
+              checked4(await client.from("home_rank_observations").upsert({ identity_key: identity(entry.id), category_id: category.id, position: entry.position, observed_at: (/* @__PURE__ */ new Date()).toISOString() }));
+              if (seen.has(entry.id)) continue;
+              seen.add(entry.id);
+              const p = await resolveProductPreview(entry.id, "PRODUCT", read);
+              const e = assessHome(p.title, category.id);
+              checked4(await client.from("home_candidates").upsert(
+                { source_key: "PRODUCT:" + entry.id, product_id: entry.id, identity_key: identity(entry.id), category_id: category.id, family: category.family, preview: p },
+                { onConflict: "source_key", ignoreDuplicates: true }
+              ));
+              checked4(await client.from("home_candidates").update({ preview: p }).eq("source_key", "PRODUCT:" + entry.id));
+              if (e.state === "CANDIDATE") await observe(client, entry.id, category.id, read, p);
+              collected++;
             }
-            if (entry.type !== "PRODUCT" || !/^MLB\d+$/.test(entry.id) || !Number.isInteger(entry.position) || entry.position < 1 || entry.position > 20) continue;
-            checked4(await client.from("home_rank_observations").upsert({ identity_key: identity(entry.id), category_id: category.id, position: entry.position, observed_at: (/* @__PURE__ */ new Date()).toISOString() }));
-            if (seen.has(entry.id)) continue;
-            seen.add(entry.id);
-            const p = await resolveProductPreview(entry.id, "PRODUCT", read);
-            const e = assessHome(p.title, category.id);
-            checked4(await client.from("home_candidates").upsert(
-              { source_key: "PRODUCT:" + entry.id, product_id: entry.id, identity_key: identity(entry.id), category_id: category.id, family: category.family, preview: p },
-              { onConflict: "source_key", ignoreDuplicates: true }
-            ));
-            checked4(await client.from("home_candidates").update({ preview: p }).eq("source_key", "PRODUCT:" + entry.id));
-            if (e.state === "CANDIDATE") await observe(client, entry.id, category.id, read, p);
-            collected++;
-          }
+          }));
+          if (workers.some((w) => w.status === "rejected")) throw new Error("HOME_CATEGORY_PARTIAL");
           if (complete) checked4(await client.from("home_category_checks").upsert({ category_id: category.id, checked_at: (/* @__PURE__ */ new Date()).toISOString(), status: 200 }));
         } catch {
           failed++;
