@@ -1,5 +1,5 @@
 // Seed IDs observed in the official category tree; ancestry is rechecked by the pilot.
-export const HOME_PILOT = {vertical:'HOME', root:'MLB1574', capacity:100, familyLimit:25, version:'HOME_PILOT_V1'} as const;
+export const HOME_PILOT = {vertical:'HOME', root:'MLB1574', capacity:100, familyLimit:25, version:'HOME_PILOT_V2'} as const;
 export const HOME_CATEGORIES = [
   {
     "id": "MLB244658",
@@ -146,4 +146,31 @@ export const HOME_CATEGORIES = [
     "name": "Varões e Cortinas de Banho",
     "family": "banheiro"
   }
+,
+{"id":"MLB9181","name":"Panelas e Frigideiras","family":"preparo"},
+{"id":"MLB33424","name":"Travessas e Assadeiras","family":"preparo"},
+{"id":"MLB271394","name":"Luvas de Cozinha","family":"preparo"},
+{"id":"MLB268438","name":"Abridores de Latas","family":"preparo"},
+{"id":"MLB455315","name":"Cortadores e Raladores","family":"preparo"},
+{"id":"MLB418005","name":"Descascadores de Batatas","family":"preparo"},
+{"id":"MLB456931","name":"Kits de Utensílios de Cozinha","family":"preparo"},
+{"id":"MLB193615","name":"Peneiras","family":"preparo"},
+{"id":"MLB277666","name":"Copos e Jarras Medidoras","family":"preparo"},
+{"id":"MLB432600","name":"Tesouras de Cozinha","family":"preparo"},
+{"id":"MLB193616","name":"Bandejas","family":"mesa"},
+{"id":"MLB271155","name":"Fruteiras","family":"mesa"},
+{"id":"MLB9193","name":"Talheres","family":"mesa"},
+{"id":"MLB455586","name":"Manteigueiras","family":"mesa"},
+{"id":"MLB186057","name":"Jogo Americano","family":"mesa"},
+{"id":"MLB186058","name":"Toalha de Mesa","family":"mesa"},
+{"id":"MLB107481","name":"Bules e Chaleiras","family":"cafe"},
+{"id":"MLB270605","name":"Infusores de Chá","family":"cafe"},
+{"id":"MLB271663","name":"Porta Cápsulas","family":"cafe"},
+{"id":"MLB73072","name":"Varais","family":"lavanderia"},
+{"id":"MLB278286","name":"Toalhas de Banho","family":"banheiro"},
+{"id":"MLB186351","name":"Toalhas de Rosto","family":"banheiro"},
+{"id":"MLB438004","name":"Travesseiros","family":"texteis"},
+{"id":"MLB30059","name":"Lençóis","family":"texteis"},
+{"id":"MLB30063","name":"Cobre Leito","family":"texteis"},
+{"id":"MLB270276","name":"Protetores para Colchões","family":"texteis"}
 ] as const;

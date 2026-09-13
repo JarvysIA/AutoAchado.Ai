@@ -5,7 +5,7 @@ begin
  select count(*) into before_auto from public.commercial_watchlist where monitor;
  update public.commercial_verticals set executor_ready=true,enabled=true,rules_version='HOME_EDITORIAL_V1' where vertical_key='HOME';
  insert into public.home_candidates(source_key,product_id,identity_key,category_id,family,preview,assessment,score)
- select 'PRODUCT:MLB999999'||g,'MLB999999'||g,'test-home-'||g,'MLB244658','family-'||(g%5),
+ select 'PRODUCT:MLB999999'||g,'MLB999999'||g,'test-home-'||g,'test-category-'||(g%40),'family-'||(g%5),
  jsonb_build_object('priceCheckedAt',now()),'{"eligible":true}',100 from generate_series(1,105) g;
  perform public.renew_home_candidates();
  select count(*) into n from public.home_candidates where monitor;

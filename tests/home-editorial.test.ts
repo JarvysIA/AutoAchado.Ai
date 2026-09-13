@@ -13,3 +13,9 @@ it('accepts everyday uses but sends compatibility and effectiveness claims to re
   const r=assessHome(title!,id!);expect(r.state).toBe('REVIEW');expect(r.reasons.length).toBeGreaterThan(0);
  }
 });
+
+it('reviews the expanded categories and rejects electrical appliances',()=>{
+ for(const [title,id] of [['Panela antiaderente','MLB9181'],['Kit talheres inox','MLB9193'],['Jogo lençóis casal','MLB30059'],['Toalha banho algodão','MLB278286'],['Protetor colchão casal','MLB270276']]) expect(assessHome(title!,id!).state).toBe('CANDIDATE');
+ expect(assessHome('Chaleira elétrica 220v','MLB107481').state).toBe('REVIEW');
+ expect(assessHome('Mop spray','MLB9181').state).toBe('REVIEW');
+});

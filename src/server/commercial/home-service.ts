@@ -1,5 +1,6 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
 import {configuredMeliReader,resolveProductPreview,catalogOfferPreview,safePreviewUrl,type ProductPreview,type PreviewReader} from '../discovery/product-preview.js';
+import {diverseHomeOrder} from './home-diversity.js';
 import {HOME_CATEGORIES} from './home-config.js';
 import {assessHome} from './home-editorial.js';
 import {rankProduct,type Observation} from './ranking.js';
@@ -141,12 +142,13 @@ export async function homeOpportunities(client:SupabaseClient,view:string,offset
   const own=observations.filter(o=>o.identity_key===w.identity_key),p=w.preview;
   return {identity_key:w.identity_key,monitor:w.monitor,feedback:w.feedback,sent_at:sent.find(s=>s.identity_key===w.identity_key)?.sent_at??null,
    snapshot:{product_id:w.product_id,type:'PRODUCT',category_id:w.category_id,vertical_key:'HOME'},preview:{...p,...affiliateIntelligence(p)},
-   selection:{...w.assessment,score:w.score,assessed_at:w.assessment.assessed_at,reasons:w.assessment.reasons??[]},
+   selection:{...w.assessment,diversity_key:w.diversity_key??w.category_id,score:w.score,assessed_at:w.assessment.assessed_at,reasons:w.assessment.reasons??[]},
    rank:rankProduct(p,own,w.feedback,Date.now(),homeContext(p.title,w.category_id)),price_analysis:analyzePriceTruth(p,own),price_timeline:priceTimeline(p,own)};
  });
  entries.sort((a,b)=>Number(b.rank.state==='APPROVED')-Number(a.rank.state==='APPROVED')||b.selection.score-a.selection.score||a.identity_key.localeCompare(b.identity_key));
  const monitored=entries.filter(e=>e.monitor),approved=monitored.filter(e=>e.rank.state==='APPROVED'&&!e.sent_at),published=entries.filter(e=>e.sent_at);
- const selected=view==='ALL'?monitored:view==='SENT'?published:view==='APPROVED'?approved:monitored.filter(e=>e.rank.state===view);
+ const selectedRaw=view==='ALL'?monitored:view==='SENT'?published:view==='APPROVED'?approved:monitored.filter(e=>e.rank.state===view);
+ const selected=diverseHomeOrder(selectedRaw);
  const runs=checked(await client.from('home_runs').select('*').order('started_at',{ascending:false}).limit(1));
  return {entries:selected.slice(offset,offset+50),total:selected.length,hasMore:offset+50<selected.length,capacity:100,
   counts:{monitored:monitored.length,approved:approved.length,sent:published.length},lastCollection:runs?.[0]??null};

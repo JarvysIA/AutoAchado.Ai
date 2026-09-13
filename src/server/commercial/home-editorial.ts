@@ -1,7 +1,33 @@
 import {HOME_CATEGORIES} from './home-config.js';
 
-export const HOME_EDITORIAL_VERSION='HOME_EDITORIAL_V1';
+export const HOME_EDITORIAL_VERSION='HOME_EDITORIAL_V2';
 const matches:Record<string,RegExp>={
+ MLB9181:/panela|frigideira/,
+ MLB33424:/travessa|assadeira|forma/,
+ MLB271394:/luva/,
+ MLB268438:/abridor/,
+ MLB455315:/cortador|ralador|fatiador|mandolin/,
+ MLB418005:/descascador/,
+ MLB456931:/utensilio|espatula|concha/,
+ MLB193615:/peneira/,
+ MLB277666:/medidor|graduad/,
+ MLB432600:/tesoura/,
+ MLB193616:/bandeja/,
+ MLB271155:/fruteira/,
+ MLB9193:/talher|faqueiro|garfo|colher|faca/,
+ MLB455586:/manteigueira/,
+ MLB186057:/jogo americano|lugar americano/,
+ MLB186058:/toalha.*mesa/,
+ MLB107481:/bule|chaleira/,
+ MLB270605:/infusor/,
+ MLB271663:/capsula/,
+ MLB73072:/varal/,
+ MLB278286:/toalha/,
+ MLB186351:/toalha/,
+ MLB438004:/travesseiro/,
+ MLB30059:/lencol|lencois/,
+ MLB30063:/cobre.?leito|colcha/,
+ MLB270276:/protetor|capa.*colchao/,
  MLB244658:/potes?|marmitas?/, MLB194034:/escorredor|tapete.*pia/, MLB455328:/tempero|condimento|moedor/,
  MLB436305:/organizador|dispenser|porta.*(bucha|esponja)/, MLB271799:/ovos/, MLB271756:/azeite|galheteiro|borrifador|pulverizador/,
  MLB193618:/tabua/, MLB271797:/alho/, MLB436433:/caixa/, MLB436435:/organizador|porta.*(algodao|cotonete|maquiagem)/,
@@ -22,7 +48,7 @@ export function assessHome(title:string,categoryId:string) {
  const reasons:string[]=[];
  const result=(state:'CANDIDATE'|'REVIEW'|'EXCLUDE')=>({version:HOME_EDITORIAL_VERSION,state,family:category?.family??'unknown',reasons});
  if(!category||!matches[categoryId]) {reasons.push('Categoria ainda não revisada para Casa.');return result('REVIEW');}
- if(/\bwhey\b|suplemento|colchao|cafeteira|maquina de lavar|\bsofa\b|guarda.?roupa/.test(text)) {
+ if(/\bwhey\b|suplemento|cafeteira|maquina de lavar|\bsofa\b|guarda.?roupa/.test(text)) {
   reasons.push('Produto pertence a outro recorte comercial, mesmo aparecendo neste ranking.');return result('EXCLUDE');
  }
  if(!matches[categoryId]!.test(text)) {reasons.push('Título não confirma correspondência com a categoria de descoberta.');return result('REVIEW');}

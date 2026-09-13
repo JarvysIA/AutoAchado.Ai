@@ -1,0 +1,188 @@
+{
+  "checkedAt": "2026-09-13T02:36:10.481Z",
+  "source": "https://api.mercadolibre.com/categories/",
+  "categories": [
+    {
+      "id": "MLB9181",
+      "name": "Panelas e Frigideiras",
+      "family": "preparo",
+      "parent": "MLB436280",
+      "verified": true
+    },
+    {
+      "id": "MLB33424",
+      "name": "Travessas e Assadeiras",
+      "family": "preparo",
+      "parent": "MLB436280",
+      "verified": true
+    },
+    {
+      "id": "MLB271394",
+      "name": "Luvas de Cozinha",
+      "family": "preparo",
+      "parent": "MLB436280",
+      "verified": true
+    },
+    {
+      "id": "MLB268438",
+      "name": "Abridores de Latas",
+      "family": "preparo",
+      "parent": "MLB436273",
+      "verified": true
+    },
+    {
+      "id": "MLB455315",
+      "name": "Cortadores e Raladores",
+      "family": "preparo",
+      "parent": "MLB436273",
+      "verified": true
+    },
+    {
+      "id": "MLB418005",
+      "name": "Descascadores de Batatas",
+      "family": "preparo",
+      "parent": "MLB436273",
+      "verified": true
+    },
+    {
+      "id": "MLB456931",
+      "name": "Kits de Utensílios de Cozinha",
+      "family": "preparo",
+      "parent": "MLB436273",
+      "verified": true
+    },
+    {
+      "id": "MLB193615",
+      "name": "Peneiras",
+      "family": "preparo",
+      "parent": "MLB436273",
+      "verified": true
+    },
+    {
+      "id": "MLB277666",
+      "name": "Copos e Jarras Medidoras",
+      "family": "preparo",
+      "parent": "MLB436273",
+      "verified": true
+    },
+    {
+      "id": "MLB432600",
+      "name": "Tesouras de Cozinha",
+      "family": "preparo",
+      "parent": "MLB436273",
+      "verified": true
+    },
+    {
+      "id": "MLB193616",
+      "name": "Bandejas",
+      "family": "mesa",
+      "parent": "MLB436289",
+      "verified": true
+    },
+    {
+      "id": "MLB271155",
+      "name": "Fruteiras",
+      "family": "mesa",
+      "parent": "MLB436289",
+      "verified": true
+    },
+    {
+      "id": "MLB9193",
+      "name": "Talheres",
+      "family": "mesa",
+      "parent": "MLB436289",
+      "verified": true
+    },
+    {
+      "id": "MLB455586",
+      "name": "Manteigueiras",
+      "family": "mesa",
+      "parent": "MLB436289",
+      "verified": true
+    },
+    {
+      "id": "MLB186057",
+      "name": "Jogo Americano",
+      "family": "mesa",
+      "parent": "MLB33385",
+      "verified": true
+    },
+    {
+      "id": "MLB186058",
+      "name": "Toalha de Mesa",
+      "family": "mesa",
+      "parent": "MLB33385",
+      "verified": true
+    },
+    {
+      "id": "MLB107481",
+      "name": "Bules e Chaleiras",
+      "family": "cafe",
+      "parent": "MLB436296",
+      "verified": true
+    },
+    {
+      "id": "MLB270605",
+      "name": "Infusores de Chá",
+      "family": "cafe",
+      "parent": "MLB436296",
+      "verified": true
+    },
+    {
+      "id": "MLB271663",
+      "name": "Porta Cápsulas",
+      "family": "cafe",
+      "parent": "MLB436296",
+      "verified": true
+    },
+    {
+      "id": "MLB73072",
+      "name": "Varais",
+      "family": "lavanderia",
+      "parent": "MLB436100",
+      "verified": true
+    },
+    {
+      "id": "MLB278286",
+      "name": "Toalhas de Banho",
+      "family": "banheiro",
+      "parent": "MLB186135",
+      "verified": true
+    },
+    {
+      "id": "MLB186351",
+      "name": "Toalhas de Rosto",
+      "family": "banheiro",
+      "parent": "MLB186135",
+      "verified": true
+    },
+    {
+      "id": "MLB438004",
+      "name": "Travesseiros",
+      "family": "texteis",
+      "parent": "MLB436246",
+      "verified": true
+    },
+    {
+      "id": "MLB30059",
+      "name": "Lençóis",
+      "family": "texteis",
+      "parent": "MLB1609",
+      "verified": true
+    },
+    {
+      "id": "MLB30063",
+      "name": "Cobre Leito",
+      "family": "texteis",
+      "parent": "MLB1609",
+      "verified": true
+    },
+    {
+      "id": "MLB270276",
+      "name": "Protetores para Colchões",
+      "family": "texteis",
+      "parent": "MLB1609",
+      "verified": true
+    }
+  ]
+}

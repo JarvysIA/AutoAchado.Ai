@@ -25085,12 +25085,30 @@ var init_revalidate = __esm({
   }
 });
 
+// src/server/commercial/home-diversity.ts
+function diverseHomeOrder(entries) {
+  const pending = [...entries], result = [];
+  const counts2 = /* @__PURE__ */ new Map();
+  while (pending.length) {
+    pending.sort((a, b) => Number(b.rank.state === "APPROVED") - Number(a.rank.state === "APPROVED") || b.selection.score - 12 * (counts2.get(b.selection.diversity_key) ?? 0) - (a.selection.score - 12 * (counts2.get(a.selection.diversity_key) ?? 0)) || a.identity_key.localeCompare(b.identity_key));
+    const next = pending.shift();
+    result.push(next);
+    counts2.set(next.selection.diversity_key, (counts2.get(next.selection.diversity_key) ?? 0) + 1);
+  }
+  return result;
+}
+var init_home_diversity = __esm({
+  "src/server/commercial/home-diversity.ts"() {
+    "use strict";
+  }
+});
+
 // src/server/commercial/home-config.ts
 var HOME_PILOT, HOME_CATEGORIES;
 var init_home_config = __esm({
   "src/server/commercial/home-config.ts"() {
     "use strict";
-    HOME_PILOT = { vertical: "HOME", root: "MLB1574", capacity: 100, familyLimit: 25, version: "HOME_PILOT_V1" };
+    HOME_PILOT = { vertical: "HOME", root: "MLB1574", capacity: 100, familyLimit: 25, version: "HOME_PILOT_V2" };
     HOME_CATEGORIES = [
       {
         "id": "MLB244658",
@@ -25236,7 +25254,33 @@ var init_home_config = __esm({
         "id": "MLB438954",
         "name": "Varões e Cortinas de Banho",
         "family": "banheiro"
-      }
+      },
+      { "id": "MLB9181", "name": "Panelas e Frigideiras", "family": "preparo" },
+      { "id": "MLB33424", "name": "Travessas e Assadeiras", "family": "preparo" },
+      { "id": "MLB271394", "name": "Luvas de Cozinha", "family": "preparo" },
+      { "id": "MLB268438", "name": "Abridores de Latas", "family": "preparo" },
+      { "id": "MLB455315", "name": "Cortadores e Raladores", "family": "preparo" },
+      { "id": "MLB418005", "name": "Descascadores de Batatas", "family": "preparo" },
+      { "id": "MLB456931", "name": "Kits de Utensílios de Cozinha", "family": "preparo" },
+      { "id": "MLB193615", "name": "Peneiras", "family": "preparo" },
+      { "id": "MLB277666", "name": "Copos e Jarras Medidoras", "family": "preparo" },
+      { "id": "MLB432600", "name": "Tesouras de Cozinha", "family": "preparo" },
+      { "id": "MLB193616", "name": "Bandejas", "family": "mesa" },
+      { "id": "MLB271155", "name": "Fruteiras", "family": "mesa" },
+      { "id": "MLB9193", "name": "Talheres", "family": "mesa" },
+      { "id": "MLB455586", "name": "Manteigueiras", "family": "mesa" },
+      { "id": "MLB186057", "name": "Jogo Americano", "family": "mesa" },
+      { "id": "MLB186058", "name": "Toalha de Mesa", "family": "mesa" },
+      { "id": "MLB107481", "name": "Bules e Chaleiras", "family": "cafe" },
+      { "id": "MLB270605", "name": "Infusores de Chá", "family": "cafe" },
+      { "id": "MLB271663", "name": "Porta Cápsulas", "family": "cafe" },
+      { "id": "MLB73072", "name": "Varais", "family": "lavanderia" },
+      { "id": "MLB278286", "name": "Toalhas de Banho", "family": "banheiro" },
+      { "id": "MLB186351", "name": "Toalhas de Rosto", "family": "banheiro" },
+      { "id": "MLB438004", "name": "Travesseiros", "family": "texteis" },
+      { "id": "MLB30059", "name": "Lençóis", "family": "texteis" },
+      { "id": "MLB30063", "name": "Cobre Leito", "family": "texteis" },
+      { "id": "MLB270276", "name": "Protetores para Colchões", "family": "texteis" }
     ];
   }
 });
@@ -25251,7 +25295,7 @@ function assessHome(title, categoryId) {
     reasons.push("Categoria ainda não revisada para Casa.");
     return result("REVIEW");
   }
-  if (/\bwhey\b|suplemento|colchao|cafeteira|maquina de lavar|\bsofa\b|guarda.?roupa/.test(text3)) {
+  if (/\bwhey\b|suplemento|cafeteira|maquina de lavar|\bsofa\b|guarda.?roupa/.test(text3)) {
     reasons.push("Produto pertence a outro recorte comercial, mesmo aparecendo neste ranking.");
     return result("EXCLUDE");
   }
@@ -25270,8 +25314,34 @@ var init_home_editorial = __esm({
   "src/server/commercial/home-editorial.ts"() {
     "use strict";
     init_home_config();
-    HOME_EDITORIAL_VERSION = "HOME_EDITORIAL_V1";
+    HOME_EDITORIAL_VERSION = "HOME_EDITORIAL_V2";
     matches = {
+      MLB9181: /panela|frigideira/,
+      MLB33424: /travessa|assadeira|forma/,
+      MLB271394: /luva/,
+      MLB268438: /abridor/,
+      MLB455315: /cortador|ralador|fatiador|mandolin/,
+      MLB418005: /descascador/,
+      MLB456931: /utensilio|espatula|concha/,
+      MLB193615: /peneira/,
+      MLB277666: /medidor|graduad/,
+      MLB432600: /tesoura/,
+      MLB193616: /bandeja/,
+      MLB271155: /fruteira/,
+      MLB9193: /talher|faqueiro|garfo|colher|faca/,
+      MLB455586: /manteigueira/,
+      MLB186057: /jogo americano|lugar americano/,
+      MLB186058: /toalha.*mesa/,
+      MLB107481: /bule|chaleira/,
+      MLB270605: /infusor/,
+      MLB271663: /capsula/,
+      MLB73072: /varal/,
+      MLB278286: /toalha/,
+      MLB186351: /toalha/,
+      MLB438004: /travesseiro/,
+      MLB30059: /lencol|lencois/,
+      MLB30063: /cobre.?leito|colcha/,
+      MLB270276: /protetor|capa.*colchao/,
       MLB244658: /potes?|marmitas?/,
       MLB194034: /escorredor|tapete.*pia/,
       MLB455328: /tempero|condimento|moedor/,
@@ -25492,7 +25562,7 @@ async function homeOpportunities(client, view, offset) {
       sent_at: sent.find((s) => s.identity_key === w.identity_key)?.sent_at ?? null,
       snapshot: { product_id: w.product_id, type: "PRODUCT", category_id: w.category_id, vertical_key: "HOME" },
       preview: { ...p, ...affiliateIntelligence(p) },
-      selection: { ...w.assessment, score: w.score, assessed_at: w.assessment.assessed_at, reasons: w.assessment.reasons ?? [] },
+      selection: { ...w.assessment, diversity_key: w.diversity_key ?? w.category_id, score: w.score, assessed_at: w.assessment.assessed_at, reasons: w.assessment.reasons ?? [] },
       rank: rankProduct(p, own, w.feedback, Date.now(), homeContext(p.title, w.category_id)),
       price_analysis: analyzePriceTruth(p, own),
       price_timeline: priceTimeline(p, own)
@@ -25500,7 +25570,8 @@ async function homeOpportunities(client, view, offset) {
   });
   entries.sort((a, b) => Number(b.rank.state === "APPROVED") - Number(a.rank.state === "APPROVED") || b.selection.score - a.selection.score || a.identity_key.localeCompare(b.identity_key));
   const monitored = entries.filter((e) => e.monitor), approved = monitored.filter((e) => e.rank.state === "APPROVED" && !e.sent_at), published = entries.filter((e) => e.sent_at);
-  const selected = view === "ALL" ? monitored : view === "SENT" ? published : view === "APPROVED" ? approved : monitored.filter((e) => e.rank.state === view);
+  const selectedRaw = view === "ALL" ? monitored : view === "SENT" ? published : view === "APPROVED" ? approved : monitored.filter((e) => e.rank.state === view);
+  const selected = diverseHomeOrder(selectedRaw);
   const runs = checked4(await client.from("home_runs").select("*").order("started_at", { ascending: false }).limit(1));
   return {
     entries: selected.slice(offset, offset + 50),
@@ -25538,6 +25609,7 @@ var init_home_service = __esm({
   "src/server/commercial/home-service.ts"() {
     "use strict";
     init_product_preview();
+    init_home_diversity();
     init_home_config();
     init_home_editorial();
     init_ranking();
@@ -26251,7 +26323,7 @@ function dashboardPage(props) {
 <div class="card">Verticais Planejadas<strong>10 Verticais</strong><small>Automotivo V1 Ativa com 155 categorias: 28 Tier A + 127 Tier B</small></div>
 <div class="card">Oportunidades no Banco<strong id="count">—</strong><small>Registros em public.highlight_snapshots</small></div>
 <div class="card">Última Sincronização<strong id="synced">—</strong><small>Atualização automática a cada 30 segundos</small></div></section>
-<section class="panel"><h2>Matriz de Expansão (10 Verticais Estratégicas)</h2><ol class="matrix">${verticals.map(([name, id], i) => `<li><button id="vertical-${i}" class="vertical-button" aria-controls="vertical-products" aria-pressed="${i === 0}">${i + 1}. ${name}<span>${id} · ${i === 0 ? "ATIVO (155 Cats)" : i === 1 ? "PILOTO (29 Cats)" : "PLANEJADO"}</span></button></li>`).join("")}</ol></section>
+<section class="panel"><h2>Matriz de Expansão (10 Verticais Estratégicas)</h2><ol class="matrix">${verticals.map(([name, id], i) => `<li><button id="vertical-${i}" class="vertical-button" aria-controls="vertical-products" aria-pressed="${i === 0}">${i + 1}. ${name}<span>${id} · ${i === 0 ? "ATIVO (155 Cats)" : i === 1 ? "PILOTO (55 Cats)" : "PLANEJADO"}</span></button></li>`).join("")}</ol></section>
 <section class="panel" id="vertical-products"><h2 id="vertical-title" tabindex="-1">Automotivo — produtos e ofertas</h2><p>Melhores oportunidades primeiro. Monitorados reúne a carteira da categoria; Prontos para divulgar mostra ofertas com histórico e demanda confirmados, ainda não divulgadas.</p><div class="controls filters"><button id="rank-ALL" aria-pressed="true">Monitorados</button><button id="rank-APPROVED" aria-pressed="false">🔥 Prontos para divulgar</button><button id="rank-SENT" aria-pressed="false">✅ Divulgados</button><button id="refresh">🔄 Atualizar</button></div><p id="message" role="status" aria-live="polite"></p><p id="commercial-status" role="status" aria-live="polite"></p><p id="copy-status" role="status" aria-live="polite"></p><textarea id="manual-copy" hidden readonly aria-label="Texto para copiar manualmente"></textarea><p>Para copiar a divulgação, cole no produto o link criado pelo gerador oficial de afiliados.</p><p id="commercial-summary"></p><div id="commercial-results" class="results"></div><button id="commercial-more" hidden>Mostrar mais desta seleção</button></section>${whatsappPanel}<details id="robot-admin" class="panel"><summary>Administração do robô</summary><p>Ferramentas técnicas de coleta e diagnóstico — Automotivo.</p><div class="controls"><button id="sweep">🚀 Executar varredura</button><button id="smoke">⚡ Teste de coleta (2 categorias)</button><button id="collect-evidence">📊 Coletar evidências agora</button></div><p id="admin-summary"></p><details id="raw-products" class="panel"><summary>Explorar todos os registros minerados (sem aprovação comercial)</summary><section><h2>Produtos encontrados</h2><p>Prévia dos destaques minerados: foto, descrição e preço informado pelo Mercado Livre. Preço e disponibilidade podem mudar; os destaques ainda não representam descontos validados.</p><h2>Central de Cupons Ativos</h2><div id="coupons" class="coupon-bar" aria-live="polite">Consultando campanhas verificadas…</div><p>Cupons sugeridos conforme categoria e valor. Confira as restrições e a aplicação no checkout. Para divulgar com comissão, cole em cada produto o link criado no gerador oficial de afiliados do Mercado Livre. Os links ficam salvos somente neste navegador.</p><div class="filters" aria-label="Filtrar produtos"><button id="filter-all" aria-pressed="true">Todas as ofertas completas</button><button id="filter-discount" aria-pressed="false">🔥 Desconto anunciado ≥ 5%</button><button id="filter-tier" aria-pressed="false">⚡ Prioridade Tier A</button><button id="filter-coupon" aria-pressed="false">🏷️ Cupom sugerido</button><button id="filter-incomplete" aria-pressed="false">Registros incompletos</button></div><p id="results-summary"></p><div id="snapshots" class="results" aria-label="Produtos minerados"></div><button id="more" hidden>Mostrar mais produtos</button></section></details></details></main>
 <script>
 const el = id => document.getElementById(id);
