@@ -54,7 +54,10 @@ async function observe(client:SupabaseClient,id:string,category:string,read:Prev
 }
 async function assessStored(client:SupabaseClient,rows:any[]) {
  const observations=await history(client,rows.map(r=>r.identity_key));
- for(const row of rows) {
+ const pending=[...rows];
+ const workers=await Promise.allSettled(Array.from({length:3},async()=>{
+ while(pending.length) {
+  const row=pending.shift()!;
   const own=observations.filter(o=>o.identity_key===row.identity_key);
   const demand=demandPotential(own.filter(o=>o.position!==null).map(o=>({category:o.demand_category!,position:o.position!,observed_at:o.observed_at})));
   const context=homeContext(row.preview.title??'',row.category_id);
@@ -64,6 +67,8 @@ async function assessStored(client:SupabaseClient,rows:any[]) {
   checked(await client.from('home_candidates').update({score,assessment:{...e,eligible:homeEligible(row.preview,row.category_id)&&demand.days>0,
    demand,assessed_at:new Date().toISOString(),components:{demand:demand.score,utility:context.profile.appeal*.20,ease:context.profile.ease*.15,seller:row.preview.seller_trusted?10:0,ticket:row.preview.price<=150?5:3}}}).eq('source_key',row.source_key));
  }
+ }));
+ if(workers.some(w=>w.status==='rejected'))throw new Error('HOME_ASSESSMENT_INCOMPLETE');
 }
 async function allCandidates(client:SupabaseClient) {
  const rows:any[]=[];for(let page=0;;page++) {
