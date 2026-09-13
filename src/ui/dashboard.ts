@@ -26,7 +26,7 @@ export function dashboardPage(props: DashboardProps): string {
 <div class="card">Verticais Planejadas<strong>10 Verticais</strong><small>Automotivo V1 Ativa com 155 categorias: 28 Tier A + 127 Tier B</small></div>
 <div class="card">Oportunidades no Banco<strong id="count">—</strong><small>Registros em public.highlight_snapshots</small></div>
 <div class="card">Última Sincronização<strong id="synced">—</strong><small>Atualização automática a cada 30 segundos</small></div></section>
-<section class="panel"><h2>Matriz de Expansão (10 Verticais Estratégicas)</h2><ol class="matrix">${verticals.map(([name,id],i)=>`<li><button id="vertical-${i}" class="vertical-button" aria-controls="vertical-products" aria-pressed="${i===0}">${i+1}. ${name}<span>${id} · ${i===0 ? "ATIVO (155 Cats)" : i===1 ? "PILOTO (55 Cats)" : "PLANEJADO"}</span></button></li>`).join("")}</ol></section>
+<section class="panel"><h2>Matriz de Expansão (10 Verticais Estratégicas)</h2><ol class="matrix">${verticals.map(([name,id],i)=>`<li><button id="vertical-${i}" class="vertical-button" aria-controls="vertical-products" aria-pressed="${i===0}">${i+1}. ${name}<span>${id} · ${i===0 ? "ATIVO (155 Cats)" : i===1 ? "PILOTO (55 Cats)" : i===2 ? "PILOTO (42 Cats)" : "PLANEJADO"}</span></button></li>`).join("")}</ol></section>
 <section class="panel" id="vertical-products"><h2 id="vertical-title" tabindex="-1">Automotivo — produtos e ofertas</h2><p>Melhores oportunidades primeiro. Monitorados reúne a carteira da categoria; Prontos para divulgar mostra ofertas com histórico e demanda confirmados, ainda não divulgadas.</p><div class="controls filters"><button id="rank-ALL" aria-pressed="true">Monitorados</button><button id="rank-APPROVED" aria-pressed="false">🔥 Prontos para divulgar</button><button id="rank-SENT" aria-pressed="false">✅ Divulgados</button><button id="refresh">🔄 Atualizar</button></div><p id="message" role="status" aria-live="polite"></p><p id="commercial-status" role="status" aria-live="polite"></p><p id="copy-status" role="status" aria-live="polite"></p><textarea id="manual-copy" hidden readonly aria-label="Texto para copiar manualmente"></textarea><p>Para copiar a divulgação, cole no produto o link criado pelo gerador oficial de afiliados.</p><p id="commercial-summary"></p><div id="commercial-results" class="results"></div><button id="commercial-more" hidden>Mostrar mais desta seleção</button></section>${whatsappPanel}<details id="robot-admin" class="panel"><summary>Administração do robô</summary><p>Ferramentas técnicas de coleta e diagnóstico — Automotivo.</p><div class="controls"><button id="sweep">🚀 Executar varredura</button><button id="smoke">⚡ Teste de coleta (2 categorias)</button><button id="collect-evidence">📊 Coletar evidências agora</button></div><p id="admin-summary"></p><details id="raw-products" class="panel"><summary>Explorar todos os registros minerados (sem aprovação comercial)</summary><section><h2>Produtos encontrados</h2><p>Prévia dos destaques minerados: foto, descrição e preço informado pelo Mercado Livre. Preço e disponibilidade podem mudar; os destaques ainda não representam descontos validados.</p><h2>Central de Cupons Ativos</h2><div id="coupons" class="coupon-bar" aria-live="polite">Consultando campanhas verificadas…</div><p>Cupons sugeridos conforme categoria e valor. Confira as restrições e a aplicação no checkout. Para divulgar com comissão, cole em cada produto o link criado no gerador oficial de afiliados do Mercado Livre. Os links ficam salvos somente neste navegador.</p><div class="filters" aria-label="Filtrar produtos"><button id="filter-all" aria-pressed="true">Todas as ofertas completas</button><button id="filter-discount" aria-pressed="false">🔥 Desconto anunciado ≥ 5%</button><button id="filter-tier" aria-pressed="false">⚡ Prioridade Tier A</button><button id="filter-coupon" aria-pressed="false">🏷️ Cupom sugerido</button><button id="filter-incomplete" aria-pressed="false">Registros incompletos</button></div><p id="results-summary"></p><div id="snapshots" class="results" aria-label="Produtos minerados"></div><button id="more" hidden>Mostrar mais produtos</button></section></details></details></main>
 <script>
 const el = id => document.getElementById(id);
@@ -35,7 +35,7 @@ const verticalNames = ["Automotivo","Casa, utilidades e organização","Eletrodo
 let selectedVertical = 0;
 let commercialView = 'ALL', commercialOffset = 0, commercialRevision = 0, collecting = false;
 function updateVerticalControls() {
-  const inactive=selectedVertical>1;
+  const inactive=selectedVertical>2;
   el('raw-products').hidden=selectedVertical!==0;
   for(const id of ['collect-evidence','rank-ALL','rank-APPROVED','rank-SENT']) el(id).disabled=inactive||busy||(id==='collect-evidence'&&collecting);
 }
@@ -59,7 +59,7 @@ for(let index=0;index<verticalNames.length;index++) el('vertical-'+index).addEve
   await loadCommercial();
 });
 async function loadCommercial(append = false) {
-  if(selectedVertical>1) {
+  if(selectedVertical>2) {
     commercialRevision++;
     el('commercial-results').replaceChildren(textNode('p','A coleta de '+verticalNames[selectedVertical]+' ainda não foi ativada. Os produtos aparecerão aqui após a ativação e a avaliação dos candidatos.'));
     el('commercial-summary').textContent='Vertical planejada · 100 vagas reservadas para monitoramento.';
@@ -68,7 +68,7 @@ async function loadCommercial(append = false) {
   }
   const version=++commercialRevision, view=commercialView, offset=append?commercialOffset:0;
   try {
-    const data=await request('/api/commercial/opportunities?view='+view+'&offset='+offset+(selectedVertical===1?'&vertical=HOME':''));
+    const data=await request('/api/commercial/opportunities?view='+view+'&offset='+offset+(selectedVertical===2?'&vertical=APPLIANCES':selectedVertical===1?'&vertical=HOME':''));
     if(version!==commercialRevision) return;
     el('commercial-status').textContent='';
     if(!append) el('commercial-results').replaceChildren();
@@ -111,7 +111,7 @@ async function loadCommercial(append = false) {
         const button=textNode('button',(entry.feedback===action?'✓ ':'')+label);
         button.addEventListener('click',async()=>{
           button.disabled=true;
-          try {await request('/api/commercial/feedback?id='+encodeURIComponent(entry.snapshot.product_id)+'&type='+encodeURIComponent(entry.snapshot.type)+'&action='+action+(entry.snapshot.vertical_key==='HOME'?'&vertical=HOME':''),'POST');await loadCommercial();}
+          try {await request('/api/commercial/feedback?id='+encodeURIComponent(entry.snapshot.product_id)+'&type='+encodeURIComponent(entry.snapshot.type)+'&action='+action+(entry.snapshot.vertical_key==='APPLIANCES'?'&vertical=APPLIANCES':entry.snapshot.vertical_key==='HOME'?'&vertical=HOME':''),'POST');await loadCommercial();}
           catch(error){el('commercial-status').textContent=error.message;} finally{button.disabled=false;}
         });feedback.append(button);
       }
@@ -121,7 +121,7 @@ async function loadCommercial(append = false) {
       sentButton.addEventListener('click',async()=>{
         sentButton.disabled=true;
         try {
-          await request('/api/commercial/sent?id='+encodeURIComponent(entry.snapshot.product_id)+'&type='+encodeURIComponent(entry.snapshot.type)+'&sent='+String(!entry.sent_at)+(entry.snapshot.vertical_key==='HOME'?'&vertical=HOME':''),'POST');
+          await request('/api/commercial/sent?id='+encodeURIComponent(entry.snapshot.product_id)+'&type='+encodeURIComponent(entry.snapshot.type)+'&sent='+String(!entry.sent_at)+(entry.snapshot.vertical_key==='APPLIANCES'?'&vertical=APPLIANCES':entry.snapshot.vertical_key==='HOME'?'&vertical=HOME':''),'POST');
           await loadCommercial();
         } catch(error) {el('commercial-status').textContent=error.message;}
         finally {sentButton.disabled=false;}
@@ -140,7 +140,7 @@ el('commercial-more').addEventListener('click',()=>loadCommercial(true));
 el('collect-evidence').addEventListener('click',async()=>{
   if(collecting || selectedVertical!==0) return; collecting=true;el('collect-evidence').disabled=true;
   el('commercial-status').textContent='Coletando preços e demanda. O lote pode levar alguns minutos; as evidências ficam salvas no banco.';
-  try {const result=await request('/api/commercial/collect'+(selectedVertical===1?'?vertical=HOME':''),'POST');el('commercial-status').textContent='Coleta: '+result.status+' · '+result.collected+' consultados · '+result.failed+' falhas. Coleta concluída não significa oferta aprovada.';await loadCommercial();}
+  try {const result=await request('/api/commercial/collect'+(selectedVertical===2?'?vertical=APPLIANCES':selectedVertical===1?'?vertical=HOME':''),'POST');el('commercial-status').textContent='Coleta: '+result.status+' · '+result.collected+' consultados · '+result.failed+' falhas. Coleta concluída não significa oferta aprovada.';await loadCommercial();}
   catch(error){el('commercial-status').textContent=error.message;}finally{collecting=false;updateVerticalControls();}
 });
 el('raw-products').addEventListener('toggle',()=>{if(el('raw-products').open && !visible && !loading) showMore();});
@@ -183,6 +183,8 @@ async function copyText(text, button) {
 function productCopy(snapshot, preview, link) {
   if (!complete(snapshot, preview) || !affiliateUrl(link)) return null;
   const lines = ['🔥 ACHADO NO MERCADO LIVRE!', '📦 ' + preview.title];
+  if(preview.appliance_specs?.voltage)lines.push('🔌 Voltagem: '+preview.appliance_specs.voltage);
+  if(preview.appliance_specs)lines.push('Confira frete, medidas e instalação para sua região.');
   if (Number.isFinite(preview.original_price) && preview.original_price > preview.price) lines.push('~De: ' + money(preview.original_price, preview.currency) + '~');
   lines.push('💥 Por: ' + money(preview.price, preview.currency) + (preview.has_advertised_discount ? ' (' + preview.discount_percent + '% de desconto anunciado)' : ''));
   if(preview.priceLinkVerified!==true) lines.push('Preço observado no catálogo; confirme o valor no link.');
@@ -280,6 +282,7 @@ function fillCard(card, snapshot, preview, timeline) {
   body.append(textNode('h3', preview.title || snapshot.product_id));
   const details=textNode('details','','product-details');
   details.append(textNode('summary','Mais informações'));
+  if(preview.appliance_specs)body.append(textNode('p','🔌 '+(preview.appliance_specs.voltage||'Consulte alimentação')+' · '+(preview.appliance_specs.model||'Modelo a confirmar')));
   details.append(textNode('p', preview.description || 'Descrição não disponibilizada pela API.'));
   const confirmedOffer=preview.priceLinkVerified===true;
   let price = 'Preço não disponível';
@@ -331,7 +334,7 @@ function fillCard(card, snapshot, preview, timeline) {
       if (!affiliateUrl(input.value.trim())) { el('copy-status').textContent = 'Cole o link deste produto gerado pela Central de Afiliados antes de copiar.'; input.focus(); return; }
       button.disabled=true;button.textContent='Conferindo oferta…';
       try {
-        const data=await request('/api/commercial/revalidate?id='+encodeURIComponent(snapshot.product_id)+'&type='+encodeURIComponent(snapshot.type)+(snapshot.vertical_key==='HOME'?'&vertical=HOME':''),'POST');
+        const data=await request('/api/commercial/revalidate?id='+encodeURIComponent(snapshot.product_id)+'&type='+encodeURIComponent(snapshot.type)+(snapshot.vertical_key==='APPLIANCES'?'&vertical=APPLIANCES':snapshot.vertical_key==='HOME'?'&vertical=HOME':''),'POST');
         if(!data.ready) {el('copy-status').textContent='Não foi possível confirmar uma oferta completa e atual. A cópia foi interrompida.';return;}
         const fresh=data.preview;
         const changed=['price','original_price','currency','seller_id','catalog_product_id','url'].some(key=>fresh[key]!==preview[key]);

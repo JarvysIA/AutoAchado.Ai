@@ -1416,8 +1416,8 @@ var init_dist = __esm({
       *   .retry(false)
       * ```
       */
-      retry(enabled2) {
-        this.retryEnabled = enabled2;
+      retry(enabled3) {
+        this.retryEnabled = enabled3;
         return this;
       }
       then(onfulfilled, onrejected) {
@@ -19440,7 +19440,7 @@ var require_GoTrueClient = __commonJS({
        * const { error } = await supabase.auth.unlinkIdentity(googleIdentity)
        * ```
        */
-      async unlinkIdentity(identity2) {
+      async unlinkIdentity(identity3) {
         try {
           return await this._useSession(async (result) => {
             var _a, _b;
@@ -19448,7 +19448,7 @@ var require_GoTrueClient = __commonJS({
             if (error) {
               throw error;
             }
-            return await (0, fetch_1._request)(this.fetch, "DELETE", `${this.url}/user/identities/${identity2.identity_id}`, {
+            return await (0, fetch_1._request)(this.fetch, "DELETE", `${this.url}/user/identities/${identity3.identity_id}`, {
               headers: this.headers,
               jwt: (_b = (_a = data2.session) === null || _a === void 0 ? void 0 : _a.access_token) !== null && _b !== void 0 ? _b : void 0
             });
@@ -22996,9 +22996,9 @@ async function loadDiscoveryEligibleCategories(input) {
   for (const value of mappingRows) {
     const row = record(value);
     const categoryId = uuid(row, "marketplace_category_id");
-    const identity2 = `${text(row, "vertical_key")}:${categoryId}`;
-    if (mappingIdentities.has(identity2)) fail("DISCOVERY_REGISTRY_RESPONSE_INVALID", "Mapping duplicado");
-    mappingIdentities.add(identity2);
+    const identity3 = `${text(row, "vertical_key")}:${categoryId}`;
+    if (mappingIdentities.has(identity3)) fail("DISCOVERY_REGISTRY_RESPONSE_INVALID", "Mapping duplicado");
+    mappingIdentities.add(identity3);
     if (text(row, "vertical_key") !== input.verticalKey) fail("DISCOVERY_REGISTRY_RESPONSE_INVALID", "Mapping fora do contexto");
     const category = categories.get(categoryId);
     if (!category) continue;
@@ -24188,9 +24188,9 @@ function priceHistoryStart(now) {
   const d = new Date(now);
   return d.getUTCMonth() >= 8 ? Math.min(now - 30 * DAY, Date.UTC(d.getUTCFullYear(), 8, 1)) : now - 30 * DAY;
 }
-function reference(history2, start, end) {
+function reference(history3, start, end) {
   const days = /* @__PURE__ */ new Map(), sellers = /* @__PURE__ */ new Set();
-  for (const o of history2) {
+  for (const o of history3) {
     const t = Date.parse(o.observed_at);
     if (t < start || t >= end || !Number.isFinite(t) || !o.comparable || !o.trusted || o.currency !== "BRL" || !o.seller_id || typeof o.price !== "number" || !Number.isFinite(o.price) || o.price <= 0) continue;
     const day = new Date(t).toISOString().slice(0, 10);
@@ -24200,15 +24200,15 @@ function reference(history2, start, end) {
   const first = days.size ? Math.min(...[...days.keys()].map(Date.parse)) : end;
   return { price: days.size ? median([...days.values()]) : null, days: days.size, sellers: sellers.size, sufficient: days.size >= 20 && end - first >= 27 * DAY && sellers.size >= 2 };
 }
-function analyzePriceTruth(p, history2, now = Date.now()) {
+function analyzePriceTruth(p, history3, now = Date.now()) {
   const date = new Date(now), today = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-  const rolling = reference(history2, now - 30 * DAY, today);
+  const rolling = reference(history3, now - 30 * DAY, today);
   const campaignStart = Date.UTC(date.getUTCFullYear(), 8, 1), campaignEnd = Date.UTC(date.getUTCFullYear(), 9, 1);
-  const campaign = date.getUTCMonth() >= 9 ? reference(history2, campaignStart, campaignEnd) : null;
+  const campaign = date.getUTCMonth() >= 9 ? reference(history3, campaignStart, campaignEnd) : null;
   const usable = [rolling, ...campaign ? [campaign] : []].filter((r) => r.sufficient && r.price !== null);
   const baseline = usable.length ? Math.min(...usable.map((r) => r.price)) : null;
-  const checked6 = Date.parse(p.priceCheckedAt ?? "");
-  const valid = p.comparable && p.seller_trusted && p.status !== "UNAVAILABLE" && p.currency === "BRL" && typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0 && checked6 <= now && checked6 >= now - DAY;
+  const checked7 = Date.parse(p.priceCheckedAt ?? "");
+  const valid = p.comparable && p.seller_trusted && p.status !== "UNAVAILABLE" && p.currency === "BRL" && typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0 && checked7 <= now && checked7 >= now - DAY;
   const actual = valid && baseline !== null ? (baseline - p.price) / baseline * 100 : null;
   const advertised = valid && typeof p.original_price === "number" && Number.isFinite(p.original_price) && p.original_price > p.price ? (p.original_price - p.price) / p.original_price * 100 : null;
   const inflated = actual !== null && advertised !== null && advertised >= 5 && advertised - actual > 5;
@@ -24238,7 +24238,7 @@ var init_price_truth = __esm({
 });
 
 // src/server/commercial/ranking.ts
-function rankProduct(preview, history2, feedback = null, now = Date.now(), context) {
+function rankProduct(preview, history3, feedback = null, now = Date.now(), context) {
   const profile = context?.profile ?? commercialProfile(preview.title);
   const editorial = context?.editorial ?? assessAutomotive(preview);
   const reasons = [], evidence = [];
@@ -24259,7 +24259,7 @@ function rankProduct(preview, history2, feedback = null, now = Date.now(), conte
   if (editorial.state !== "ELIGIBLE") fail3(editorial.reason, editorial.state === "EXCLUDE");
   if (profile.reason) fail3(profile.reason, true);
   if (feedback === "NOT_RELEVANT") fail3("Você marcou este produto como inadequado para o público.", true);
-  const truth = analyzePriceTruth(preview, history2, now);
+  const truth = analyzePriceTruth(preview, history3, now);
   const coverage = truth.campaign?.sufficient && (!truth.rolling.sufficient || truth.campaign.price <= truth.rolling.price) ? truth.campaign : truth.rolling;
   const reference2 = truth.reference_price;
   const discount = reference2 !== null && preview.price !== null ? (reference2 - preview.price) / reference2 * 100 : null;
@@ -24268,7 +24268,7 @@ function rankProduct(preview, history2, feedback = null, now = Date.now(), conte
   else if (discount === null || discount < 10) fail3("Desconto histórico inferior a 10%.", true);
   else evidence.push(Math.round(discount) + "% abaixo da mediana dos melhores preços diários observados.");
   const dimensions = /* @__PURE__ */ new Map();
-  for (const observation of history2) {
+  for (const observation of history3) {
     const time = Date.parse(observation.observed_at);
     if (time <= now && time >= now - 14 * DAY2 && Number.isInteger(observation.position) && observation.position >= 1 && observation.position <= 20) {
       const day = observation.observed_at.slice(0, 10);
@@ -24394,8 +24394,8 @@ function demandPotential(signals, now = Date.now()) {
 }
 function scoreCandidate(c, now = Date.now()) {
   const p = c.preview, demand = demandPotential(c.ranks, now), profile = commercialProfile(p?.title ?? ""), editorial = assessAutomotive({ title: p?.title ?? "", description: p?.description ?? null });
-  const checked6 = Date.parse(p?.priceCheckedAt ?? "");
-  const complete = !!p && !!p.title.trim() && !/^MLBU?\d+$/.test(p.title.trim()) && !!safePreviewUrl(p.image, true) && !!safePreviewUrl(p.url) && typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0 && p.currency === "BRL" && p.comparable === true && p.seller_trusted === true && !!p.seller_id && p.status !== "UNAVAILABLE" && checked6 <= now && checked6 >= now - DAY3;
+  const checked7 = Date.parse(p?.priceCheckedAt ?? "");
+  const complete = !!p && !!p.title.trim() && !/^MLBU?\d+$/.test(p.title.trim()) && !!safePreviewUrl(p.image, true) && !!safePreviewUrl(p.url) && typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0 && p.currency === "BRL" && p.comparable === true && p.seller_trusted === true && !!p.seller_id && p.status !== "UNAVAILABLE" && checked7 <= now && checked7 >= now - DAY3;
   const components = {
     demand: Math.round(demand.score * 100) / 100,
     utility: profile.appeal * 0.2,
@@ -24523,15 +24523,15 @@ function analyzeSelectionInputs(input, now = Date.now(), evaluationLimit = 500) 
   const actions = new Map(feedback.map((f) => [f.identity_key, f.action]));
   const monitoringStarts = new Map(changes.map((c) => [c.added_source, c.changed_at]));
   const candidates = [.../* @__PURE__ */ new Set([...ranks.keys(), ...memberships.map((m) => m.source_key)])].map((key) => {
-    const w = bySource.get(key), identity2 = w?.identity_key ?? key;
+    const w = bySource.get(key), identity3 = w?.identity_key ?? key;
     return {
       source_key: key,
-      identity_key: identity2,
+      identity_key: identity3,
       preview: w?.preview,
-      monitor: active.has(identity2),
-      protected: protectedIds.has(identity2),
-      feedback: actions.get(identity2),
-      monitor_since: memberships.find((m) => m.identity_key === identity2 && m.monitor)?.monitor_since ?? monitoringStarts.get(key),
+      monitor: active.has(identity3),
+      protected: protectedIds.has(identity3),
+      feedback: actions.get(identity3),
+      monitor_since: memberships.find((m) => m.identity_key === identity3 && m.monitor)?.monitor_since ?? monitoringStarts.get(key),
       ranks: ranks.get(key) ?? []
     };
   });
@@ -24649,7 +24649,7 @@ async function exploreCandidates(client, deadline, compact = false) {
       try {
         const p = await configuredProductPreview(client, row.product_id, row.type);
         const decision = admissionDecision(p, attempts);
-        const identity2 = p.comparable && p.catalog_product_id ? "catalog:" + p.catalog_product_id + ":new:BRL:public" : row.source_key;
+        const identity3 = p.comparable && p.catalog_product_id ? "catalog:" + p.catalog_product_id + ":new:BRL:public" : row.source_key;
         checked(await client.from("commercial_watchlist").upsert(
           {
             source_key: row.source_key,
@@ -24657,13 +24657,13 @@ async function exploreCandidates(client, deadline, compact = false) {
             type: row.type,
             category_id: row.category_id,
             snapshot: row.snapshot,
-            identity_key: identity2,
+            identity_key: identity3,
             preview: p,
             monitor: false
           },
           { onConflict: "source_key", ignoreDuplicates: true }
         ));
-        checked(await client.from("commercial_watchlist").update({ preview: p, identity_key: identity2 }).eq("source_key", row.source_key).eq("monitor", false));
+        checked(await client.from("commercial_watchlist").update({ preview: p, identity_key: identity3 }).eq("source_key", row.source_key).eq("monitor", false));
         checked(await client.from("commercial_candidate_queue").update({
           ...decision,
           attempts,
@@ -24730,10 +24730,10 @@ function timelineStart(now) {
   const d = new Date(now);
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - 90 * DAY4;
 }
-function priceTimeline(preview, history2, now = Date.now()) {
+function priceTimeline(preview, history3, now = Date.now()) {
   const start = timelineStart(now), today = start + 90 * DAY4;
   const daily = /* @__PURE__ */ new Map();
-  for (const o of history2) {
+  for (const o of history3) {
     const t = Date.parse(o.observed_at);
     if (!Number.isFinite(t) || t < start || t > now || !o.comparable || !o.trusted || !o.seller_id || o.currency !== "BRL" || typeof o.price !== "number" || !Number.isFinite(o.price) || o.price <= 0) continue;
     const day = new Date(t).toISOString().slice(0, 10);
@@ -24751,8 +24751,8 @@ function priceTimeline(preview, history2, now = Date.now()) {
     return { month, days: n, typical: n % 2 ? values[Math.floor(n / 2)] : (values[n / 2 - 1] + values[n / 2]) / 2, minimum: values[0] };
   });
   const prior = [...daily].filter(([day]) => Date.parse(day) < today);
-  const checked6 = Date.parse(preview.priceCheckedAt ?? "");
-  const currentValid = preview.comparable && preview.seller_trusted && !!preview.seller_id && preview.status !== "UNAVAILABLE" && preview.currency === "BRL" && typeof preview.price === "number" && Number.isFinite(preview.price) && preview.price > 0 && checked6 <= now && checked6 >= now - DAY4;
+  const checked7 = Date.parse(preview.priceCheckedAt ?? "");
+  const currentValid = preview.comparable && preview.seller_trusted && !!preview.seller_id && preview.status !== "UNAVAILABLE" && preview.currency === "BRL" && typeof preview.price === "number" && Number.isFinite(preview.price) && preview.price > 0 && checked7 <= now && checked7 >= now - DAY4;
   const minimum = prior.length ? Math.min(...prior.map(([, price]) => price)) : null;
   return {
     months,
@@ -24947,22 +24947,22 @@ async function commercialOpportunities(client, view, offset = 0) {
     if (!rows || rows.length < 500) break;
     if (page >= 19) throw new Error("COMMERCIAL_FEEDBACK_LIMIT");
   }
-  const now = Date.now(), history2 = [];
+  const now = Date.now(), history3 = [];
   const identities = [...new Set(watches.map((w) => w.identity_key))];
   for (let start = 0; start < identities.length; start += 100) for (let page = 0; ; page++) {
     const rows = checked2(await client.from("commercial_observations").select("identity_key,observed_at,price,currency,seller_id,comparable,trusted,position").in("identity_key", identities.slice(start, start + 100)).gte("observed_at", new Date(Math.min(priceHistoryStart(now), timelineStart(now))).toISOString()).order("source_key").order("observed_at").range(page * 1e3, page * 1e3 + 999));
-    history2.push(...rows.map((row) => ({ ...row, position: null })));
+    history3.push(...rows.map((row) => ({ ...row, position: null })));
     if (rows.length < 1e3) break;
     if (page >= 99) throw new Error("COMMERCIAL_HISTORY_LIMIT");
   }
   for (let start = 0; start < identities.length; start += 100) for (let page = 0; ; page++) {
     const rows = checked2(await client.from("commercial_rank_observations").select("identity_key,category_id,observed_at,position").in("identity_key", identities.slice(start, start + 100)).gte("observed_at", new Date(now - 14 * 864e5).toISOString()).order("identity_key").order("category_id").order("observed_at").range(page * 1e3, page * 1e3 + 999));
-    history2.push(...(rows ?? []).map((row) => ({ ...row, demand_category: row.category_id, price: null, currency: "BRL", seller_id: null, comparable: false, trusted: false })));
+    history3.push(...(rows ?? []).map((row) => ({ ...row, demand_category: row.category_id, price: null, currency: "BRL", seller_id: null, comparable: false, trusted: false })));
     if (!rows || rows.length < 1e3) break;
     if (page >= 99) throw new Error("COMMERCIAL_RANK_HISTORY_LIMIT");
   }
   const historyByIdentity = /* @__PURE__ */ new Map();
-  for (const observation of history2) {
+  for (const observation of history3) {
     const list = historyByIdentity.get(observation.identity_key) ?? [];
     list.push(observation);
     historyByIdentity.set(observation.identity_key, list);
@@ -25060,17 +25060,17 @@ function checked3(r) {
 }
 async function revalidateProduct(client, id, type) {
   const preview = await configuredProductPreview(client, id, type, true);
-  const identity2 = productIdentity(id, type, preview);
+  const identity3 = productIdentity(id, type, preview);
   const rows = [];
   for (const table of ["commercial_observations", "commercial_rank_observations"]) for (let page = 0; ; page++) {
-    const data2 = checked3(await client.from(table).select("*").eq("identity_key", identity2).gte("observed_at", new Date(priceHistoryStart(Date.now())).toISOString()).order("observed_at").order(table === "commercial_observations" ? "source_key" : "category_id").range(page * 1e3, page * 1e3 + 999));
+    const data2 = checked3(await client.from(table).select("*").eq("identity_key", identity3).gte("observed_at", new Date(priceHistoryStart(Date.now())).toISOString()).order("observed_at").order(table === "commercial_observations" ? "source_key" : "category_id").range(page * 1e3, page * 1e3 + 999));
     rows.push(...(data2 ?? []).map((row) => table === "commercial_observations" ? { ...row, position: null } : { ...row, demand_category: row.category_id, price: null, currency: "BRL", seller_id: null, comparable: false, trusted: false }));
     if (!data2 || data2.length < 1e3) break;
     if (page >= 99) throw new Error("REVALIDATION_HISTORY_LIMIT");
   }
-  const feedback = checked3(await client.from("commercial_vertical_feedback").select("action").eq("vertical_key", "AUTOMOTIVE").eq("identity_key", identity2).maybeSingle());
+  const feedback = checked3(await client.from("commercial_vertical_feedback").select("action").eq("vertical_key", "AUTOMOTIVE").eq("identity_key", identity3).maybeSingle());
   const commercial = rankProduct(preview, rows, feedback?.action ?? null);
-  checked3(await client.from("commercial_watchlist").update({ preview, identity_key: identity2 }).eq("source_key", type + ":" + id));
+  checked3(await client.from("commercial_watchlist").update({ preview, identity_key: identity3 }).eq("source_key", type + ":" + id));
   const ready = preview.status !== "UNAVAILABLE" && !!preview.title && preview.title !== id && !!safePreviewUrl(preview.image, true) && !!safePreviewUrl(preview.url) && !!preview.price && preview.currency === "BRL" && Date.parse(preview.priceCheckedAt ?? "") >= Date.now() - 6e4;
   return { ready, preview: { ...preview, ...affiliateIntelligence(preview), commercial } };
 }
@@ -25100,6 +25100,578 @@ function diverseHomeOrder(entries) {
 var init_home_diversity = __esm({
   "src/server/commercial/home-diversity.ts"() {
     "use strict";
+  }
+});
+
+// src/server/commercial/appliances-config.ts
+var APPLIANCES_CATEGORIES;
+var init_appliances_config = __esm({
+  "src/server/commercial/appliances-config.ts"() {
+    "use strict";
+    APPLIANCES_CATEGORIES = [
+      {
+        "id": "MLB456043",
+        "name": "Fritadeiras",
+        "family": "cozimento",
+        "match": "fritadeira|air.?fryer"
+      },
+      {
+        "id": "MLB120373",
+        "name": "Panela de Arroz",
+        "family": "cozimento",
+        "match": "panela.*arroz"
+      },
+      {
+        "id": "MLB48666",
+        "name": "Panelas Elétricas",
+        "family": "cozimento",
+        "match": "panela"
+      },
+      {
+        "id": "MLB48773",
+        "name": "Panela a Vapor",
+        "family": "cozimento",
+        "match": "panela|cozedor"
+      },
+      {
+        "id": "MLB31683",
+        "name": "Sanduicheiras",
+        "family": "cozimento",
+        "match": "sanduicheira|grill"
+      },
+      {
+        "id": "MLB31675",
+        "name": "Torradeiras",
+        "family": "cozimento",
+        "match": "torradeira"
+      },
+      {
+        "id": "MLB48730",
+        "name": "Churrasqueiras Elétricas",
+        "family": "cozimento",
+        "match": "churrasqueira|grill"
+      },
+      {
+        "id": "MLB120314",
+        "name": "Fornos",
+        "family": "cozimento",
+        "match": "forno"
+      },
+      {
+        "id": "MLB73057",
+        "name": "Micro-ondas",
+        "family": "cozimento",
+        "match": "micro.?ondas"
+      },
+      {
+        "id": "MLB73055",
+        "name": "Liquidificadores",
+        "family": "preparo",
+        "match": "liquidificador"
+      },
+      {
+        "id": "MLB4339",
+        "name": "Batedeiras",
+        "family": "preparo",
+        "match": "batedeira"
+      },
+      {
+        "id": "MLB263570",
+        "name": "Mixers",
+        "family": "preparo",
+        "match": "mixer"
+      },
+      {
+        "id": "MLB31674",
+        "name": "Processadores",
+        "family": "preparo",
+        "match": "processador|triturador"
+      },
+      {
+        "id": "MLB120446",
+        "name": "Espremedores Elétricos",
+        "family": "preparo",
+        "match": "espremedor"
+      },
+      {
+        "id": "MLB120445",
+        "name": "Centrífuga de Frutas",
+        "family": "preparo",
+        "match": "centrifuga|extrator"
+      },
+      {
+        "id": "MLB30220",
+        "name": "Balanças de Cozinha",
+        "family": "preparo",
+        "match": "balanca"
+      },
+      {
+        "id": "MLB429600",
+        "name": "Moedores de Carne Elétricos",
+        "family": "preparo",
+        "match": "moedor"
+      },
+      {
+        "id": "MLB9188",
+        "name": "Cafeteiras",
+        "family": "cafe",
+        "match": "cafeteira"
+      },
+      {
+        "id": "MLB31678",
+        "name": "Chaleiras Elétricas",
+        "family": "cafe",
+        "match": "chaleira"
+      },
+      {
+        "id": "MLB456055",
+        "name": "Moedores de Café Elétricos",
+        "family": "cafe",
+        "match": "moedor"
+      },
+      {
+        "id": "MLB455549",
+        "name": "Espumadores de Leite",
+        "family": "cafe",
+        "match": "espumador|mixer|batedor"
+      },
+      {
+        "id": "MLB421823",
+        "name": "Marmitas Elétricas",
+        "family": "cafe",
+        "match": "marmita"
+      },
+      {
+        "id": "MLB4337",
+        "name": "Aspiradores",
+        "family": "limpeza",
+        "match": "aspirador|extratora|higienizadora"
+      },
+      {
+        "id": "MLB120262",
+        "name": "Robôs Aspiradores",
+        "family": "limpeza",
+        "match": "robo.*aspirador|aspirador.*robo"
+      },
+      {
+        "id": "MLB73068",
+        "name": "Vassouras Elétricas",
+        "family": "limpeza",
+        "match": "vassoura|aspirador"
+      },
+      {
+        "id": "MLB31689",
+        "name": "Ferro de Passar",
+        "family": "roupas",
+        "match": "ferro.*passar"
+      },
+      {
+        "id": "MLB73062",
+        "name": "Vaporizador",
+        "family": "roupas",
+        "match": "vaporizador|passadeira"
+      },
+      {
+        "id": "MLB120307",
+        "name": "Máquina de Costura",
+        "family": "roupas",
+        "match": "maquina.*costura"
+      },
+      {
+        "id": "MLB1645",
+        "name": "Ventiladores",
+        "family": "clima",
+        "match": "ventilador"
+      },
+      {
+        "id": "MLB457530",
+        "name": "Ventiladores Portáteis",
+        "family": "clima",
+        "match": "ventilador"
+      },
+      {
+        "id": "MLB72503",
+        "name": "Climatizador Portátil",
+        "family": "clima",
+        "match": "climatizador"
+      },
+      {
+        "id": "MLB180081",
+        "name": "Desumidificador",
+        "family": "clima",
+        "match": "desumidificador"
+      },
+      {
+        "id": "MLB133297",
+        "name": "Aquecedores de Ar",
+        "family": "clima",
+        "match": "aquecedor"
+      },
+      {
+        "id": "MLB120242",
+        "name": "Pipoqueiras Elétricas",
+        "family": "especialidades",
+        "match": "pipoqueira"
+      },
+      {
+        "id": "MLB120243",
+        "name": "Máquinas de Waffles",
+        "family": "especialidades",
+        "match": "waffle"
+      },
+      {
+        "id": "MLB457810",
+        "name": "Omeleteiras",
+        "family": "especialidades",
+        "match": "omeleteira"
+      },
+      {
+        "id": "MLB62076",
+        "name": "Panificadoras",
+        "family": "especialidades",
+        "match": "panificadora|maquina.*pao"
+      },
+      {
+        "id": "MLB120244",
+        "name": "Iogurteiras",
+        "family": "especialidades",
+        "match": "iogurteira"
+      },
+      {
+        "id": "MLB120246",
+        "name": "Sorveteiras",
+        "family": "especialidades",
+        "match": "sorveteira"
+      },
+      {
+        "id": "MLB76475",
+        "name": "Frigobares",
+        "family": "refrigeracao",
+        "match": "frigobar"
+      },
+      {
+        "id": "MLB76481",
+        "name": "Adegas Climatizadas",
+        "family": "refrigeracao",
+        "match": "adega"
+      },
+      {
+        "id": "MLB181287",
+        "name": "Cervejeiras",
+        "family": "refrigeracao",
+        "match": "cervejeira"
+      }
+    ];
+  }
+});
+
+// src/server/commercial/appliances-editorial.ts
+function assessAppliances(title, categoryId) {
+  const c = APPLIANCES_CATEGORIES.find((c2) => c2.id === categoryId), t = normalized(title), reasons = [];
+  const result = (state) => ({ version: "APPLIANCES_V1", state, family: c?.family ?? "unknown", reasons });
+  if (!c) {
+    reasons.push("Categoria ainda não revisada para Eletrodomésticos.");
+    return result("REVIEW");
+  }
+  if (/\b(refil|reposicao|resistencia|capacitor|correia|peca|pecas|recondicionado|usado)\b|compativel com|para (aspirador|liquidificador|cafeteira|fritadeira)/.test(t)) {
+    reasons.push("Peça, acessório ou condição fora do piloto de aparelhos novos.");
+    return result("EXCLUDE");
+  }
+  if (!new RegExp(c.match).test(t)) {
+    reasons.push("Título não confirma o aparelho da categoria.");
+    return result("REVIEW");
+  }
+  if (/industrial|comercial|trifasic|\bgas\b|embutir|teto|parede/.test(t)) reasons.push("Instalação ou uso especializado precisa de revisão.");
+  return result(reasons.length ? "REVIEW" : "CANDIDATE");
+}
+function applianceSpecs(data2) {
+  const attrs = Array.isArray(data2?.attributes) ? data2.attributes : [];
+  const value = (pattern) => attrs.filter((a) => typeof a.id === "string" && pattern.test(a.id) && typeof a.value_name === "string").map((a) => a.value_name.trim()).filter(Boolean).join(" · ") || null;
+  const brand = value(/^BRAND$/), model = value(/^(MODEL|ALPHANUMERIC_MODEL)$/), voltage = value(/^VOLTAGE$/), capacity = value(/CAPACITY|VOLUME/);
+  const power = value(/POWER_SOURCE|POWER_SUPPLY|BATTERY_TYPE/), reasons = [];
+  if (/FRYER|MICROWAVE|REFRIGERATOR|FREEZER|OVEN/.test(String(data2?.domain_id)) && !capacity) reasons.push("Capacidade ainda não identificada pela API.");
+  if (!brand || !model) reasons.push("Marca/modelo ainda não identificados pela API.");
+  const v = normalized(voltage ?? "");
+  if (!(/bivolt/.test(v) || /^\d+(?:[.,]\d+)?\s*v$/.test(v) || !voltage && /pilha|bateria|battery|usb/.test(normalized(power ?? "")))) reasons.push("Alimentação elétrica ausente ou ambígua; não comparar voltagens.");
+  if (data2?.status !== "active" || Array.isArray(data2.children_ids) && data2.children_ids.length) reasons.push("Catálogo não identifica uma variante ativa única.");
+  const signature = attrs.filter((a) => typeof a.id === "string" && /BRAND|MODEL|VOLTAGE|CAPACITY|VOLUME|POWER|COLOR/.test(a.id)).map((a) => [a.id, a.value_name ?? null]).sort((a, b) => a[0].localeCompare(b[0]));
+  return { brand, model, voltage, capacity, verified: !reasons.length, reasons, variant_key: reasons.length ? null : JSON.stringify(signature) };
+}
+async function resolveAppliancePreview(id, type, read) {
+  let catalog;
+  const p = await resolveProductPreview(id, type, async (path) => {
+    const data2 = await read(path);
+    if (path === "/products/" + id && data2.id === id) catalog = data2;
+    return data2;
+  });
+  const specs = applianceSpecs(catalog);
+  const description = [specs.brand && "Marca: " + specs.brand, specs.model && "Modelo: " + specs.model, specs.voltage && "Voltagem: " + specs.voltage, specs.capacity && "Capacidade: " + specs.capacity].filter(Boolean).join(" · ");
+  return { ...p, description: description || p.description, appliance_specs: specs, comparable: p.comparable === true && specs.verified };
+}
+var normalized;
+var init_appliances_editorial = __esm({
+  "src/server/commercial/appliances-editorial.ts"() {
+    "use strict";
+    init_appliances_config();
+    init_product_preview();
+    normalized = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  }
+});
+
+// src/server/commercial/appliances-service.ts
+var appliances_service_exports = {};
+__export(appliances_service_exports, {
+  appliancesAction: () => appliancesAction,
+  appliancesContext: () => appliancesContext,
+  appliancesEligible: () => appliancesEligible,
+  appliancesOpportunities: () => appliancesOpportunities,
+  revalidateAppliances: () => revalidateAppliances,
+  runAppliances: () => runAppliances
+});
+function checked4(r) {
+  if (r.error) throw new Error("APPLIANCES_STORAGE_UNAVAILABLE");
+  return r.data;
+}
+function appliancesContext(title, category) {
+  const e = assessAppliances(title, category);
+  return {
+    profile: { appeal: e.state === "CANDIDATE" ? 80 : 40, ease: e.state === "CANDIDATE" ? 85 : 35, reason: null },
+    editorial: { state: e.state === "CANDIDATE" ? "ELIGIBLE" : e.state, family: e.family, reason: e.reasons.join(" ") }
+  };
+}
+function appliancesEligible(p, category) {
+  return p.appliance_specs?.verified === true && assessAppliances(p.title, category).state === "CANDIDATE" && p.status !== "UNAVAILABLE" && p.comparable === true && p.seller_trusted === true && p.currency === "BRL" && typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0 && !!safePreviewUrl(p.image, true) && !!safePreviewUrl(p.url);
+}
+async function enabled(client) {
+  const row = checked4(await client.from("commercial_verticals").select("enabled,executor_ready").eq("vertical_key", "APPLIANCES").single());
+  if (!row?.enabled || !row.executor_ready) throw new Error("APPLIANCES_DISABLED");
+}
+async function history(client, ids) {
+  const result = [];
+  if (!ids.length) return result;
+  const variants = /* @__PURE__ */ new Map();
+  for (let i = 0; i < ids.length; i += 100) {
+    const current = checked4(await client.from("appliances_candidates").select("identity_key,preview").in("identity_key", ids.slice(i, i + 100))) ?? [];
+    for (const row of current) if (row.preview?.appliance_specs?.variant_key) variants.set(row.identity_key, row.preview.appliance_specs.variant_key);
+  }
+  const start = new Date(Math.min(priceHistoryStart(Date.now()), timelineStart(Date.now()))).toISOString();
+  for (let startIndex = 0; startIndex < ids.length; startIndex += 100) for (const table of ["appliances_observations", "appliances_rank_observations"]) for (let page = 0; ; page++) {
+    const rows = checked4(await client.from(table).select("*").in("identity_key", ids.slice(startIndex, startIndex + 100)).gte("observed_at", start).order("observed_at").order("identity_key").order(table === "appliances_observations" ? "source_key" : "category_id").range(page * 1e3, page * 1e3 + 999));
+    result.push(...(rows ?? []).filter((r) => table !== "appliances_observations" || !!r.variant_key && r.variant_key === variants.get(r.identity_key)).map((r) => table === "appliances_observations" ? { ...r, price: r.price === null ? null : Number(r.price), position: null } : { ...r, price: null, currency: "BRL", seller_id: null, comparable: false, trusted: false, demand_category: r.category_id }));
+    if (!rows || rows.length < 1e3) break;
+    if (page >= 99) throw new Error("APPLIANCES_HISTORY_LIMIT");
+  }
+  return result;
+}
+async function savePrice(client, id, source, p) {
+  if (!p.appliance_specs?.verified || !p.appliance_specs.variant_key || !p.priceCheckedAt || !p.comparable || p.catalog_product_id !== id || !p.price) return;
+  checked4(await client.from("appliances_observations").upsert({
+    identity_key: identity(id),
+    source_key: source,
+    observed_at: p.priceCheckedAt,
+    variant_key: p.appliance_specs.variant_key,
+    price: p.price,
+    currency: p.currency,
+    seller_id: p.seller_id ?? null,
+    comparable: true,
+    trusted: p.seller_trusted === true
+  }, { onConflict: "identity_key,source_key,observed_at", ignoreDuplicates: true }));
+}
+async function observe(client, id, category, read, p) {
+  if (p.catalog_product_id !== id) return;
+  await savePrice(client, id, "PRODUCT:" + id, p);
+  if (p.comparable) try {
+    const offers = await read("/products/" + id + "/items?limit=3");
+    for (const offer of (Array.isArray(offers.results) ? offers.results : []).slice(0, 3)) {
+      const extra = await catalogOfferPreview(id, p, offer, read);
+      if (extra && p.appliance_specs) await savePrice(client, id, "ITEM:" + offer.item_id, { ...extra, appliance_specs: p.appliance_specs, comparable: extra.comparable === true && p.appliance_specs?.verified === true });
+    }
+  } catch {
+  }
+}
+async function assessStored(client, rows) {
+  const observations = await history(client, rows.map((r) => r.identity_key));
+  const pending = [...rows];
+  const workers = await Promise.allSettled(Array.from({ length: 3 }, async () => {
+    while (pending.length) {
+      const row = pending.shift();
+      const own = observations.filter((o) => o.identity_key === row.identity_key);
+      const demand = demandPotential(own.filter((o) => o.position !== null).map((o) => ({ category: o.demand_category, position: o.position, observed_at: o.observed_at })));
+      const context = appliancesContext(row.preview.title ?? "", row.category_id);
+      const score = Math.round(demand.score + context.profile.appeal * 0.2 + context.profile.ease * 0.15 + (row.preview.seller_trusted ? 10 : 0) + (row.preview.price <= 150 ? 5 : 3));
+      const e = assessAppliances(row.preview.title ?? "", row.category_id);
+      checked4(await client.from("appliances_candidates").update({ score, assessment: {
+        ...e,
+        eligible: appliancesEligible(row.preview, row.category_id) && demand.days > 0,
+        demand,
+        assessed_at: (/* @__PURE__ */ new Date()).toISOString(),
+        components: { demand: demand.score, utility: context.profile.appeal * 0.2, ease: context.profile.ease * 0.15, seller: row.preview.seller_trusted ? 10 : 0, ticket: row.preview.price <= 150 ? 5 : 3 }
+      } }).eq("source_key", row.source_key));
+    }
+  }));
+  if (workers.some((w) => w.status === "rejected")) throw new Error("APPLIANCES_ASSESSMENT_INCOMPLETE");
+}
+async function allCandidates(client) {
+  const rows = [];
+  for (let page = 0; ; page++) {
+    const batch = checked4(await client.from("appliances_candidates").select("*").order("source_key").range(page * 500, page * 500 + 499));
+    rows.push(...batch ?? []);
+    if (!batch || batch.length < 500) break;
+    if (page >= 19) throw new Error("APPLIANCES_CANDIDATE_LIMIT");
+  }
+  return rows;
+}
+async function runAppliances(client, kind) {
+  await enabled(client);
+  const run = checked4(await client.rpc("begin_appliances_run", { run_kind: kind }));
+  if (!run) return { status: "BUSY", collected: 0, failed: 0 };
+  let collected = 0, failed = 0;
+  const deadline = Date.now() + 2e5;
+  try {
+    const read = await configuredMeliReader(client);
+    if (kind === "DISCOVERY") {
+      const checks = checked4(await client.from("appliances_category_checks").select("*")) ?? [];
+      const categories = [...APPLIANCES_CATEGORIES].sort((a, b) => String(checks.find((c) => c.category_id === a.id)?.checked_at ?? "").localeCompare(String(checks.find((c) => c.category_id === b.id)?.checked_at ?? "")));
+      const seen = /* @__PURE__ */ new Set();
+      for (const category of categories) {
+        if (Date.now() >= deadline) break;
+        try {
+          const c = await read("/categories/" + category.id);
+          if (c.id !== category.id || !c.path_from_root?.some((p) => p.id === "MLB5726")) throw new Error("APPLIANCES_ANCESTRY");
+          const ranking = await read("/highlights/MLB/category/" + category.id);
+          let complete = true;
+          const pending = [...Array.isArray(ranking.content) ? ranking.content : []];
+          const workers = await Promise.allSettled(Array.from({ length: 3 }, async () => {
+            while (pending.length) {
+              const entry = pending.shift();
+              if (Date.now() >= deadline) {
+                complete = false;
+                break;
+              }
+              if (entry.type !== "PRODUCT" || !/^MLB\d+$/.test(entry.id) || !Number.isInteger(entry.position) || entry.position < 1 || entry.position > 20) continue;
+              checked4(await client.from("appliances_rank_observations").upsert({ identity_key: identity(entry.id), category_id: category.id, position: entry.position, observed_at: (/* @__PURE__ */ new Date()).toISOString() }));
+              if (seen.has(entry.id)) continue;
+              seen.add(entry.id);
+              const p = await resolveAppliancePreview(entry.id, "PRODUCT", read);
+              const e = assessAppliances(p.title, category.id);
+              checked4(await client.from("appliances_candidates").upsert(
+                { source_key: "PRODUCT:" + entry.id, product_id: entry.id, identity_key: identity(entry.id), category_id: category.id, family: category.family, preview: p },
+                { onConflict: "source_key", ignoreDuplicates: true }
+              ));
+              checked4(await client.from("appliances_candidates").update({ preview: p }).eq("source_key", "PRODUCT:" + entry.id));
+              if (e.state === "CANDIDATE") await observe(client, entry.id, category.id, read, p);
+              collected++;
+            }
+          }));
+          if (workers.some((w) => w.status === "rejected")) throw new Error("APPLIANCES_CATEGORY_PARTIAL");
+          if (complete) checked4(await client.from("appliances_category_checks").upsert({ category_id: category.id, checked_at: (/* @__PURE__ */ new Date()).toISOString(), status: 200 }));
+        } catch {
+          failed++;
+          checked4(await client.from("appliances_category_checks").upsert({ category_id: category.id, checked_at: (/* @__PURE__ */ new Date()).toISOString(), status: 503 }));
+        }
+      }
+    } else {
+      const rows = checked4(await client.from("appliances_candidates").select("*").eq("monitor", true).lte("next_check", (/* @__PURE__ */ new Date()).toISOString()).order("next_check").order("source_key").limit(25)) ?? [];
+      const rankings = /* @__PURE__ */ new Map();
+      for (const row of rows) {
+        if (Date.now() >= deadline) break;
+        checked4(await client.from("appliances_candidates").update({ last_attempt: (/* @__PURE__ */ new Date()).toISOString(), next_check: new Date(Date.now() + 36e5).toISOString() }).eq("source_key", row.source_key));
+        try {
+          const p = await resolveAppliancePreview(row.product_id, "PRODUCT", read);
+          await observe(client, row.product_id, row.category_id, read, p);
+          if (!rankings.has(row.category_id)) {
+            const r = await read("/highlights/MLB/category/" + row.category_id);
+            rankings.set(row.category_id, Array.isArray(r.content) ? r.content : []);
+          }
+          const rank = rankings.get(row.category_id).find((r) => r.type === "PRODUCT" && r.id === row.product_id);
+          if (rank && Number.isInteger(rank.position) && rank.position >= 1 && rank.position <= 20) checked4(await client.from("appliances_rank_observations").upsert({ identity_key: row.identity_key, category_id: row.category_id, position: rank.position, observed_at: (/* @__PURE__ */ new Date()).toISOString() }));
+          checked4(await client.from("appliances_candidates").update({ preview: p, next_check: new Date(Date.now() + (appliancesEligible(p, row.category_id) ? 12 : 1) * 36e5).toISOString() }).eq("source_key", row.source_key));
+          collected++;
+        } catch {
+          failed++;
+        }
+      }
+    }
+    await assessStored(client, await allCandidates(client));
+    const admitted = checked4(await client.rpc("renew_appliances_candidates"));
+    checked4(await client.from("appliances_runs").update({ status: "COMPLETED", finished_at: (/* @__PURE__ */ new Date()).toISOString(), collected, failed }).eq("id", run));
+    return { status: "COMPLETED", collected, failed, admitted };
+  } catch (error) {
+    await client.from("appliances_runs").update({ status: "FAILED", finished_at: (/* @__PURE__ */ new Date()).toISOString(), collected, failed }).eq("id", run);
+    throw error;
+  }
+}
+async function appliancesOpportunities(client, view, offset) {
+  await enabled(client);
+  const rows = await allCandidates(client);
+  const sent = checked4(await client.from("commercial_sent_products").select("identity_key,sent_at").eq("vertical_key", "APPLIANCES")) ?? [];
+  const watches = rows.filter((r) => r.monitor || sent.some((s) => s.identity_key === r.identity_key && s.sent_at));
+  const observations = await history(client, watches.map((w) => w.identity_key));
+  const entries = watches.map((w) => {
+    const own = observations.filter((o) => o.identity_key === w.identity_key), p = w.preview;
+    return {
+      identity_key: w.identity_key,
+      monitor: w.monitor,
+      feedback: w.feedback,
+      sent_at: sent.find((s) => s.identity_key === w.identity_key)?.sent_at ?? null,
+      snapshot: { product_id: w.product_id, type: "PRODUCT", category_id: w.category_id, vertical_key: "APPLIANCES" },
+      preview: { ...p, ...affiliateIntelligence(p) },
+      selection: { ...w.assessment, diversity_key: w.diversity_key ?? w.category_id, score: w.score, assessed_at: w.assessment.assessed_at, reasons: w.assessment.reasons ?? [] },
+      rank: rankProduct(p, own, w.feedback, Date.now(), appliancesContext(p.title, w.category_id)),
+      price_analysis: analyzePriceTruth(p, own),
+      price_timeline: priceTimeline(p, own)
+    };
+  });
+  entries.sort((a, b) => Number(b.rank.state === "APPROVED") - Number(a.rank.state === "APPROVED") || b.selection.score - a.selection.score || a.identity_key.localeCompare(b.identity_key));
+  const monitored = entries.filter((e) => e.monitor), approved = monitored.filter((e) => e.rank.state === "APPROVED" && !e.sent_at), published = entries.filter((e) => e.sent_at);
+  const selectedRaw = view === "ALL" ? monitored : view === "SENT" ? published : view === "APPROVED" ? approved : monitored.filter((e) => e.rank.state === view);
+  const selected = diverseHomeOrder(selectedRaw);
+  const runs = checked4(await client.from("appliances_runs").select("*").order("started_at", { ascending: false }).limit(1));
+  return {
+    entries: selected.slice(offset, offset + 50),
+    total: selected.length,
+    hasMore: offset + 50 < selected.length,
+    capacity: 100,
+    counts: { monitored: monitored.length, approved: approved.length, sent: published.length },
+    lastCollection: runs?.[0] ?? null
+  };
+}
+async function revalidateAppliances(client, id, type) {
+  await enabled(client);
+  if (type !== "PRODUCT") throw new Error("APPLIANCES_PRODUCT_TYPE");
+  const row = checked4(await client.from("appliances_candidates").select("*").eq("product_id", id).maybeSingle());
+  if (!row) throw new Error("APPLIANCES_PRODUCT_NOT_FOUND");
+  const p = await resolveAppliancePreview(id, type, await configuredMeliReader(client));
+  checked4(await client.from("appliances_candidates").update({ preview: p }).eq("product_id", id));
+  const own = await history(client, [row.identity_key]);
+  return {
+    ready: p.appliance_specs?.verified === true && p.status !== "UNAVAILABLE" && !!p.title && p.title !== id && !!p.price && p.currency === "BRL" && !!safePreviewUrl(p.image, true) && !!safePreviewUrl(p.url) && Date.parse(p.priceCheckedAt ?? "") >= Date.now() - 6e4,
+    preview: { ...p, ...affiliateIntelligence(p), commercial: rankProduct(p, own, row.feedback, Date.now(), appliancesContext(p.title, row.category_id)) }
+  };
+}
+async function appliancesAction(client, id, type, action, sent) {
+  await enabled(client);
+  if (type !== "PRODUCT") throw new Error("APPLIANCES_PRODUCT_TYPE");
+  const row = checked4(await client.from("appliances_candidates").select("identity_key").eq("product_id", id).maybeSingle());
+  if (!row) throw new Error("APPLIANCES_PRODUCT_NOT_FOUND");
+  if (action === "sent") checked4(await client.from("commercial_sent_products").upsert({ vertical_key: "APPLIANCES", identity_key: row.identity_key, sent_at: sent ? (/* @__PURE__ */ new Date()).toISOString() : null, updated_at: (/* @__PURE__ */ new Date()).toISOString() }));
+  else checked4(await client.from("appliances_candidates").update({ feedback: action, ...action === "NOT_RELEVANT" ? { monitor: false } : {} }).eq("product_id", id));
+  return { saved: true };
+}
+var identity;
+var init_appliances_service = __esm({
+  "src/server/commercial/appliances-service.ts"() {
+    "use strict";
+    init_product_preview();
+    init_home_diversity();
+    init_appliances_config();
+    init_appliances_editorial();
+    init_ranking();
+    init_selection_algorithm();
+    init_coupon_service();
+    init_price_timeline();
+    init_price_truth();
+    identity = (id) => "catalog:" + id + ":new:BRL:public";
   }
 });
 
@@ -25385,7 +25957,7 @@ __export(home_service_exports, {
   revalidateHome: () => revalidateHome,
   runHome: () => runHome
 });
-function checked4(r) {
+function checked5(r) {
   if (r.error) throw new Error("HOME_STORAGE_UNAVAILABLE");
   return r.data;
 }
@@ -25399,26 +25971,26 @@ function homeContext(title, category) {
 function homeEligible(p, category) {
   return assessHome(p.title, category).state === "CANDIDATE" && p.status !== "UNAVAILABLE" && p.comparable === true && p.seller_trusted === true && p.currency === "BRL" && typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0 && !!safePreviewUrl(p.image, true) && !!safePreviewUrl(p.url);
 }
-async function enabled(client) {
-  const row = checked4(await client.from("commercial_verticals").select("enabled,executor_ready").eq("vertical_key", "HOME").single());
+async function enabled2(client) {
+  const row = checked5(await client.from("commercial_verticals").select("enabled,executor_ready").eq("vertical_key", "HOME").single());
   if (!row?.enabled || !row.executor_ready) throw new Error("HOME_DISABLED");
 }
-async function history(client, ids) {
+async function history2(client, ids) {
   const result = [];
   if (!ids.length) return result;
   const start = new Date(Math.min(priceHistoryStart(Date.now()), timelineStart(Date.now()))).toISOString();
   for (let startIndex = 0; startIndex < ids.length; startIndex += 100) for (const table of ["home_observations", "home_rank_observations"]) for (let page = 0; ; page++) {
-    const rows = checked4(await client.from(table).select("*").in("identity_key", ids.slice(startIndex, startIndex + 100)).gte("observed_at", start).order("observed_at").order("identity_key").order(table === "home_observations" ? "source_key" : "category_id").range(page * 1e3, page * 1e3 + 999));
+    const rows = checked5(await client.from(table).select("*").in("identity_key", ids.slice(startIndex, startIndex + 100)).gte("observed_at", start).order("observed_at").order("identity_key").order(table === "home_observations" ? "source_key" : "category_id").range(page * 1e3, page * 1e3 + 999));
     result.push(...(rows ?? []).map((r) => table === "home_observations" ? { ...r, price: r.price === null ? null : Number(r.price), position: null } : { ...r, price: null, currency: "BRL", seller_id: null, comparable: false, trusted: false, demand_category: r.category_id }));
     if (!rows || rows.length < 1e3) break;
     if (page >= 99) throw new Error("HOME_HISTORY_LIMIT");
   }
   return result;
 }
-async function savePrice(client, id, source, p) {
+async function savePrice2(client, id, source, p) {
   if (!p.priceCheckedAt || !p.comparable || p.catalog_product_id !== id || !p.price) return;
-  checked4(await client.from("home_observations").upsert({
-    identity_key: identity(id),
+  checked5(await client.from("home_observations").upsert({
+    identity_key: identity2(id),
     source_key: source,
     observed_at: p.priceCheckedAt,
     price: p.price,
@@ -25428,20 +26000,20 @@ async function savePrice(client, id, source, p) {
     trusted: p.seller_trusted === true
   }, { onConflict: "identity_key,source_key,observed_at", ignoreDuplicates: true }));
 }
-async function observe(client, id, category, read, p) {
+async function observe2(client, id, category, read, p) {
   if (p.catalog_product_id !== id) return;
-  await savePrice(client, id, "PRODUCT:" + id, p);
+  await savePrice2(client, id, "PRODUCT:" + id, p);
   if (p.comparable) try {
     const offers = await read("/products/" + id + "/items?limit=3");
     for (const offer of (Array.isArray(offers.results) ? offers.results : []).slice(0, 3)) {
       const extra = await catalogOfferPreview(id, p, offer, read);
-      if (extra) await savePrice(client, id, "ITEM:" + offer.item_id, extra);
+      if (extra) await savePrice2(client, id, "ITEM:" + offer.item_id, extra);
     }
   } catch {
   }
 }
-async function assessStored(client, rows) {
-  const observations = await history(client, rows.map((r) => r.identity_key));
+async function assessStored2(client, rows) {
+  const observations = await history2(client, rows.map((r) => r.identity_key));
   const pending = [...rows];
   const workers = await Promise.allSettled(Array.from({ length: 3 }, async () => {
     while (pending.length) {
@@ -25451,7 +26023,7 @@ async function assessStored(client, rows) {
       const context = homeContext(row.preview.title ?? "", row.category_id);
       const score = Math.round(demand.score + context.profile.appeal * 0.2 + context.profile.ease * 0.15 + (row.preview.seller_trusted ? 10 : 0) + (row.preview.price <= 150 ? 5 : 3));
       const e = assessHome(row.preview.title ?? "", row.category_id);
-      checked4(await client.from("home_candidates").update({ score, assessment: {
+      checked5(await client.from("home_candidates").update({ score, assessment: {
         ...e,
         eligible: homeEligible(row.preview, row.category_id) && demand.days > 0,
         demand,
@@ -25462,10 +26034,10 @@ async function assessStored(client, rows) {
   }));
   if (workers.some((w) => w.status === "rejected")) throw new Error("HOME_ASSESSMENT_INCOMPLETE");
 }
-async function allCandidates(client) {
+async function allCandidates2(client) {
   const rows = [];
   for (let page = 0; ; page++) {
-    const batch = checked4(await client.from("home_candidates").select("*").order("source_key").range(page * 500, page * 500 + 499));
+    const batch = checked5(await client.from("home_candidates").select("*").order("source_key").range(page * 500, page * 500 + 499));
     rows.push(...batch ?? []);
     if (!batch || batch.length < 500) break;
     if (page >= 19) throw new Error("HOME_CANDIDATE_LIMIT");
@@ -25473,15 +26045,15 @@ async function allCandidates(client) {
   return rows;
 }
 async function runHome(client, kind) {
-  await enabled(client);
-  const run = checked4(await client.rpc("begin_home_run", { run_kind: kind }));
+  await enabled2(client);
+  const run = checked5(await client.rpc("begin_home_run", { run_kind: kind }));
   if (!run) return { status: "BUSY", collected: 0, failed: 0 };
   let collected = 0, failed = 0;
   const deadline = Date.now() + 2e5;
   try {
     const read = await configuredMeliReader(client);
     if (kind === "DISCOVERY") {
-      const checks = checked4(await client.from("home_category_checks").select("*")) ?? [];
+      const checks = checked5(await client.from("home_category_checks").select("*")) ?? [];
       const categories = [...HOME_CATEGORIES].sort((a, b) => String(checks.find((c) => c.category_id === a.id)?.checked_at ?? "").localeCompare(String(checks.find((c) => c.category_id === b.id)?.checked_at ?? "")));
       const seen = /* @__PURE__ */ new Set();
       for (const category of categories) {
@@ -25500,52 +26072,52 @@ async function runHome(client, kind) {
                 break;
               }
               if (entry.type !== "PRODUCT" || !/^MLB\d+$/.test(entry.id) || !Number.isInteger(entry.position) || entry.position < 1 || entry.position > 20) continue;
-              checked4(await client.from("home_rank_observations").upsert({ identity_key: identity(entry.id), category_id: category.id, position: entry.position, observed_at: (/* @__PURE__ */ new Date()).toISOString() }));
+              checked5(await client.from("home_rank_observations").upsert({ identity_key: identity2(entry.id), category_id: category.id, position: entry.position, observed_at: (/* @__PURE__ */ new Date()).toISOString() }));
               if (seen.has(entry.id)) continue;
               seen.add(entry.id);
               const p = await resolveProductPreview(entry.id, "PRODUCT", read);
               const e = assessHome(p.title, category.id);
-              checked4(await client.from("home_candidates").upsert(
-                { source_key: "PRODUCT:" + entry.id, product_id: entry.id, identity_key: identity(entry.id), category_id: category.id, family: category.family, preview: p },
+              checked5(await client.from("home_candidates").upsert(
+                { source_key: "PRODUCT:" + entry.id, product_id: entry.id, identity_key: identity2(entry.id), category_id: category.id, family: category.family, preview: p },
                 { onConflict: "source_key", ignoreDuplicates: true }
               ));
-              checked4(await client.from("home_candidates").update({ preview: p }).eq("source_key", "PRODUCT:" + entry.id));
-              if (e.state === "CANDIDATE") await observe(client, entry.id, category.id, read, p);
+              checked5(await client.from("home_candidates").update({ preview: p }).eq("source_key", "PRODUCT:" + entry.id));
+              if (e.state === "CANDIDATE") await observe2(client, entry.id, category.id, read, p);
               collected++;
             }
           }));
           if (workers.some((w) => w.status === "rejected")) throw new Error("HOME_CATEGORY_PARTIAL");
-          if (complete) checked4(await client.from("home_category_checks").upsert({ category_id: category.id, checked_at: (/* @__PURE__ */ new Date()).toISOString(), status: 200 }));
+          if (complete) checked5(await client.from("home_category_checks").upsert({ category_id: category.id, checked_at: (/* @__PURE__ */ new Date()).toISOString(), status: 200 }));
         } catch {
           failed++;
-          checked4(await client.from("home_category_checks").upsert({ category_id: category.id, checked_at: (/* @__PURE__ */ new Date()).toISOString(), status: 503 }));
+          checked5(await client.from("home_category_checks").upsert({ category_id: category.id, checked_at: (/* @__PURE__ */ new Date()).toISOString(), status: 503 }));
         }
       }
     } else {
-      const rows = checked4(await client.from("home_candidates").select("*").eq("monitor", true).lte("next_check", (/* @__PURE__ */ new Date()).toISOString()).order("next_check").order("source_key").limit(25)) ?? [];
+      const rows = checked5(await client.from("home_candidates").select("*").eq("monitor", true).lte("next_check", (/* @__PURE__ */ new Date()).toISOString()).order("next_check").order("source_key").limit(25)) ?? [];
       const rankings = /* @__PURE__ */ new Map();
       for (const row of rows) {
         if (Date.now() >= deadline) break;
-        checked4(await client.from("home_candidates").update({ last_attempt: (/* @__PURE__ */ new Date()).toISOString(), next_check: new Date(Date.now() + 36e5).toISOString() }).eq("source_key", row.source_key));
+        checked5(await client.from("home_candidates").update({ last_attempt: (/* @__PURE__ */ new Date()).toISOString(), next_check: new Date(Date.now() + 36e5).toISOString() }).eq("source_key", row.source_key));
         try {
           const p = await resolveProductPreview(row.product_id, "PRODUCT", read);
-          await observe(client, row.product_id, row.category_id, read, p);
+          await observe2(client, row.product_id, row.category_id, read, p);
           if (!rankings.has(row.category_id)) {
             const r = await read("/highlights/MLB/category/" + row.category_id);
             rankings.set(row.category_id, Array.isArray(r.content) ? r.content : []);
           }
           const rank = rankings.get(row.category_id).find((r) => r.type === "PRODUCT" && r.id === row.product_id);
-          if (rank && Number.isInteger(rank.position) && rank.position >= 1 && rank.position <= 20) checked4(await client.from("home_rank_observations").upsert({ identity_key: row.identity_key, category_id: row.category_id, position: rank.position, observed_at: (/* @__PURE__ */ new Date()).toISOString() }));
-          checked4(await client.from("home_candidates").update({ preview: p, next_check: new Date(Date.now() + (homeEligible(p, row.category_id) ? 12 : 1) * 36e5).toISOString() }).eq("source_key", row.source_key));
+          if (rank && Number.isInteger(rank.position) && rank.position >= 1 && rank.position <= 20) checked5(await client.from("home_rank_observations").upsert({ identity_key: row.identity_key, category_id: row.category_id, position: rank.position, observed_at: (/* @__PURE__ */ new Date()).toISOString() }));
+          checked5(await client.from("home_candidates").update({ preview: p, next_check: new Date(Date.now() + (homeEligible(p, row.category_id) ? 12 : 1) * 36e5).toISOString() }).eq("source_key", row.source_key));
           collected++;
         } catch {
           failed++;
         }
       }
     }
-    await assessStored(client, await allCandidates(client));
-    const admitted = checked4(await client.rpc("renew_home_candidates"));
-    checked4(await client.from("home_runs").update({ status: "COMPLETED", finished_at: (/* @__PURE__ */ new Date()).toISOString(), collected, failed }).eq("id", run));
+    await assessStored2(client, await allCandidates2(client));
+    const admitted = checked5(await client.rpc("renew_home_candidates"));
+    checked5(await client.from("home_runs").update({ status: "COMPLETED", finished_at: (/* @__PURE__ */ new Date()).toISOString(), collected, failed }).eq("id", run));
     return { status: "COMPLETED", collected, failed, admitted };
   } catch (error) {
     await client.from("home_runs").update({ status: "FAILED", finished_at: (/* @__PURE__ */ new Date()).toISOString(), collected, failed }).eq("id", run);
@@ -25553,11 +26125,11 @@ async function runHome(client, kind) {
   }
 }
 async function homeOpportunities(client, view, offset) {
-  await enabled(client);
-  const rows = await allCandidates(client);
-  const sent = checked4(await client.from("commercial_sent_products").select("identity_key,sent_at").eq("vertical_key", "HOME")) ?? [];
+  await enabled2(client);
+  const rows = await allCandidates2(client);
+  const sent = checked5(await client.from("commercial_sent_products").select("identity_key,sent_at").eq("vertical_key", "HOME")) ?? [];
   const watches = rows.filter((r) => r.monitor || sent.some((s) => s.identity_key === r.identity_key && s.sent_at));
-  const observations = await history(client, watches.map((w) => w.identity_key));
+  const observations = await history2(client, watches.map((w) => w.identity_key));
   const entries = watches.map((w) => {
     const own = observations.filter((o) => o.identity_key === w.identity_key), p = w.preview;
     return {
@@ -25577,7 +26149,7 @@ async function homeOpportunities(client, view, offset) {
   const monitored = entries.filter((e) => e.monitor), approved = monitored.filter((e) => e.rank.state === "APPROVED" && !e.sent_at), published = entries.filter((e) => e.sent_at);
   const selectedRaw = view === "ALL" ? monitored : view === "SENT" ? published : view === "APPROVED" ? approved : monitored.filter((e) => e.rank.state === view);
   const selected = diverseHomeOrder(selectedRaw);
-  const runs = checked4(await client.from("home_runs").select("*").order("started_at", { ascending: false }).limit(1));
+  const runs = checked5(await client.from("home_runs").select("*").order("started_at", { ascending: false }).limit(1));
   return {
     entries: selected.slice(offset, offset + 50),
     total: selected.length,
@@ -25588,28 +26160,28 @@ async function homeOpportunities(client, view, offset) {
   };
 }
 async function revalidateHome(client, id, type) {
-  await enabled(client);
+  await enabled2(client);
   if (type !== "PRODUCT") throw new Error("HOME_PRODUCT_TYPE");
-  const row = checked4(await client.from("home_candidates").select("*").eq("product_id", id).maybeSingle());
+  const row = checked5(await client.from("home_candidates").select("*").eq("product_id", id).maybeSingle());
   if (!row) throw new Error("HOME_PRODUCT_NOT_FOUND");
   const p = await resolveProductPreview(id, type, await configuredMeliReader(client));
-  checked4(await client.from("home_candidates").update({ preview: p }).eq("product_id", id));
-  const own = await history(client, [row.identity_key]);
+  checked5(await client.from("home_candidates").update({ preview: p }).eq("product_id", id));
+  const own = await history2(client, [row.identity_key]);
   return {
     ready: p.status !== "UNAVAILABLE" && !!p.title && p.title !== id && !!p.price && p.currency === "BRL" && !!safePreviewUrl(p.image, true) && !!safePreviewUrl(p.url) && Date.parse(p.priceCheckedAt ?? "") >= Date.now() - 6e4,
     preview: { ...p, ...affiliateIntelligence(p), commercial: rankProduct(p, own, row.feedback, Date.now(), homeContext(p.title, row.category_id)) }
   };
 }
 async function homeAction(client, id, type, action, sent) {
-  await enabled(client);
+  await enabled2(client);
   if (type !== "PRODUCT") throw new Error("HOME_PRODUCT_TYPE");
-  const row = checked4(await client.from("home_candidates").select("identity_key").eq("product_id", id).maybeSingle());
+  const row = checked5(await client.from("home_candidates").select("identity_key").eq("product_id", id).maybeSingle());
   if (!row) throw new Error("HOME_PRODUCT_NOT_FOUND");
-  if (action === "sent") checked4(await client.from("commercial_sent_products").upsert({ vertical_key: "HOME", identity_key: row.identity_key, sent_at: sent ? (/* @__PURE__ */ new Date()).toISOString() : null, updated_at: (/* @__PURE__ */ new Date()).toISOString() }));
-  else checked4(await client.from("home_candidates").update({ feedback: action, ...action === "NOT_RELEVANT" ? { monitor: false } : {} }).eq("product_id", id));
+  if (action === "sent") checked5(await client.from("commercial_sent_products").upsert({ vertical_key: "HOME", identity_key: row.identity_key, sent_at: sent ? (/* @__PURE__ */ new Date()).toISOString() : null, updated_at: (/* @__PURE__ */ new Date()).toISOString() }));
+  else checked5(await client.from("home_candidates").update({ feedback: action, ...action === "NOT_RELEVANT" ? { monitor: false } : {} }).eq("product_id", id));
   return { saved: true };
 }
-var identity;
+var identity2;
 var init_home_service = __esm({
   "src/server/commercial/home-service.ts"() {
     "use strict";
@@ -25622,7 +26194,7 @@ var init_home_service = __esm({
     init_coupon_service();
     init_price_timeline();
     init_price_truth();
-    identity = (id) => "catalog:" + id + ":new:BRL:public";
+    identity2 = (id) => "catalog:" + id + ":new:BRL:public";
   }
 });
 
@@ -25651,6 +26223,8 @@ function affiliateLink(value) {
 }
 function offerMessage(p, link) {
   const lines = ["🔥 ACHADO NO MERCADO LIVRE!", "📦 " + p.title];
+  if (p.appliance_specs?.voltage) lines.push("🔌 Voltagem: " + p.appliance_specs.voltage);
+  if (p.appliance_specs) lines.push("Confira frete, medidas e instalação para sua região.");
   if (Number.isFinite(p.original_price) && p.original_price > p.price) lines.push("~De: " + money(p.original_price) + "~");
   lines.push("💥 Por: " + money(p.price) + (p.has_advertised_discount ? " (" + p.discount_percent + "% de desconto anunciado)" : ""));
   if (p.priceLinkVerified !== true) lines.push("Preço observado no catálogo; confirme o valor no link.");
@@ -25694,15 +26268,15 @@ async function outboxAction(client, action, b, origin, generation) {
     return { saved: true };
   }
   if (action === "prepare") {
-    if (!["AUTOMOTIVE", "HOME"].includes(b.vertical)) throw new OutboxError(400, "VERTICAL_NOT_ACTIVE");
+    if (!["AUTOMOTIVE", "HOME", "APPLIANCES"].includes(b.vertical)) throw new OutboxError(400, "VERTICAL_NOT_ACTIVE");
     if (!["ITEM", "PRODUCT", "USER_PRODUCT"].includes(b.type) || !/^MLBU?\d{1,20}$/.test(b.id ?? "")) throw new OutboxError(400, "INVALID_PRODUCT");
     const link = affiliateLink(b.link);
     const destination = data(await client.from("whatsapp_destinations").select("*").eq("vertical_key", b.vertical).eq("enabled", true).maybeSingle());
     if (!destination) throw new OutboxError(409, "DESTINATION_NOT_CONFIGURED");
     const c = data(await client.from("whatsapp_connector").select("generation").eq("id", 1).single());
-    const watch = data(await client.from(b.vertical === "HOME" ? "home_candidates" : "commercial_watchlist").select("identity_key,monitor").eq("source_key", b.type + ":" + b.id).maybeSingle());
+    const watch = data(await client.from(b.vertical === "APPLIANCES" ? "appliances_candidates" : b.vertical === "HOME" ? "home_candidates" : "commercial_watchlist").select("identity_key,monitor").eq("source_key", b.type + ":" + b.id).maybeSingle());
     if (!watch?.monitor) throw new OutboxError(409, "PRODUCT_NOT_MONITORED");
-    const fresh = b.vertical === "HOME" ? await (await Promise.resolve().then(() => (init_home_service(), home_service_exports))).revalidateHome(client, b.id, b.type) : await revalidateProduct(client, b.id, b.type);
+    const fresh = b.vertical === "APPLIANCES" ? await (await Promise.resolve().then(() => (init_appliances_service(), appliances_service_exports))).revalidateAppliances(client, b.id, b.type) : b.vertical === "HOME" ? await (await Promise.resolve().then(() => (init_home_service(), home_service_exports))).revalidateHome(client, b.id, b.type) : await revalidateProduct(client, b.id, b.type);
     if (!fresh.ready || productIdentity(b.id, b.type, fresh.preview) !== watch.identity_key) throw new OutboxError(409, "OFFER_CHANGED");
     const job = data(await client.from("whatsapp_outbox").insert({
       generation: c.generation,
@@ -25738,7 +26312,7 @@ async function outboxAction(client, action, b, origin, generation) {
     const job = data(await client.rpc("whatsapp_claim", { gen: generation }))?.[0];
     if (!job) return { job: null };
     try {
-      const fresh = job.vertical_key === "HOME" ? await (await Promise.resolve().then(() => (init_home_service(), home_service_exports))).revalidateHome(client, job.product_id, job.product_type) : await revalidateProduct(client, job.product_id, job.product_type);
+      const fresh = job.vertical_key === "APPLIANCES" ? await (await Promise.resolve().then(() => (init_appliances_service(), appliances_service_exports))).revalidateAppliances(client, job.product_id, job.product_type) : job.vertical_key === "HOME" ? await (await Promise.resolve().then(() => (init_home_service(), home_service_exports))).revalidateHome(client, job.product_id, job.product_type) : await revalidateProduct(client, job.product_id, job.product_type);
       if (!fresh.ready || productIdentity(job.product_id, job.product_type, fresh.preview) !== job.identity_key || offerMessage(fresh.preview, job.affiliate_url) !== job.message) throw new Error("OFFER_CHANGED");
     } catch {
       data(await client.rpc("whatsapp_finish", { job: job.id, gen: generation, claim: job.claim_token, result: "FAILED", provider_id: null, reason: "OFFER_REQUIRES_REVIEW" }));
@@ -25939,18 +26513,18 @@ var priority_exports = {};
 __export(priority_exports, {
   collectPriority: () => collectPriority
 });
-function checked5(r) {
+function checked6(r) {
   if (r.error) throw new Error("PRIORITY_STORAGE_FAILED");
   return r.data;
 }
 async function collectPriority(client) {
-  const runId = checked5(await client.rpc("begin_commercial_collection"));
+  const runId = checked6(await client.rpc("begin_commercial_collection"));
   if (!runId) return { status: "BUSY", collected: 0, failed: 0 };
   let collected = 0, failed = 0;
   const start = Date.now();
   try {
-    checked5(await client.from("commercial_collection_runs").update({ kind: "PRIORITY" }).eq("id", runId));
-    const rows = checked5(await client.from("commercial_watchlist").select("*").eq("monitor", true).gt("priority_until", (/* @__PURE__ */ new Date()).toISOString()).lte("next_priority_check", (/* @__PURE__ */ new Date()).toISOString()).order("next_priority_check").order("source_key").limit(6));
+    checked6(await client.from("commercial_collection_runs").update({ kind: "PRIORITY" }).eq("id", runId));
+    const rows = checked6(await client.from("commercial_watchlist").select("*").eq("monitor", true).gt("priority_until", (/* @__PURE__ */ new Date()).toISOString()).lte("next_priority_check", (/* @__PURE__ */ new Date()).toISOString()).order("next_priority_check").order("source_key").limit(6));
     for (const row of rows ?? []) {
       if (Date.now() - start > 12e4) {
         failed++;
@@ -25964,7 +26538,7 @@ async function collectPriority(client) {
             const read = await configuredMeliReader(client);
             const rank = await read("/highlights/MLB/product/" + preview.catalog_product_id);
             if (rank.dimension === "category" && /^MLB\d+$/.test(rank.id) && Number.isInteger(rank.position) && rank.position >= 1 && rank.position <= 20)
-              checked5(await client.from("commercial_rank_observations").upsert({
+              checked6(await client.from("commercial_rank_observations").upsert({
                 identity_key: productIdentity(row.product_id, row.type, preview),
                 category_id: rank.id,
                 observed_at: (/* @__PURE__ */ new Date()).toISOString(),
@@ -25973,7 +26547,7 @@ async function collectPriority(client) {
           } catch {
           }
         }
-        checked5(await client.from("commercial_watchlist").update({
+        checked6(await client.from("commercial_watchlist").update({
           preview,
           identity_key: productIdentity(row.product_id, row.type, preview),
           next_priority_check: new Date(Date.now() + 30 * 6e4).toISOString(),
@@ -25982,11 +26556,11 @@ async function collectPriority(client) {
         collected++;
       } catch {
         failed++;
-        checked5(await client.from("commercial_watchlist").update({ next_priority_check: new Date(Date.now() + 36e5).toISOString() }).eq("source_key", row.source_key));
+        checked6(await client.from("commercial_watchlist").update({ next_priority_check: new Date(Date.now() + 36e5).toISOString() }).eq("source_key", row.source_key));
       }
     }
     const status = failed ? "PARTIAL" : "COMPLETED";
-    checked5(await client.from("commercial_collection_runs").update({ status, collected, failed, finished_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", runId));
+    checked6(await client.from("commercial_collection_runs").update({ status, collected, failed, finished_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", runId));
     return { status, collected, failed };
   } catch (error) {
     await client.from("commercial_collection_runs").update({ status: "FAILED", collected, failed, finished_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", runId);
@@ -26269,7 +26843,7 @@ async function loadWhatsApp() {
  }catch(e){el('wa-status').textContent=e.message;}
 }
 function whatsappSendButton(snapshot,input) {
- const cardVertical=snapshot.vertical_key==='HOME'?1:0;
+ const cardVertical=snapshot.vertical_key==='APPLIANCES'?2:snapshot.vertical_key==='HOME'?1:0;
  const button=textNode('button','📤 Revisar envio para '+verticalNames[cardVertical],'copy-button');
  button.addEventListener('click',async()=>{
   button.disabled=true;el('copy-status').textContent='Revalidando a oferta e preparando a mensagem…';
@@ -26328,7 +26902,7 @@ function dashboardPage(props) {
 <div class="card">Verticais Planejadas<strong>10 Verticais</strong><small>Automotivo V1 Ativa com 155 categorias: 28 Tier A + 127 Tier B</small></div>
 <div class="card">Oportunidades no Banco<strong id="count">—</strong><small>Registros em public.highlight_snapshots</small></div>
 <div class="card">Última Sincronização<strong id="synced">—</strong><small>Atualização automática a cada 30 segundos</small></div></section>
-<section class="panel"><h2>Matriz de Expansão (10 Verticais Estratégicas)</h2><ol class="matrix">${verticals.map(([name, id], i) => `<li><button id="vertical-${i}" class="vertical-button" aria-controls="vertical-products" aria-pressed="${i === 0}">${i + 1}. ${name}<span>${id} · ${i === 0 ? "ATIVO (155 Cats)" : i === 1 ? "PILOTO (55 Cats)" : "PLANEJADO"}</span></button></li>`).join("")}</ol></section>
+<section class="panel"><h2>Matriz de Expansão (10 Verticais Estratégicas)</h2><ol class="matrix">${verticals.map(([name, id], i) => `<li><button id="vertical-${i}" class="vertical-button" aria-controls="vertical-products" aria-pressed="${i === 0}">${i + 1}. ${name}<span>${id} · ${i === 0 ? "ATIVO (155 Cats)" : i === 1 ? "PILOTO (55 Cats)" : i === 2 ? "PILOTO (42 Cats)" : "PLANEJADO"}</span></button></li>`).join("")}</ol></section>
 <section class="panel" id="vertical-products"><h2 id="vertical-title" tabindex="-1">Automotivo — produtos e ofertas</h2><p>Melhores oportunidades primeiro. Monitorados reúne a carteira da categoria; Prontos para divulgar mostra ofertas com histórico e demanda confirmados, ainda não divulgadas.</p><div class="controls filters"><button id="rank-ALL" aria-pressed="true">Monitorados</button><button id="rank-APPROVED" aria-pressed="false">🔥 Prontos para divulgar</button><button id="rank-SENT" aria-pressed="false">✅ Divulgados</button><button id="refresh">🔄 Atualizar</button></div><p id="message" role="status" aria-live="polite"></p><p id="commercial-status" role="status" aria-live="polite"></p><p id="copy-status" role="status" aria-live="polite"></p><textarea id="manual-copy" hidden readonly aria-label="Texto para copiar manualmente"></textarea><p>Para copiar a divulgação, cole no produto o link criado pelo gerador oficial de afiliados.</p><p id="commercial-summary"></p><div id="commercial-results" class="results"></div><button id="commercial-more" hidden>Mostrar mais desta seleção</button></section>${whatsappPanel}<details id="robot-admin" class="panel"><summary>Administração do robô</summary><p>Ferramentas técnicas de coleta e diagnóstico — Automotivo.</p><div class="controls"><button id="sweep">🚀 Executar varredura</button><button id="smoke">⚡ Teste de coleta (2 categorias)</button><button id="collect-evidence">📊 Coletar evidências agora</button></div><p id="admin-summary"></p><details id="raw-products" class="panel"><summary>Explorar todos os registros minerados (sem aprovação comercial)</summary><section><h2>Produtos encontrados</h2><p>Prévia dos destaques minerados: foto, descrição e preço informado pelo Mercado Livre. Preço e disponibilidade podem mudar; os destaques ainda não representam descontos validados.</p><h2>Central de Cupons Ativos</h2><div id="coupons" class="coupon-bar" aria-live="polite">Consultando campanhas verificadas…</div><p>Cupons sugeridos conforme categoria e valor. Confira as restrições e a aplicação no checkout. Para divulgar com comissão, cole em cada produto o link criado no gerador oficial de afiliados do Mercado Livre. Os links ficam salvos somente neste navegador.</p><div class="filters" aria-label="Filtrar produtos"><button id="filter-all" aria-pressed="true">Todas as ofertas completas</button><button id="filter-discount" aria-pressed="false">🔥 Desconto anunciado ≥ 5%</button><button id="filter-tier" aria-pressed="false">⚡ Prioridade Tier A</button><button id="filter-coupon" aria-pressed="false">🏷️ Cupom sugerido</button><button id="filter-incomplete" aria-pressed="false">Registros incompletos</button></div><p id="results-summary"></p><div id="snapshots" class="results" aria-label="Produtos minerados"></div><button id="more" hidden>Mostrar mais produtos</button></section></details></details></main>
 <script>
 const el = id => document.getElementById(id);
@@ -26337,7 +26911,7 @@ const verticalNames = ["Automotivo","Casa, utilidades e organização","Eletrodo
 let selectedVertical = 0;
 let commercialView = 'ALL', commercialOffset = 0, commercialRevision = 0, collecting = false;
 function updateVerticalControls() {
-  const inactive=selectedVertical>1;
+  const inactive=selectedVertical>2;
   el('raw-products').hidden=selectedVertical!==0;
   for(const id of ['collect-evidence','rank-ALL','rank-APPROVED','rank-SENT']) el(id).disabled=inactive||busy||(id==='collect-evidence'&&collecting);
 }
@@ -26361,7 +26935,7 @@ for(let index=0;index<verticalNames.length;index++) el('vertical-'+index).addEve
   await loadCommercial();
 });
 async function loadCommercial(append = false) {
-  if(selectedVertical>1) {
+  if(selectedVertical>2) {
     commercialRevision++;
     el('commercial-results').replaceChildren(textNode('p','A coleta de '+verticalNames[selectedVertical]+' ainda não foi ativada. Os produtos aparecerão aqui após a ativação e a avaliação dos candidatos.'));
     el('commercial-summary').textContent='Vertical planejada · 100 vagas reservadas para monitoramento.';
@@ -26370,7 +26944,7 @@ async function loadCommercial(append = false) {
   }
   const version=++commercialRevision, view=commercialView, offset=append?commercialOffset:0;
   try {
-    const data=await request('/api/commercial/opportunities?view='+view+'&offset='+offset+(selectedVertical===1?'&vertical=HOME':''));
+    const data=await request('/api/commercial/opportunities?view='+view+'&offset='+offset+(selectedVertical===2?'&vertical=APPLIANCES':selectedVertical===1?'&vertical=HOME':''));
     if(version!==commercialRevision) return;
     el('commercial-status').textContent='';
     if(!append) el('commercial-results').replaceChildren();
@@ -26413,7 +26987,7 @@ async function loadCommercial(append = false) {
         const button=textNode('button',(entry.feedback===action?'✓ ':'')+label);
         button.addEventListener('click',async()=>{
           button.disabled=true;
-          try {await request('/api/commercial/feedback?id='+encodeURIComponent(entry.snapshot.product_id)+'&type='+encodeURIComponent(entry.snapshot.type)+'&action='+action+(entry.snapshot.vertical_key==='HOME'?'&vertical=HOME':''),'POST');await loadCommercial();}
+          try {await request('/api/commercial/feedback?id='+encodeURIComponent(entry.snapshot.product_id)+'&type='+encodeURIComponent(entry.snapshot.type)+'&action='+action+(entry.snapshot.vertical_key==='APPLIANCES'?'&vertical=APPLIANCES':entry.snapshot.vertical_key==='HOME'?'&vertical=HOME':''),'POST');await loadCommercial();}
           catch(error){el('commercial-status').textContent=error.message;} finally{button.disabled=false;}
         });feedback.append(button);
       }
@@ -26423,7 +26997,7 @@ async function loadCommercial(append = false) {
       sentButton.addEventListener('click',async()=>{
         sentButton.disabled=true;
         try {
-          await request('/api/commercial/sent?id='+encodeURIComponent(entry.snapshot.product_id)+'&type='+encodeURIComponent(entry.snapshot.type)+'&sent='+String(!entry.sent_at)+(entry.snapshot.vertical_key==='HOME'?'&vertical=HOME':''),'POST');
+          await request('/api/commercial/sent?id='+encodeURIComponent(entry.snapshot.product_id)+'&type='+encodeURIComponent(entry.snapshot.type)+'&sent='+String(!entry.sent_at)+(entry.snapshot.vertical_key==='APPLIANCES'?'&vertical=APPLIANCES':entry.snapshot.vertical_key==='HOME'?'&vertical=HOME':''),'POST');
           await loadCommercial();
         } catch(error) {el('commercial-status').textContent=error.message;}
         finally {sentButton.disabled=false;}
@@ -26442,7 +27016,7 @@ el('commercial-more').addEventListener('click',()=>loadCommercial(true));
 el('collect-evidence').addEventListener('click',async()=>{
   if(collecting || selectedVertical!==0) return; collecting=true;el('collect-evidence').disabled=true;
   el('commercial-status').textContent='Coletando preços e demanda. O lote pode levar alguns minutos; as evidências ficam salvas no banco.';
-  try {const result=await request('/api/commercial/collect'+(selectedVertical===1?'?vertical=HOME':''),'POST');el('commercial-status').textContent='Coleta: '+result.status+' · '+result.collected+' consultados · '+result.failed+' falhas. Coleta concluída não significa oferta aprovada.';await loadCommercial();}
+  try {const result=await request('/api/commercial/collect'+(selectedVertical===2?'?vertical=APPLIANCES':selectedVertical===1?'?vertical=HOME':''),'POST');el('commercial-status').textContent='Coleta: '+result.status+' · '+result.collected+' consultados · '+result.failed+' falhas. Coleta concluída não significa oferta aprovada.';await loadCommercial();}
   catch(error){el('commercial-status').textContent=error.message;}finally{collecting=false;updateVerticalControls();}
 });
 el('raw-products').addEventListener('toggle',()=>{if(el('raw-products').open && !visible && !loading) showMore();});
@@ -26485,6 +27059,8 @@ async function copyText(text, button) {
 function productCopy(snapshot, preview, link) {
   if (!complete(snapshot, preview) || !affiliateUrl(link)) return null;
   const lines = ['🔥 ACHADO NO MERCADO LIVRE!', '📦 ' + preview.title];
+  if(preview.appliance_specs?.voltage)lines.push('🔌 Voltagem: '+preview.appliance_specs.voltage);
+  if(preview.appliance_specs)lines.push('Confira frete, medidas e instalação para sua região.');
   if (Number.isFinite(preview.original_price) && preview.original_price > preview.price) lines.push('~De: ' + money(preview.original_price, preview.currency) + '~');
   lines.push('💥 Por: ' + money(preview.price, preview.currency) + (preview.has_advertised_discount ? ' (' + preview.discount_percent + '% de desconto anunciado)' : ''));
   if(preview.priceLinkVerified!==true) lines.push('Preço observado no catálogo; confirme o valor no link.');
@@ -26582,6 +27158,7 @@ function fillCard(card, snapshot, preview, timeline) {
   body.append(textNode('h3', preview.title || snapshot.product_id));
   const details=textNode('details','','product-details');
   details.append(textNode('summary','Mais informações'));
+  if(preview.appliance_specs)body.append(textNode('p','🔌 '+(preview.appliance_specs.voltage||'Consulte alimentação')+' · '+(preview.appliance_specs.model||'Modelo a confirmar')));
   details.append(textNode('p', preview.description || 'Descrição não disponibilizada pela API.'));
   const confirmedOffer=preview.priceLinkVerified===true;
   let price = 'Preço não disponível';
@@ -26633,7 +27210,7 @@ function fillCard(card, snapshot, preview, timeline) {
       if (!affiliateUrl(input.value.trim())) { el('copy-status').textContent = 'Cole o link deste produto gerado pela Central de Afiliados antes de copiar.'; input.focus(); return; }
       button.disabled=true;button.textContent='Conferindo oferta…';
       try {
-        const data=await request('/api/commercial/revalidate?id='+encodeURIComponent(snapshot.product_id)+'&type='+encodeURIComponent(snapshot.type)+(snapshot.vertical_key==='HOME'?'&vertical=HOME':''),'POST');
+        const data=await request('/api/commercial/revalidate?id='+encodeURIComponent(snapshot.product_id)+'&type='+encodeURIComponent(snapshot.type)+(snapshot.vertical_key==='APPLIANCES'?'&vertical=APPLIANCES':snapshot.vertical_key==='HOME'?'&vertical=HOME':''),'POST');
         if(!data.ready) {el('copy-status').textContent='Não foi possível confirmar uma oferta completa e atual. A cópia foi interrompida.';return;}
         const fresh=data.preview;
         const changed=['price','original_price','currency','seller_id','catalog_product_id','url'].some(key=>fresh[key]!==preview[key]);
@@ -26745,8 +27322,8 @@ function concealedNotFound(response) {
 }
 function normalizedHost(value) {
   if (!value) return null;
-  const normalized = value.trim().toLowerCase().replace(/^https?:\/\//, "").split("/")[0].replace(/:443$/, "").replace(/\.$/, "");
-  return normalized.length > 0 ? normalized : null;
+  const normalized2 = value.trim().toLowerCase().replace(/^https?:\/\//, "").split("/")[0].replace(/:443$/, "").replace(/\.$/, "");
+  return normalized2.length > 0 ? normalized2 : null;
 }
 function mediaType(value) {
   if (typeof value !== "string") return null;
@@ -26984,11 +27561,12 @@ async function handleRequest(request, response, overrides = {}) {
       const preparation = url.pathname === "/api/commercial/pre-home";
       const homePilot = url.pathname === "/api/commercial/home-pilot";
       const homeRun = url.pathname === "/api/commercial/home-run";
+      const appliancesRun = url.pathname === "/api/commercial/appliances-run";
       const vertical = url.searchParams.get("vertical") ?? "AUTOMOTIVE";
       const simulation = url.pathname === "/api/commercial/selection-simulation";
       const priority = url.pathname === "/api/commercial/priority";
       const revalidating = url.pathname === "/api/commercial/revalidate";
-      const cron = homeRun || homePilot || discovering || probing || preparation || simulation || priority || url.pathname === "/api/commercial/cron";
+      const cron = appliancesRun || homeRun || homePilot || discovering || probing || preparation || simulation || priority || url.pathname === "/api/commercial/cron";
       const feedback = url.pathname === "/api/commercial/feedback";
       const publication = url.pathname === "/api/commercial/sent";
       const listing = url.pathname === "/api/commercial/opportunities";
@@ -27018,7 +27596,7 @@ async function handleRequest(request, response, overrides = {}) {
           return;
         }
       }
-      if (!["AUTOMOTIVE", "HOME"].includes(vertical) || vertical === "HOME" && (discovering || probing || preparation || simulation || priority)) {
+      if (!["AUTOMOTIVE", "HOME", "APPLIANCES"].includes(vertical) || vertical !== "AUTOMOTIVE" && (discovering || probing || preparation || simulation || priority)) {
         sendJson(response, 400, { errorCode: "VERTICAL_NOT_ACTIVE" });
         return;
       }
@@ -27047,6 +27625,26 @@ async function handleRequest(request, response, overrides = {}) {
           return;
         }
         sendJson(response, 200, await runHome2(client, kind));
+        return;
+      }
+      if (appliancesRun) {
+        const { runAppliances: runAppliances2 } = await Promise.resolve().then(() => (init_appliances_service(), appliances_service_exports));
+        const kind = url.searchParams.get("kind") ?? "HISTORY";
+        if (kind === "STATUS") {
+          const offset2 = Number(url.searchParams.get("offset") ?? 0);
+          if (!Number.isSafeInteger(offset2) || offset2 < 0 || offset2 > 1e4) {
+            sendJson(response, 400, { errorCode: "INVALID_VIEW" });
+            return;
+          }
+          const { appliancesOpportunities: appliancesOpportunities2 } = await Promise.resolve().then(() => (init_appliances_service(), appliances_service_exports));
+          if (!sendJson(response, 200, await appliancesOpportunities2(client, "ALL", offset2), void 0, 2 * 1024 * 1024)) sendJson(response, 503, { errorCode: "APPLIANCES_RESPONSE_TOO_LARGE" });
+          return;
+        }
+        if (!["DISCOVERY", "HISTORY"].includes(kind)) {
+          sendJson(response, 400, { errorCode: "INVALID_KIND" });
+          return;
+        }
+        sendJson(response, 200, await runAppliances2(client, kind));
         return;
       }
       if (homePilot) {
@@ -27094,7 +27692,7 @@ async function handleRequest(request, response, overrides = {}) {
           return;
         }
         const { revalidateProduct: revalidateProduct2 } = await Promise.resolve().then(() => (init_revalidate(), revalidate_exports));
-        sendJson(response, 200, vertical === "HOME" ? await (await Promise.resolve().then(() => (init_home_service(), home_service_exports))).revalidateHome(client, id, type) : await revalidateProduct2(client, id, type));
+        sendJson(response, 200, vertical === "APPLIANCES" ? await (await Promise.resolve().then(() => (init_appliances_service(), appliances_service_exports))).revalidateAppliances(client, id, type) : vertical === "HOME" ? await (await Promise.resolve().then(() => (init_home_service(), home_service_exports))).revalidateHome(client, id, type) : await revalidateProduct2(client, id, type));
         return;
       }
       const service = await Promise.resolve().then(() => (init_service(), service_exports));
@@ -27104,11 +27702,11 @@ async function handleRequest(request, response, overrides = {}) {
           sendJson(response, 400, { errorCode: "INVALID_PUBLICATION" });
           return;
         }
-        sendJson(response, 200, vertical === "HOME" ? await (await Promise.resolve().then(() => (init_home_service(), home_service_exports))).homeAction(client, id, type, "sent", sent === "true") : await service.markCommercialSent(client, id, type, sent === "true"));
+        sendJson(response, 200, vertical === "APPLIANCES" ? await (await Promise.resolve().then(() => (init_appliances_service(), appliances_service_exports))).appliancesAction(client, id, type, "sent", sent === "true") : vertical === "HOME" ? await (await Promise.resolve().then(() => (init_home_service(), home_service_exports))).homeAction(client, id, type, "sent", sent === "true") : await service.markCommercialSent(client, id, type, sent === "true"));
         return;
       }
       if (collecting || cron) {
-        sendJson(response, 200, vertical === "HOME" ? await (await Promise.resolve().then(() => (init_home_service(), home_service_exports))).runHome(client, "HISTORY") : await service.collectCommercialEvidence(client));
+        sendJson(response, 200, vertical === "APPLIANCES" ? await (await Promise.resolve().then(() => (init_appliances_service(), appliances_service_exports))).runAppliances(client, "HISTORY") : vertical === "HOME" ? await (await Promise.resolve().then(() => (init_home_service(), home_service_exports))).runHome(client, "HISTORY") : await service.collectCommercialEvidence(client));
         return;
       }
       if (feedback) {
@@ -27117,7 +27715,7 @@ async function handleRequest(request, response, overrides = {}) {
           sendJson(response, 400, { errorCode: "INVALID_FEEDBACK" });
           return;
         }
-        sendJson(response, 200, vertical === "HOME" ? await (await Promise.resolve().then(() => (init_home_service(), home_service_exports))).homeAction(client, id, type, action) : await service.saveCommercialFeedback(client, id, type, action));
+        sendJson(response, 200, vertical === "APPLIANCES" ? await (await Promise.resolve().then(() => (init_appliances_service(), appliances_service_exports))).appliancesAction(client, id, type, action) : vertical === "HOME" ? await (await Promise.resolve().then(() => (init_home_service(), home_service_exports))).homeAction(client, id, type, action) : await service.saveCommercialFeedback(client, id, type, action));
         return;
       }
       const view = url.searchParams.get("view") ?? "ALL", offset = Number(url.searchParams.get("offset") ?? 0);
@@ -27125,7 +27723,7 @@ async function handleRequest(request, response, overrides = {}) {
         sendJson(response, 400, { errorCode: "INVALID_VIEW" });
         return;
       }
-      if (!sendJson(response, 200, vertical === "HOME" ? await (await Promise.resolve().then(() => (init_home_service(), home_service_exports))).homeOpportunities(client, view, offset) : await service.commercialOpportunities(client, view, offset), void 0, 2 * 1024 * 1024))
+      if (!sendJson(response, 200, vertical === "APPLIANCES" ? await (await Promise.resolve().then(() => (init_appliances_service(), appliances_service_exports))).appliancesOpportunities(client, view, offset) : vertical === "HOME" ? await (await Promise.resolve().then(() => (init_home_service(), home_service_exports))).homeOpportunities(client, view, offset) : await service.commercialOpportunities(client, view, offset), void 0, 2 * 1024 * 1024))
         sendJson(response, 503, { errorCode: "COMMERCIAL_RESPONSE_TOO_LARGE" });
     } catch {
       sendJson(response, 503, { errorCode: "COMMERCIAL_UNAVAILABLE" });

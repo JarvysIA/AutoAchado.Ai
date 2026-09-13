@@ -7,6 +7,8 @@ vi.mock('../src/server/discovery/operational.js',()=>({createOperationalDiscover
 vi.mock('../src/server/commercial/service.js',()=>({collectCommercialEvidence:calls.collect,commercialOpportunities:calls.list,saveCommercialFeedback:calls.feedback,markCommercialSent:calls.sent}));
 const home=vi.hoisted(()=>({list:vi.fn(async()=>({entries:[]})),run:vi.fn(async()=>({status:'COMPLETED'})),action:vi.fn(async()=>({saved:true}))}));
 vi.mock('../src/server/commercial/home-service.js',()=>({homeOpportunities:home.list,runHome:home.run,homeAction:home.action}));
+const appliances=vi.hoisted(()=>({list:vi.fn(async()=>({entries:[]})),run:vi.fn(async()=>({status:'COMPLETED'})),action:vi.fn(async()=>({saved:true}))}));
+vi.mock('../src/server/commercial/appliances-service.js',()=>({appliancesOpportunities:appliances.list,runAppliances:appliances.run,appliancesAction:appliances.action}));
 const config={clientId:'fake',clientSecret:'fake',redirectUri:'https://autoachado-ai.vercel.app/auth/mercadolivre/callback',sessionSecret:'fake-test-session-secret-123456789012345'};
 const simulation = vi.hoisted(()=>vi.fn<()=>Promise<unknown>>());
 vi.mock('../src/server/commercial/selection-simulation.js',()=>({runSelectionSimulation:simulation}));
@@ -46,7 +48,7 @@ describe('commercial endpoint boundaries',()=>{
  });
  it('does not apply Automotive feedback or rankings to an inactive vertical',async()=>{
   const headers={cookie:cookie(),origin:'https://autoachado-ai.vercel.app'};
-  const result=await request('/api/commercial/feedback?id=MLB123&type=ITEM&action=NOT_RELEVANT&vertical=APPLIANCES','POST',headers);
+  const result=await request('/api/commercial/feedback?id=MLB123&type=ITEM&action=NOT_RELEVANT&vertical=FASHION','POST',headers);
   expect(result.status).toBe(400);expect(JSON.parse(result.body).errorCode).toBe('VERTICAL_NOT_ACTIVE');
   expect((await request('/api/commercial/opportunities?vertical=PET','GET',headers)).status).toBe(400);
   expect(calls.feedback).not.toHaveBeenCalled();expect(calls.list).not.toHaveBeenCalled();
@@ -100,4 +102,14 @@ it('protects HOME status pagination with the cron secret',async()=>{
  expect((await request('/api/commercial/home-run?kind=STATUS&offset=50','GET',{authorization:'Bearer test-only'})).status).toBe(200);
  expect(home.list).toHaveBeenCalledWith({},'ALL',50);
  expect((await request('/api/commercial/home-run?kind=STATUS&offset=-1','GET',{authorization:'Bearer test-only'})).status).toBe(400);
+});
+
+it('routes Appliances to its own executor and protects the cron',async()=>{
+ const headers={cookie:cookie(),origin:'https://autoachado-ai.vercel.app'};
+ expect((await request('/api/commercial/opportunities?vertical=APPLIANCES','GET',headers)).status).toBe(200);
+ expect(appliances.list).toHaveBeenCalledWith({},'ALL',0);expect(home.list).not.toHaveBeenCalled();expect(calls.list).not.toHaveBeenCalled();
+ expect((await request('/api/commercial/appliances-run?kind=DISCOVERY')).status).toBe(401);
+ vi.stubEnv('CRON_SECRET','test-only');
+ expect((await request('/api/commercial/appliances-run?kind=HISTORY','GET',{authorization:'Bearer test-only'})).status).toBe(200);
+ expect(appliances.run).toHaveBeenCalledWith({},'HISTORY');
 });

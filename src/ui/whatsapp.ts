@@ -41,7 +41,7 @@ async function loadWhatsApp() {
  }catch(e){el('wa-status').textContent=e.message;}
 }
 function whatsappSendButton(snapshot,input) {
- const cardVertical=snapshot.vertical_key==='HOME'?1:0;
+ const cardVertical=snapshot.vertical_key==='APPLIANCES'?2:snapshot.vertical_key==='HOME'?1:0;
  const button=textNode('button','📤 Revisar envio para '+verticalNames[cardVertical],'copy-button');
  button.addEventListener('click',async()=>{
   button.disabled=true;el('copy-status').textContent='Revalidando a oferta e preparando a mensagem…';

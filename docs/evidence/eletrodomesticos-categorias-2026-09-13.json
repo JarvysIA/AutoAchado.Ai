@@ -1,0 +1,258 @@
+{
+  "checkedAt": "2026-09-13T14:35:10.882Z",
+  "source": "https://api.mercadolibre.com/categories/",
+  "categories": [
+    {
+      "id": "MLB456043",
+      "name": "Fritadeiras",
+      "family": "cozimento",
+      "parent": "MLB120235"
+    },
+    {
+      "id": "MLB120373",
+      "name": "Panela de Arroz",
+      "family": "cozimento",
+      "parent": "MLB120235"
+    },
+    {
+      "id": "MLB48666",
+      "name": "Panelas Elétricas",
+      "family": "cozimento",
+      "parent": "MLB120235"
+    },
+    {
+      "id": "MLB48773",
+      "name": "Panela a Vapor",
+      "family": "cozimento",
+      "parent": "MLB120235"
+    },
+    {
+      "id": "MLB31683",
+      "name": "Sanduicheiras",
+      "family": "cozimento",
+      "parent": "MLB120235"
+    },
+    {
+      "id": "MLB31675",
+      "name": "Torradeiras",
+      "family": "cozimento",
+      "parent": "MLB120235"
+    },
+    {
+      "id": "MLB48730",
+      "name": "Churrasqueiras Elétricas",
+      "family": "cozimento",
+      "parent": "MLB120235"
+    },
+    {
+      "id": "MLB120314",
+      "name": "Fornos",
+      "family": "cozimento",
+      "parent": "MLB1580"
+    },
+    {
+      "id": "MLB73057",
+      "name": "Micro-ondas",
+      "family": "cozimento",
+      "parent": "MLB1580"
+    },
+    {
+      "id": "MLB73055",
+      "name": "Liquidificadores",
+      "family": "preparo",
+      "parent": "MLB438297"
+    },
+    {
+      "id": "MLB4339",
+      "name": "Batedeiras",
+      "family": "preparo",
+      "parent": "MLB120235"
+    },
+    {
+      "id": "MLB263570",
+      "name": "Mixers",
+      "family": "preparo",
+      "parent": "MLB120235"
+    },
+    {
+      "id": "MLB31674",
+      "name": "Processadores",
+      "family": "preparo",
+      "parent": "MLB120235"
+    },
+    {
+      "id": "MLB120446",
+      "name": "Espremedores Elétricos",
+      "family": "preparo",
+      "parent": "MLB438297"
+    },
+    {
+      "id": "MLB120445",
+      "name": "Centrífuga de Frutas",
+      "family": "preparo",
+      "parent": "MLB438297"
+    },
+    {
+      "id": "MLB30220",
+      "name": "Balanças de Cozinha",
+      "family": "preparo",
+      "parent": "MLB438287"
+    },
+    {
+      "id": "MLB429600",
+      "name": "Moedores de Carne Elétricos",
+      "family": "preparo",
+      "parent": "MLB120235"
+    },
+    {
+      "id": "MLB9188",
+      "name": "Cafeteiras",
+      "family": "cafe",
+      "parent": "MLB438287"
+    },
+    {
+      "id": "MLB31678",
+      "name": "Chaleiras Elétricas",
+      "family": "cafe",
+      "parent": "MLB438287"
+    },
+    {
+      "id": "MLB456055",
+      "name": "Moedores de Café Elétricos",
+      "family": "cafe",
+      "parent": "MLB438287"
+    },
+    {
+      "id": "MLB455549",
+      "name": "Espumadores de Leite",
+      "family": "cafe",
+      "parent": "MLB438287"
+    },
+    {
+      "id": "MLB421823",
+      "name": "Marmitas Elétricas",
+      "family": "cafe",
+      "parent": "MLB438287"
+    },
+    {
+      "id": "MLB4337",
+      "name": "Aspiradores",
+      "family": "limpeza",
+      "parent": "MLB438286"
+    },
+    {
+      "id": "MLB120262",
+      "name": "Robôs Aspiradores",
+      "family": "limpeza",
+      "parent": "MLB438286"
+    },
+    {
+      "id": "MLB73068",
+      "name": "Vassouras Elétricas",
+      "family": "limpeza",
+      "parent": "MLB438286"
+    },
+    {
+      "id": "MLB31689",
+      "name": "Ferro de Passar",
+      "family": "roupas",
+      "parent": "MLB438286"
+    },
+    {
+      "id": "MLB73062",
+      "name": "Vaporizador",
+      "family": "roupas",
+      "parent": "MLB438286"
+    },
+    {
+      "id": "MLB120307",
+      "name": "Máquina de Costura",
+      "family": "roupas",
+      "parent": "MLB438286"
+    },
+    {
+      "id": "MLB1645",
+      "name": "Ventiladores",
+      "family": "clima",
+      "parent": "MLB252358"
+    },
+    {
+      "id": "MLB457530",
+      "name": "Ventiladores Portáteis",
+      "family": "clima",
+      "parent": "MLB252358"
+    },
+    {
+      "id": "MLB72503",
+      "name": "Climatizador Portátil",
+      "family": "clima",
+      "parent": "MLB252358"
+    },
+    {
+      "id": "MLB180081",
+      "name": "Desumidificador",
+      "family": "clima",
+      "parent": "MLB252358"
+    },
+    {
+      "id": "MLB133297",
+      "name": "Aquecedores de Ar",
+      "family": "clima",
+      "parent": "MLB252358"
+    },
+    {
+      "id": "MLB120242",
+      "name": "Pipoqueiras Elétricas",
+      "family": "especialidades",
+      "parent": "MLB438291"
+    },
+    {
+      "id": "MLB120243",
+      "name": "Máquinas de Waffles",
+      "family": "especialidades",
+      "parent": "MLB120235"
+    },
+    {
+      "id": "MLB457810",
+      "name": "Omeleteiras",
+      "family": "especialidades",
+      "parent": "MLB120235"
+    },
+    {
+      "id": "MLB62076",
+      "name": "Panificadoras",
+      "family": "especialidades",
+      "parent": "MLB120235"
+    },
+    {
+      "id": "MLB120244",
+      "name": "Iogurteiras",
+      "family": "especialidades",
+      "parent": "MLB120235"
+    },
+    {
+      "id": "MLB120246",
+      "name": "Sorveteiras",
+      "family": "especialidades",
+      "parent": "MLB438291"
+    },
+    {
+      "id": "MLB76475",
+      "name": "Frigobares",
+      "family": "refrigeracao",
+      "parent": "MLB1576"
+    },
+    {
+      "id": "MLB76481",
+      "name": "Adegas Climatizadas",
+      "family": "refrigeracao",
+      "parent": "MLB1576"
+    },
+    {
+      "id": "MLB181287",
+      "name": "Cervejeiras",
+      "family": "refrigeracao",
+      "parent": "MLB1576"
+    }
+  ]
+}
