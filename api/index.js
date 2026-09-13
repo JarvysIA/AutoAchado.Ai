@@ -26227,7 +26227,6 @@ function offerMessage(p, link) {
   if (p.appliance_specs) lines.push("Confira frete, medidas e instalação para sua região.");
   if (Number.isFinite(p.original_price) && p.original_price > p.price) lines.push("~De: " + money(p.original_price) + "~");
   lines.push("💥 Por: " + money(p.price) + (p.has_advertised_discount ? " (" + p.discount_percent + "% de desconto anunciado)" : ""));
-  if (p.priceLinkVerified !== true) lines.push("Preço observado no catálogo; confirme o valor no link.");
   const c = p.matched_coupon;
   if (c && Date.parse(c.expiresAt) > Date.now()) {
     lines.push("🏷️ Cupom sugerido: *" + c.code + "* (" + c.discountValue + ")");
@@ -27063,7 +27062,6 @@ function productCopy(snapshot, preview, link) {
   if(preview.appliance_specs)lines.push('Confira frete, medidas e instalação para sua região.');
   if (Number.isFinite(preview.original_price) && preview.original_price > preview.price) lines.push('~De: ' + money(preview.original_price, preview.currency) + '~');
   lines.push('💥 Por: ' + money(preview.price, preview.currency) + (preview.has_advertised_discount ? ' (' + preview.discount_percent + '% de desconto anunciado)' : ''));
-  if(preview.priceLinkVerified!==true) lines.push('Preço observado no catálogo; confirme o valor no link.');
   const coupon = preview.matched_coupon;
   if (coupon && Date.parse(coupon.expiresAt) > Date.now()) {
     lines.push('🏷️ Cupom sugerido: *' + coupon.code + '* (' + coupon.discountValue + ')');

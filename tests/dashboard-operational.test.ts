@@ -38,7 +38,7 @@ describe("operational dashboard browser script", () => {
     const input = body.children.find((n:any) => n.children[0]?.type === "url").children[0];
     await button.handlers.click(); expect(copied).toEqual([]);
     input.value="https://meli.la/test-link"; input.handlers.change(); await button.handlers.click();
-    expect(copied[0]).toContain("Preço observado no catálogo; confirme o valor no link."); expect(copied[0]).toContain("R$ 123,00"); expect(copied[0]).toContain("~De: R$ 150,00~"); expect(copied[0]).toContain("\n📦");
+    expect(copied[0]).not.toContain("Preço observado no catálogo; confirme o valor no link."); expect(copied[0]).toContain("R$ 123,00"); expect(copied[0]).toContain("~De: R$ 150,00~"); expect(copied[0]).toContain("\n📦");
     expect(copied[0]).not.toContain("Link de afiliado — posso receber comissão."); expect(copied[0]).toContain("Preço e estoque podem mudar. Confira a oferta e aproveite! 🛒"); expect(storage.size).toBe(1);
     input.value="https://mercadolivre.com.br.evil.test/"; await button.handlers.click(); expect(copied).toHaveLength(1);
     input.value="https://meli.la/test-link";

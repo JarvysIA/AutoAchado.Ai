@@ -16,7 +16,6 @@ export function offerMessage(p:any,link:string):string {
  if(p.appliance_specs)lines.push('Confira frete, medidas e instalação para sua região.');
  if(Number.isFinite(p.original_price)&&p.original_price>p.price) lines.push('~De: '+money(p.original_price)+'~');
  lines.push('💥 Por: '+money(p.price)+(p.has_advertised_discount?' ('+p.discount_percent+'% de desconto anunciado)':''));
- if(p.priceLinkVerified!==true) lines.push('Preço observado no catálogo; confirme o valor no link.');
  const c=p.matched_coupon;
  if(c&&Date.parse(c.expiresAt)>Date.now()) {
   lines.push('🏷️ Cupom sugerido: *'+c.code+'* ('+c.discountValue+')');
