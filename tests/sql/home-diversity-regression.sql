@@ -1,4 +1,5 @@
 begin;
+set local role service_role;
 update public.home_candidates set monitor=false,assessment='{}';
 insert into public.home_candidates(source_key,product_id,identity_key,category_id,family,preview,assessment,score)
 select 'PRODUCT:MLB999888'||g,'MLB999888'||g,'diversity-test-'||g,'test-cat-'||(g%40),'test-family-'||(g%8),jsonb_build_object('title','Test','priceCheckedAt',now()),'{"eligible":true}',100-(g%4) from generate_series(1,160) g;
