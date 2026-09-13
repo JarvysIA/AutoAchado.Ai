@@ -1,3 +1,5 @@
+> Atualização posterior: Casa foi ampliada para 55 categorias com controle de repetição. Ver [revisão de variedade](casa-variedade-2026-09-12.md). O texto abaixo registra a ativação inicial.
+
 # Casa — operação ativada em 12/09/2026
 
 ## Estado verificado

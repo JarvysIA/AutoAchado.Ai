@@ -15,3 +15,12 @@ Na vitrine, ofertas aprovadas vêm primeiro. Entre produtos do mesmo estado, cad
 A aprovação de desconto histórico, a coleta de demanda e a confirmação de envio ao WhatsApp não foram flexibilizadas. As categorias novas começam seu histórico na primeira coleta efetiva, sem preencher dias retroativamente. Automotivo permanece isolado.
 
 Validação: build, testes de Casa, endpoint, ordenação e regressão SQL com rollback (capacidade, limite por tipo/família, proteção INTERESTED e isolamento de Automotivo).
+## Resultado em produção
+
+Após o rebalanceamento: 100 monitorados, 55 tipos distintos (antes 26), nove famílias e no máximo três produtos por tipo. Foram registradas 33 substituições por diversidade. As 26 categorias adicionadas responderam à consulta de ranking; isso não significa que todos os seus produtos sejam elegíveis.
+
+A API retornou duas páginas de 50 produtos únicos, todos com preço, foto e URL. O teste do script da dashboard com essa resposta real manteve 100 cards, inputs de afiliado, preços e botão de copiar. Automotivo permaneceu com 100 monitorados. Evidência em `evidence/casa-variedade-resultado-2026-09-12.json`.
+
+Na validação ao vivo foram corrigidos o privilégio da função gerada (testado também como service_role) e a avaliação sequencial que ultrapassava o tempo disponível com a amostra maior. A avaliação agora usa três trabalhadores concorrentes e aguarda todos antes da renovação.
+
+A coleta normal de validação terminou com HTTP 200, status COMPLETED, 25 produtos coletados, zero falhas e zero substituições adicionais.
