@@ -4,7 +4,7 @@ export const FASHION_PILOT_CATEGORIES=[
  {id:'MLB108704',segment:'CLOTHING'}, {id:'MLB3112',segment:'CLOTHING'}, {id:'MLB188065',segment:'CLOTHING'}, {id:'MLB31447',segment:'CLOTHING'},
  {id:'MLB23332',segment:'FOOTWEAR'}, {id:'MLB273770',segment:'FOOTWEAR'}, {id:'MLB275574',segment:'FOOTWEAR'}, {id:'MLB272202',segment:'FOOTWEAR'},
  {id:'MLB7022',segment:'ACCESSORIES'}, {id:'MLB28108',segment:'ACCESSORIES'}, {id:'MLB3127',segment:'ACCESSORIES'}, {id:'MLB190393',segment:'ACCESSORIES'},
- {id:'MLB118017',segment:'ACCESSORIES'}, {id:'MLB1431',segment:'ACCESSORIES'}
+ {id:'MLB26426',segment:'ACCESSORIES'}, {id:'MLB457383',segment:'ACCESSORIES'}, {id:'MLB1432',segment:'ACCESSORIES'}, {id:'MLB1434',segment:'ACCESSORIES'}
 ] as const;
 // Diagnostic only: never admits products or treats model-level prices as variant prices.
 export async function inspectFashionPilot(read:PreviewReader,deadline=Date.now()+200000) {

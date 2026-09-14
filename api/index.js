@@ -26410,8 +26410,10 @@ var init_fashion_pilot = __esm({
       { id: "MLB28108", segment: "ACCESSORIES" },
       { id: "MLB3127", segment: "ACCESSORIES" },
       { id: "MLB190393", segment: "ACCESSORIES" },
-      { id: "MLB118017", segment: "ACCESSORIES" },
-      { id: "MLB1431", segment: "ACCESSORIES" }
+      { id: "MLB26426", segment: "ACCESSORIES" },
+      { id: "MLB457383", segment: "ACCESSORIES" },
+      { id: "MLB1432", segment: "ACCESSORIES" },
+      { id: "MLB1434", segment: "ACCESSORIES" }
     ];
   }
 });
