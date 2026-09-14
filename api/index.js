@@ -26348,6 +26348,74 @@ var init_service2 = __esm({
   }
 });
 
+// src/server/commercial/fashion-pilot.ts
+var fashion_pilot_exports = {};
+__export(fashion_pilot_exports, {
+  FASHION_PILOT_CATEGORIES: () => FASHION_PILOT_CATEGORIES,
+  inspectConfiguredFashionPilot: () => inspectConfiguredFashionPilot,
+  inspectFashionPilot: () => inspectFashionPilot
+});
+async function inspectFashionPilot(read, deadline = Date.now() + 2e5) {
+  const categories = [], products = [], seen = /* @__PURE__ */ new Set();
+  for (const category of FASHION_PILOT_CATEGORIES) {
+    if (Date.now() >= deadline) break;
+    try {
+      const info = await read("/categories/" + category.id);
+      if (info.id !== category.id || !info.path_from_root?.some((x) => ["MLB1430", "MLB3937"].includes(x.id))) throw new Error("INVALID_ANCESTRY");
+      const rank = await read("/highlights/MLB/category/" + category.id);
+      const entries = (Array.isArray(rank.content) ? rank.content : []).filter((x) => ["PRODUCT", "ITEM", "USER_PRODUCT"].includes(x.type) && /^MLBU?\d+$/.test(x.id) && Number.isInteger(x.position) && x.position >= 1 && x.position <= 20);
+      categories.push({ ...category, name: info.name, status: 200, ranked: entries.length, types: Object.fromEntries(["PRODUCT", "ITEM", "USER_PRODUCT"].map((t) => [t, entries.filter((e) => e.type === t).length])) });
+      await Promise.all(entries.slice(0, 3).map(async (entry) => {
+        const key = entry.type + ":" + entry.id;
+        if (seen.has(key) || Date.now() >= deadline) return;
+        seen.add(key);
+        const documents = [], errors = [];
+        const preview = await resolveProductPreview(entry.id, entry.type, async (path) => {
+          try {
+            const d = await read(path);
+            if (/^\/(products|items|user-products)\/[A-Z0-9]+$/.test(path)) documents.push(d);
+            return d;
+          } catch (e) {
+            errors.push({ path, status: e instanceof PreviewUpstreamError ? e.status : 0 });
+            throw e;
+          }
+        });
+        const meta = documents.map((d) => ({ id: d.id, status: d.status, category_id: d.category_id, children: d.children_ids ?? [], attributes: (d.attributes ?? []).filter((a) => ["GENDER", "BRAND", "MODEL", "SIZE", "COLOR", "FOOTWEAR_SIZE", "SIZE_COVERAGE"].includes(a.id)), variationCount: Array.isArray(d.variations) ? d.variations.length : null, variations: (d.variations ?? []).slice(0, 4).map((v) => ({ id: v.id, price: v.price, available_quantity: v.available_quantity, attributes: v.attribute_combinations })) }));
+        products.push({ id: entry.id, type: entry.type, position: entry.position, category: category.id, segment: category.segment, preview, meta, errors });
+      }));
+    } catch (e) {
+      categories.push({ ...category, status: e instanceof PreviewUpstreamError ? e.status : 0 });
+    }
+  }
+  return { scope: "READ_ONLY_FASHION_PILOT", checkedAt: (/* @__PURE__ */ new Date()).toISOString(), activation: false, targets: { CLOTHING: 35, FOOTWEAR: 35, ACCESSORIES: 30 }, categories, products, deadlineReached: Date.now() >= deadline };
+}
+async function inspectConfiguredFashionPilot(client) {
+  return inspectFashionPilot(await configuredMeliReader(client));
+}
+var FASHION_PILOT_CATEGORIES;
+var init_fashion_pilot = __esm({
+  "src/server/commercial/fashion-pilot.ts"() {
+    "use strict";
+    init_product_preview();
+    FASHION_PILOT_CATEGORIES = [
+      { id: "MLB108704", segment: "CLOTHING" },
+      { id: "MLB3112", segment: "CLOTHING" },
+      { id: "MLB188065", segment: "CLOTHING" },
+      { id: "MLB31447", segment: "CLOTHING" },
+      { id: "MLB23332", segment: "FOOTWEAR" },
+      { id: "MLB273770", segment: "FOOTWEAR" },
+      { id: "MLB275574", segment: "FOOTWEAR" },
+      { id: "MLB272202", segment: "FOOTWEAR" },
+      { id: "MLB7022", segment: "ACCESSORIES" },
+      { id: "MLB28108", segment: "ACCESSORIES" },
+      { id: "MLB3127", segment: "ACCESSORIES" },
+      { id: "MLB190393", segment: "ACCESSORIES" },
+      { id: "MLB118017", segment: "ACCESSORIES" },
+      { id: "MLB1431", segment: "ACCESSORIES" }
+    ];
+  }
+});
+
 // src/server/commercial/home-pilot.ts
 var home_pilot_exports = {};
 __export(home_pilot_exports, {
@@ -26807,7 +26875,7 @@ var whatsappPanel = `<details id="whatsapp-central" class="panel"><summary>Whats
 <dialog id="wa-preview" style="max-width:600px;width:95%;background:#131d31;color:#e2e8f0;border:1px solid #64748b;border-radius:12px"><h2>Revisar envio</h2><p id="wa-target"></p><pre id="wa-copy" style="white-space:pre-wrap;overflow-wrap:anywhere;font:inherit"></pre><p>Confirme o destino e a oferta. O envio ocorrerá pelo notebook quando estiver conectado, dentro de 30 minutos.</p><div class="controls"><button id="wa-confirm">Confirmar envio</button><button id="wa-close">Voltar</button></div></dialog>`;
 var whatsappScript = `
 let waData=null,waDraft=null,waWatching=false;
-const waVerticals=['AUTOMOTIVE','HOME','APPLIANCES','FASHION','BEAUTY','ELECTRONICS','KIDS','GAMES','SPORTS_FITNESS','PET'];
+const waVerticals=['AUTOMOTIVE','HOME','APPLIANCES','FASHION','BEAUTY','ELECTRONICS','KIDS','GAMES','SPORTS_FITNESS','PET','FASHION_MEN'];
 const waLabels={DRAFT:'Aguardando sua confirmação',PENDING:'Na fila',SENDING:'Enviando',SENT:'Enviado ao WhatsApp',UNKNOWN:'Confirmação pendente — confira no grupo; não será reenviado',FAILED:'Não enviado — revise a oferta',CANCELLED:'Cancelado'};
 async function waRequest(action,body) {
  const response=await fetch('/api/whatsapp/'+action,{method:body?'POST':'GET',credentials:'same-origin',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
@@ -26879,13 +26947,14 @@ function dashboardPage(props) {
     ["Automotivo", "MLB5672"],
     ["Casa, utilidades e organização", "MLB1574"],
     ["Eletrodomésticos", "MLB5726"],
-    ["Moda", "MLB1430"],
+    ["Moda Feminina", "MLB1430 + MLB3937"],
     ["Beleza e cuidado pessoal", "MLB1246"],
     ["Eletrônicos, celulares e acessórios", "MLB1051"],
     ["Infantil — bebês, brinquedos e moda infantil", "MLB1132"],
     ["Games", "MLB1144"],
     ["Esportes e fitness", "MLB1276"],
-    ["Pet", "MLB1071"]
+    ["Pet", "MLB1071"],
+    ["Moda Masculina", "MLB1430 + MLB3937"]
   ];
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -26898,15 +26967,15 @@ function dashboardPage(props) {
 </style></head><body><header><div><h1>AutoAchado.AI</h1><p>Dashboard Operacional · Robô de mineração · MLB / Brasil · 0B3D-C</p></div><div class="badge">${connected ? "● Mercado Livre conectado" : "⚠ Mercado Livre não conectado"}<br><small>ID: 296984475</small> · <a href="/auth/start">Conectar conta</a></div></header>
 <main><section class="stats" aria-label="Indicadores">
 <div class="card">Status do Robô<strong>Operacional ✅</strong><small>Automotivo V1</small></div>
-<div class="card">Verticais Planejadas<strong>10 Verticais</strong><small>Automotivo V1 Ativa com 155 categorias: 28 Tier A + 127 Tier B</small></div>
+<div class="card">Verticais Planejadas<strong>11 Categorias</strong><small>Automotivo V1 Ativa com 155 categorias: 28 Tier A + 127 Tier B</small></div>
 <div class="card">Oportunidades no Banco<strong id="count">—</strong><small>Registros em public.highlight_snapshots</small></div>
 <div class="card">Última Sincronização<strong id="synced">—</strong><small>Atualização automática a cada 30 segundos</small></div></section>
-<section class="panel"><h2>Matriz de Expansão (10 Verticais Estratégicas)</h2><ol class="matrix">${verticals.map(([name, id], i) => `<li><button id="vertical-${i}" class="vertical-button" aria-controls="vertical-products" aria-pressed="${i === 0}">${i + 1}. ${name}<span>${id} · ${i === 0 ? "ATIVO (155 Cats)" : i === 1 ? "PILOTO (55 Cats)" : i === 2 ? "PILOTO (42 Cats)" : "PLANEJADO"}</span></button></li>`).join("")}</ol></section>
+<section class="panel"><h2>Matriz de Expansão (11 Categorias)</h2><ol class="matrix">${verticals.map(([name, id], i) => `<li><button id="vertical-${i}" class="vertical-button" aria-controls="vertical-products" aria-pressed="${i === 0}">${i + 1}. ${name}<span>${id} · ${i === 0 ? "ATIVO (155 Cats)" : i === 1 ? "PILOTO (55 Cats)" : i === 2 ? "PILOTO (42 Cats)" : i === 3 ? "EM VALIDAÇÃO · 35 roupas / 35 calçados / 30 acessórios" : "PLANEJADO"}</span></button></li>`).join("")}</ol></section>
 <section class="panel" id="vertical-products"><h2 id="vertical-title" tabindex="-1">Automotivo — produtos e ofertas</h2><p>Melhores oportunidades primeiro. Monitorados reúne a carteira da categoria; Prontos para divulgar mostra ofertas com histórico e demanda confirmados, ainda não divulgadas.</p><div class="controls filters"><button id="rank-ALL" aria-pressed="true">Monitorados</button><button id="rank-APPROVED" aria-pressed="false">🔥 Prontos para divulgar</button><button id="rank-SENT" aria-pressed="false">✅ Divulgados</button><button id="refresh">🔄 Atualizar</button></div><p id="message" role="status" aria-live="polite"></p><p id="commercial-status" role="status" aria-live="polite"></p><p id="copy-status" role="status" aria-live="polite"></p><textarea id="manual-copy" hidden readonly aria-label="Texto para copiar manualmente"></textarea><p>Para copiar a divulgação, cole no produto o link criado pelo gerador oficial de afiliados.</p><p id="commercial-summary"></p><div id="commercial-results" class="results"></div><button id="commercial-more" hidden>Mostrar mais desta seleção</button></section>${whatsappPanel}<details id="robot-admin" class="panel"><summary>Administração do robô</summary><p>Ferramentas técnicas de coleta e diagnóstico — Automotivo.</p><div class="controls"><button id="sweep">🚀 Executar varredura</button><button id="smoke">⚡ Teste de coleta (2 categorias)</button><button id="collect-evidence">📊 Coletar evidências agora</button></div><p id="admin-summary"></p><details id="raw-products" class="panel"><summary>Explorar todos os registros minerados (sem aprovação comercial)</summary><section><h2>Produtos encontrados</h2><p>Prévia dos destaques minerados: foto, descrição e preço informado pelo Mercado Livre. Preço e disponibilidade podem mudar; os destaques ainda não representam descontos validados.</p><h2>Central de Cupons Ativos</h2><div id="coupons" class="coupon-bar" aria-live="polite">Consultando campanhas verificadas…</div><p>Cupons sugeridos conforme categoria e valor. Confira as restrições e a aplicação no checkout. Para divulgar com comissão, cole em cada produto o link criado no gerador oficial de afiliados do Mercado Livre. Os links ficam salvos somente neste navegador.</p><div class="filters" aria-label="Filtrar produtos"><button id="filter-all" aria-pressed="true">Todas as ofertas completas</button><button id="filter-discount" aria-pressed="false">🔥 Desconto anunciado ≥ 5%</button><button id="filter-tier" aria-pressed="false">⚡ Prioridade Tier A</button><button id="filter-coupon" aria-pressed="false">🏷️ Cupom sugerido</button><button id="filter-incomplete" aria-pressed="false">Registros incompletos</button></div><p id="results-summary"></p><div id="snapshots" class="results" aria-label="Produtos minerados"></div><button id="more" hidden>Mostrar mais produtos</button></section></details></details></main>
 <script>
 const el = id => document.getElementById(id);
 let busy = false;
-const verticalNames = ["Automotivo","Casa, utilidades e organização","Eletrodomésticos","Moda","Beleza e cuidado pessoal","Eletrônicos, celulares e acessórios","Infantil — bebês, brinquedos e moda infantil","Games","Esportes e fitness","Pet"];
+const verticalNames = ["Automotivo","Casa, utilidades e organização","Eletrodomésticos","Moda Feminina","Beleza e cuidado pessoal","Eletrônicos, celulares e acessórios","Infantil — bebês, brinquedos e moda infantil","Games","Esportes e fitness","Pet","Moda Masculina"];
 let selectedVertical = 0;
 let commercialView = 'ALL', commercialOffset = 0, commercialRevision = 0, collecting = false;
 function updateVerticalControls() {
@@ -27558,13 +27627,14 @@ async function handleRequest(request, response, overrides = {}) {
       const probing = url.pathname === "/api/commercial/probe";
       const preparation = url.pathname === "/api/commercial/pre-home";
       const homePilot = url.pathname === "/api/commercial/home-pilot";
+      const fashionPilot = url.pathname === "/api/commercial/fashion-pilot";
       const homeRun = url.pathname === "/api/commercial/home-run";
       const appliancesRun = url.pathname === "/api/commercial/appliances-run";
       const vertical = url.searchParams.get("vertical") ?? "AUTOMOTIVE";
       const simulation = url.pathname === "/api/commercial/selection-simulation";
       const priority = url.pathname === "/api/commercial/priority";
       const revalidating = url.pathname === "/api/commercial/revalidate";
-      const cron = appliancesRun || homeRun || homePilot || discovering || probing || preparation || simulation || priority || url.pathname === "/api/commercial/cron";
+      const cron = fashionPilot || appliancesRun || homeRun || homePilot || discovering || probing || preparation || simulation || priority || url.pathname === "/api/commercial/cron";
       const feedback = url.pathname === "/api/commercial/feedback";
       const publication = url.pathname === "/api/commercial/sent";
       const listing = url.pathname === "/api/commercial/opportunities";
@@ -27572,7 +27642,7 @@ async function handleRequest(request, response, overrides = {}) {
         sendJson(response, 404, { errorCode: "NOT_FOUND" });
         return;
       }
-      if (method !== (homePilot || collecting || feedback || publication || probing || preparation || simulation || revalidating ? "POST" : "GET")) {
+      if (method !== (fashionPilot || homePilot || collecting || feedback || publication || probing || preparation || simulation || revalidating ? "POST" : "GET")) {
         sendJson(response, 405, { errorCode: "METHOD_NOT_ALLOWED" });
         return;
       }
@@ -27643,6 +27713,11 @@ async function handleRequest(request, response, overrides = {}) {
           return;
         }
         sendJson(response, 200, await runAppliances2(client, kind));
+        return;
+      }
+      if (fashionPilot) {
+        const { inspectConfiguredFashionPilot: inspectConfiguredFashionPilot2 } = await Promise.resolve().then(() => (init_fashion_pilot(), fashion_pilot_exports));
+        sendJson(response, 200, await inspectConfiguredFashionPilot2(client), void 0, 2 * 1024 * 1024);
         return;
       }
       if (homePilot) {

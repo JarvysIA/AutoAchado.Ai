@@ -275,18 +275,19 @@ export async function handleRequest(
       const probing=url.pathname === '/api/commercial/probe';
       const preparation=url.pathname === '/api/commercial/pre-home';
       const homePilot=url.pathname === '/api/commercial/home-pilot';
+      const fashionPilot=url.pathname === '/api/commercial/fashion-pilot';
       const homeRun=url.pathname === '/api/commercial/home-run';
       const appliancesRun=url.pathname === '/api/commercial/appliances-run';
       const vertical=url.searchParams.get('vertical')??'AUTOMOTIVE';
       const simulation=url.pathname === '/api/commercial/selection-simulation';
       const priority=url.pathname === '/api/commercial/priority';
       const revalidating=url.pathname === '/api/commercial/revalidate';
-      const cron=appliancesRun || homeRun || homePilot || discovering || probing || preparation || simulation || priority || url.pathname === "/api/commercial/cron";
+      const cron=fashionPilot || appliancesRun || homeRun || homePilot || discovering || probing || preparation || simulation || priority || url.pathname === "/api/commercial/cron";
       const feedback=url.pathname === "/api/commercial/feedback";
       const publication=url.pathname === '/api/commercial/sent';
       const listing=url.pathname === "/api/commercial/opportunities";
       if(!collecting && !cron && !feedback && !publication && !listing && !revalidating) { sendJson(response,404,{errorCode:"NOT_FOUND"}); return; }
-      if(method !== (homePilot || collecting || feedback || publication || probing || preparation || simulation || revalidating ? "POST" : "GET")) {sendJson(response,405,{errorCode:"METHOD_NOT_ALLOWED"});return;}
+      if(method !== (fashionPilot || homePilot || collecting || feedback || publication || probing || preparation || simulation || revalidating ? "POST" : "GET")) {sendJson(response,405,{errorCode:"METHOD_NOT_ALLOWED"});return;}
       if(cron) {
         const secret=process.env.CRON_SECRET;
         if(!secret || request.headers.authorization !== "Bearer "+secret) {sendJson(response,401,{errorCode:"AUTHORIZATION_REQUIRED"});return;}
@@ -305,6 +306,7 @@ export async function handleRequest(
       const client=createOperationalDiscoveryAdapter().client;
       if(homeRun) {const {runHome}=await import('./server/commercial/home-service.js');const kind=url.searchParams.get('kind')??'HISTORY';if(kind==='STATUS'){const offset=Number(url.searchParams.get('offset')??0);if(!Number.isSafeInteger(offset)||offset<0||offset>10000){sendJson(response,400,{errorCode:'INVALID_VIEW'});return;}const {homeOpportunities}=await import('./server/commercial/home-service.js');if(!sendJson(response,200,await homeOpportunities(client,'ALL',offset),undefined,2*1024*1024))sendJson(response,503,{errorCode:'HOME_RESPONSE_TOO_LARGE'});return;}if(!['DISCOVERY','HISTORY'].includes(kind)){sendJson(response,400,{errorCode:'INVALID_KIND'});return;}sendJson(response,200,await runHome(client,kind as 'DISCOVERY'|'HISTORY'));return;}
       if(appliancesRun) {const {runAppliances}=await import('./server/commercial/appliances-service.js');const kind=url.searchParams.get('kind')??'HISTORY';if(kind==='STATUS'){const offset=Number(url.searchParams.get('offset')??0);if(!Number.isSafeInteger(offset)||offset<0||offset>10000){sendJson(response,400,{errorCode:'INVALID_VIEW'});return;}const {appliancesOpportunities}=await import('./server/commercial/appliances-service.js');if(!sendJson(response,200,await appliancesOpportunities(client,'ALL',offset),undefined,2*1024*1024))sendJson(response,503,{errorCode:'APPLIANCES_RESPONSE_TOO_LARGE'});return;}if(!['DISCOVERY','HISTORY'].includes(kind)){sendJson(response,400,{errorCode:'INVALID_KIND'});return;}sendJson(response,200,await runAppliances(client,kind as 'DISCOVERY'|'HISTORY'));return;}
+      if(fashionPilot) { const {inspectConfiguredFashionPilot}=await import('./server/commercial/fashion-pilot.js');sendJson(response,200,await inspectConfiguredFashionPilot(client),undefined,2*1024*1024);return;}
       if(homePilot) {
         try {const {inspectConfiguredHomePilot}=await import('./server/commercial/home-pilot.js');sendJson(response,200,await inspectConfiguredHomePilot(client));}
         catch(error) {sendJson(response,503,{errorCode:error instanceof Error&&error.message==='PREVIEW_AUTH_UNAVAILABLE'?'MELI_AUTH_UNAVAILABLE':'HOME_PILOT_UNAVAILABLE'});}

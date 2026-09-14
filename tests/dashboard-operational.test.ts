@@ -8,7 +8,7 @@ describe("operational dashboard browser script", () => {
     const node = () => ({ textContent: "", disabled: false, children: [] as any[], handlers: {} as any, value: "", hidden:false, open:false, querySelector(selector:string):any {for(const child of this.children) {if(child.className===selector.slice(1)) return child;const found=child.querySelector(selector);if(found)return found;}return null;}, focus() {}, scrollIntoView() {}, select() {}, attributes:{} as any, setAttribute(key:string,value:string) {this.attributes[key]=value;},
       append(child: any) { this.children.push(child); }, replaceChildren(...children:any[]) { this.children = children; },
       addEventListener(event: string, handler: any) { this.handlers[event] = handler; } });
-    for (const id of ["vertical-title", "vertical-products", ...Array.from({length:10},(_,i)=>"vertical-"+i), "count", "synced", "snapshots", "message", "sweep", "smoke", "refresh", "more", "results-summary", "raw-products", "commercial-results", "commercial-status", "commercial-summary", "commercial-more", "collect-evidence", "rank-APPROVED", "rank-ALL", "rank-SENT", "admin-summary", "coupons", "copy-status", "manual-copy", ...["all","discount","tier","coupon","incomplete"].map(f => "filter-" + f)]) elements.set(id, node());
+    for (const id of ["vertical-title", "vertical-products", ...Array.from({length:11},(_,i)=>"vertical-"+i), "count", "synced", "snapshots", "message", "sweep", "smoke", "refresh", "more", "results-summary", "raw-products", "commercial-results", "commercial-status", "commercial-summary", "commercial-more", "collect-evidence", "rank-APPROVED", "rank-ALL", "rank-SENT", "admin-summary", "coupons", "copy-status", "manual-copy", ...["all","discount","tier","coupon","incomplete"].map(f => "filter-" + f)]) elements.set(id, node());
     elements.get("raw-products").open=true;
     const calls: any[] = [];
     const copied: string[] = [];
@@ -67,7 +67,7 @@ describe("operational dashboard browser script", () => {
     await elements.get('vertical-2').handlers.click();
     expect(calls.at(-1).path).toContain('vertical=APPLIANCES');
     expect(elements.get('vertical-title').textContent).toContain('Eletrodomésticos');
-    for(let i=3;i<10;i++) {
+    for(let i=3;i<11;i++) {
       const before=calls.length;
       await elements.get('vertical-'+i).handlers.click();
       expect(calls.length).toBe(before);

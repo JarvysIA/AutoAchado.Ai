@@ -6,7 +6,7 @@ export const whatsappPanel=`<details id="whatsapp-central" class="panel"><summar
 <dialog id="wa-preview" style="max-width:600px;width:95%;background:#131d31;color:#e2e8f0;border:1px solid #64748b;border-radius:12px"><h2>Revisar envio</h2><p id="wa-target"></p><pre id="wa-copy" style="white-space:pre-wrap;overflow-wrap:anywhere;font:inherit"></pre><p>Confirme o destino e a oferta. O envio ocorrerá pelo notebook quando estiver conectado, dentro de 30 minutos.</p><div class="controls"><button id="wa-confirm">Confirmar envio</button><button id="wa-close">Voltar</button></div></dialog>`;
 export const whatsappScript=`
 let waData=null,waDraft=null,waWatching=false;
-const waVerticals=['AUTOMOTIVE','HOME','APPLIANCES','FASHION','BEAUTY','ELECTRONICS','KIDS','GAMES','SPORTS_FITNESS','PET'];
+const waVerticals=['AUTOMOTIVE','HOME','APPLIANCES','FASHION','BEAUTY','ELECTRONICS','KIDS','GAMES','SPORTS_FITNESS','PET','FASHION_MEN'];
 const waLabels={DRAFT:'Aguardando sua confirmação',PENDING:'Na fila',SENDING:'Enviando',SENT:'Enviado ao WhatsApp',UNKNOWN:'Confirmação pendente — confira no grupo; não será reenviado',FAILED:'Não enviado — revise a oferta',CANCELLED:'Cancelado'};
 async function waRequest(action,body) {
  const response=await fetch('/api/whatsapp/'+action,{method:body?'POST':'GET',credentials:'same-origin',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
