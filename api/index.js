@@ -24059,7 +24059,13 @@ async function configuredMeliReader(client) {
     if (response.status === 401) token = void 0;
     if (!response.ok) {
       console.warn(JSON.stringify({ event: "PREVIEW_UPSTREAM_FAILED", path, status: response.status }));
-      throw new PreviewUpstreamError(response.status);
+      let detail;
+      try {
+        detail = await response.json();
+      } catch {
+      }
+      const safeCode = (v) => typeof v === "string" && /^[A-Za-z_]{1,80}$/.test(v) ? v : void 0;
+      throw new PreviewUpstreamError(response.status, safeCode(detail?.code ?? detail?.error), safeCode(detail?.blocked_by));
     }
     return await response.json();
   };
@@ -24070,11 +24076,15 @@ var init_product_preview = __esm({
     "use strict";
     init_factory();
     PreviewUpstreamError = class extends Error {
-      constructor(status) {
+      constructor(status, upstreamCode, blockedBy) {
         super("PREVIEW_FETCH_FAILED");
         this.status = status;
+        this.upstreamCode = upstreamCode;
+        this.blockedBy = blockedBy;
       }
       status;
+      upstreamCode;
+      blockedBy;
     };
     shortText = (value, max = 240) => typeof value === "string" ? value.slice(0, max) : null;
     previews = /* @__PURE__ */ new Map();
@@ -26353,11 +26363,12 @@ var fashion_pilot_exports = {};
 __export(fashion_pilot_exports, {
   FASHION_PILOT_CATEGORIES: () => FASHION_PILOT_CATEGORIES,
   inspectConfiguredFashionPilot: () => inspectConfiguredFashionPilot,
+  inspectFashionAccess: () => inspectFashionAccess,
   inspectFashionPilot: () => inspectFashionPilot
 });
-async function inspectFashionPilot(read, deadline = Date.now() + 2e5) {
+async function inspectFashionPilot(read, deadline = Date.now() + 2e5, options = {}) {
   const categories = [], products = [], seen = /* @__PURE__ */ new Set();
-  for (const category of FASHION_PILOT_CATEGORIES) {
+  for (const category of FASHION_PILOT_CATEGORIES.slice(options.offset ?? 0, (options.offset ?? 0) + (options.limit ?? FASHION_PILOT_CATEGORIES.length))) {
     if (Date.now() >= deadline) break;
     try {
       const info = await read("/categories/" + category.id);
@@ -26365,23 +26376,27 @@ async function inspectFashionPilot(read, deadline = Date.now() + 2e5) {
       const rank = await read("/highlights/MLB/category/" + category.id);
       const entries = (Array.isArray(rank.content) ? rank.content : []).filter((x) => ["PRODUCT", "ITEM", "USER_PRODUCT"].includes(x.type) && /^MLBU?\d+$/.test(x.id) && Number.isInteger(x.position) && x.position >= 1 && x.position <= 20);
       categories.push({ ...category, name: info.name, status: 200, ranked: entries.length, types: Object.fromEntries(["PRODUCT", "ITEM", "USER_PRODUCT"].map((t) => [t, entries.filter((e) => e.type === t).length])) });
-      await Promise.all(entries.slice(0, 3).map(async (entry) => {
-        const key = entry.type + ":" + entry.id;
-        if (seen.has(key) || Date.now() >= deadline) return;
-        seen.add(key);
-        const documents = [], errors = [];
-        const preview = await resolveProductPreview(entry.id, entry.type, async (path) => {
-          try {
-            const d = await read(path);
-            if (/^\/(products|items|user-products)\/[A-Z0-9]+$/.test(path)) documents.push(d);
-            return d;
-          } catch (e) {
-            errors.push({ path, status: e instanceof PreviewUpstreamError ? e.status : 0 });
-            throw e;
-          }
-        });
-        const meta = documents.map((d) => ({ id: d.id, status: d.status, category_id: d.category_id, children: d.children_ids ?? [], attributes: (d.attributes ?? []).filter((a) => ["GENDER", "BRAND", "MODEL", "SIZE", "COLOR", "FOOTWEAR_SIZE", "SIZE_COVERAGE"].includes(a.id)), variationCount: Array.isArray(d.variations) ? d.variations.length : null, variations: (d.variations ?? []).slice(0, 4).map((v) => ({ id: v.id, price: v.price, available_quantity: v.available_quantity, attributes: v.attribute_combinations })) }));
-        products.push({ id: entry.id, type: entry.type, position: entry.position, category: category.id, segment: category.segment, preview, meta, errors });
+      const queue = [...entries.filter((e) => !options.catalogOnly || e.type === "PRODUCT").slice(0, options.catalogOnly ? 20 : 3)];
+      await Promise.all(Array.from({ length: 3 }, async () => {
+        while (queue.length) {
+          const entry = queue.shift();
+          const key = entry.type + ":" + entry.id;
+          if (seen.has(key) || Date.now() >= deadline) continue;
+          seen.add(key);
+          const documents = [], errors = [];
+          const preview = await resolveProductPreview(entry.id, entry.type, async (path) => {
+            try {
+              const d = await read(path);
+              if (/^\/(products|items|user-products)\/[A-Z0-9]+$/.test(path)) documents.push(d);
+              return d;
+            } catch (e) {
+              errors.push({ path, status: e instanceof PreviewUpstreamError ? e.status : 0, code: e instanceof PreviewUpstreamError ? e.upstreamCode : void 0, blockedBy: e instanceof PreviewUpstreamError ? e.blockedBy : void 0 });
+              throw e;
+            }
+          });
+          const meta = documents.map((d) => ({ id: d.id, status: d.status, category_id: d.category_id, children: d.children_ids ?? [], attributes: (d.attributes ?? []).filter((a) => ["GENDER", "BRAND", "MODEL", "SIZE", "COLOR", "FOOTWEAR_SIZE", "SIZE_COVERAGE"].includes(a.id)), variationCount: Array.isArray(d.variations) ? d.variations.length : null, variations: (d.variations ?? []).slice(0, 4).map((v) => ({ id: v.id, price: v.price, available_quantity: v.available_quantity, attributes: v.attribute_combinations })) }));
+          products.push({ id: entry.id, type: entry.type, position: entry.position, category: category.id, segment: category.segment, preview, meta, errors });
+        }
       }));
     } catch (e) {
       categories.push({ ...category, status: e instanceof PreviewUpstreamError ? e.status : 0 });
@@ -26389,8 +26404,26 @@ async function inspectFashionPilot(read, deadline = Date.now() + 2e5) {
   }
   return { scope: "READ_ONLY_FASHION_PILOT", checkedAt: (/* @__PURE__ */ new Date()).toISOString(), activation: false, targets: { CLOTHING: 35, FOOTWEAR: 35, ACCESSORIES: 30 }, categories, products, deadlineReached: Date.now() >= deadline };
 }
-async function inspectConfiguredFashionPilot(client) {
-  return inspectFashionPilot(await configuredMeliReader(client));
+async function inspectConfiguredFashionPilot(client, options = {}) {
+  return inspectFashionPilot(await configuredMeliReader(client), Date.now() + 2e5, options);
+}
+async function inspectFashionAccess(client) {
+  const read = await configuredMeliReader(client), results = [];
+  const probes = [
+    { name: "AUTHORIZED_ACCOUNT", path: "/users/me" },
+    { name: "ITEM_ACCESS", path: "/items/MLB5395837382" },
+    { name: "CATALOG_CLOTHING_SEARCH", path: "/products/search?status=active&site_id=MLB&q=camiseta%20feminina" },
+    { name: "CATALOG_DRESS_SEARCH", path: "/products/search?status=active&site_id=MLB&q=vestido%20feminino" }
+  ];
+  for (const probe of probes) {
+    try {
+      const d = await read(probe.path);
+      results.push({ name: probe.name, status: 200, ...probe.name === "AUTHORIZED_ACCOUNT" ? { expectedAccount: d.id === 296984475 } : { total: d.paging?.total, products: (d.results ?? []).slice(0, 5).map((p) => ({ id: p.id, name: p.name, domain_id: p.domain_id })) } });
+    } catch (e) {
+      results.push({ name: probe.name, status: e instanceof PreviewUpstreamError ? e.status : 0, code: e instanceof PreviewUpstreamError ? e.upstreamCode : void 0, blockedBy: e instanceof PreviewUpstreamError ? e.blockedBy : void 0 });
+    }
+  }
+  return { scope: "READ_ONLY_ACCESS_DIAGNOSTIC", checkedAt: (/* @__PURE__ */ new Date()).toISOString(), results };
 }
 var FASHION_PILOT_CATEGORIES;
 var init_fashion_pilot = __esm({
@@ -26402,6 +26435,16 @@ var init_fashion_pilot = __esm({
       { id: "MLB3112", segment: "CLOTHING" },
       { id: "MLB188065", segment: "CLOTHING" },
       { id: "MLB31447", segment: "CLOTHING" },
+      { id: "MLB107292", segment: "CLOTHING" },
+      { id: "MLB188064", segment: "CLOTHING" },
+      { id: "MLB185489", segment: "CLOTHING" },
+      { id: "MLB27250", segment: "CLOTHING" },
+      { id: "MLB108803", segment: "CLOTHING" },
+      { id: "MLB108807", segment: "CLOTHING" },
+      { id: "MLB278010", segment: "CLOTHING" },
+      { id: "MLB278112", segment: "CLOTHING" },
+      { id: "MLB278018", segment: "CLOTHING" },
+      { id: "MLB271219", segment: "CLOTHING" },
       { id: "MLB23332", segment: "FOOTWEAR" },
       { id: "MLB273770", segment: "FOOTWEAR" },
       { id: "MLB275574", segment: "FOOTWEAR" },
@@ -27718,8 +27761,15 @@ async function handleRequest(request, response, overrides = {}) {
         return;
       }
       if (fashionPilot) {
-        const { inspectConfiguredFashionPilot: inspectConfiguredFashionPilot2 } = await Promise.resolve().then(() => (init_fashion_pilot(), fashion_pilot_exports));
-        sendJson(response, 200, await inspectConfiguredFashionPilot2(client), void 0, 2 * 1024 * 1024);
+        const mode = url.searchParams.get("mode") ?? "sample";
+        const offset2 = Number(url.searchParams.get("offset") ?? 0), limit = Number(url.searchParams.get("limit") ?? 8);
+        if (!["sample", "catalog", "access"].includes(mode) || !Number.isInteger(offset2) || offset2 < 0 || offset2 > 100 || !Number.isInteger(limit) || limit < 1 || limit > 8) {
+          sendJson(response, 400, { errorCode: "INVALID_VIEW" });
+          return;
+        }
+        const { inspectConfiguredFashionPilot: inspectConfiguredFashionPilot2, inspectFashionAccess: inspectFashionAccess2 } = await Promise.resolve().then(() => (init_fashion_pilot(), fashion_pilot_exports));
+        const result = mode === "access" ? await inspectFashionAccess2(client) : await inspectConfiguredFashionPilot2(client, { offset: offset2, limit, catalogOnly: mode === "catalog" });
+        if (!sendJson(response, 200, result, void 0, 2 * 1024 * 1024)) sendJson(response, 503, { errorCode: "FASHION_RESPONSE_TOO_LARGE" });
         return;
       }
       if (homePilot) {

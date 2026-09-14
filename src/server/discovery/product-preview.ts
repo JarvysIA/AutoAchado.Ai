@@ -26,7 +26,7 @@ export interface ProductPreview {
 }
 type RecordValue = Record<string, any>;
 export type PreviewReader = (path: string) => Promise<RecordValue>;
-export class PreviewUpstreamError extends Error {constructor(readonly status:number){super('PREVIEW_FETCH_FAILED');}}
+export class PreviewUpstreamError extends Error {constructor(readonly status:number,readonly upstreamCode?:string,readonly blockedBy?:string){super('PREVIEW_FETCH_FAILED');}}
 export function safePreviewUrl(value: unknown, image = false): string | null {
   if (typeof value !== "string") return null;
   try {
@@ -242,7 +242,9 @@ export async function configuredMeliReader(client: SupabaseClient): Promise<Prev
       if (response.status === 401) token = undefined;
       if (!response.ok) {
         console.warn(JSON.stringify({event:"PREVIEW_UPSTREAM_FAILED", path, status:response.status}));
-        throw new PreviewUpstreamError(response.status);
+        let detail:any;try{detail=await response.json();}catch{}
+        const safeCode=(v:unknown)=>typeof v==='string'&&/^[A-Za-z_]{1,80}$/.test(v)?v:undefined;
+        throw new PreviewUpstreamError(response.status,safeCode(detail?.code??detail?.error),safeCode(detail?.blocked_by));
       }
       return await response.json() as RecordValue;
     };

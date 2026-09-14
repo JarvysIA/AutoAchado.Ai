@@ -306,7 +306,14 @@ export async function handleRequest(
       const client=createOperationalDiscoveryAdapter().client;
       if(homeRun) {const {runHome}=await import('./server/commercial/home-service.js');const kind=url.searchParams.get('kind')??'HISTORY';if(kind==='STATUS'){const offset=Number(url.searchParams.get('offset')??0);if(!Number.isSafeInteger(offset)||offset<0||offset>10000){sendJson(response,400,{errorCode:'INVALID_VIEW'});return;}const {homeOpportunities}=await import('./server/commercial/home-service.js');if(!sendJson(response,200,await homeOpportunities(client,'ALL',offset),undefined,2*1024*1024))sendJson(response,503,{errorCode:'HOME_RESPONSE_TOO_LARGE'});return;}if(!['DISCOVERY','HISTORY'].includes(kind)){sendJson(response,400,{errorCode:'INVALID_KIND'});return;}sendJson(response,200,await runHome(client,kind as 'DISCOVERY'|'HISTORY'));return;}
       if(appliancesRun) {const {runAppliances}=await import('./server/commercial/appliances-service.js');const kind=url.searchParams.get('kind')??'HISTORY';if(kind==='STATUS'){const offset=Number(url.searchParams.get('offset')??0);if(!Number.isSafeInteger(offset)||offset<0||offset>10000){sendJson(response,400,{errorCode:'INVALID_VIEW'});return;}const {appliancesOpportunities}=await import('./server/commercial/appliances-service.js');if(!sendJson(response,200,await appliancesOpportunities(client,'ALL',offset),undefined,2*1024*1024))sendJson(response,503,{errorCode:'APPLIANCES_RESPONSE_TOO_LARGE'});return;}if(!['DISCOVERY','HISTORY'].includes(kind)){sendJson(response,400,{errorCode:'INVALID_KIND'});return;}sendJson(response,200,await runAppliances(client,kind as 'DISCOVERY'|'HISTORY'));return;}
-      if(fashionPilot) { const {inspectConfiguredFashionPilot}=await import('./server/commercial/fashion-pilot.js');sendJson(response,200,await inspectConfiguredFashionPilot(client),undefined,2*1024*1024);return;}
+      if(fashionPilot) {
+       const mode=url.searchParams.get('mode')??'sample';
+       const offset=Number(url.searchParams.get('offset')??0),limit=Number(url.searchParams.get('limit')??8);
+       if(!['sample','catalog','access'].includes(mode)||!Number.isInteger(offset)||offset<0||offset>100||!Number.isInteger(limit)||limit<1||limit>8){sendJson(response,400,{errorCode:'INVALID_VIEW'});return;}
+       const {inspectConfiguredFashionPilot,inspectFashionAccess}=await import('./server/commercial/fashion-pilot.js');
+       const result=mode==='access'?await inspectFashionAccess(client):await inspectConfiguredFashionPilot(client,{offset,limit,catalogOnly:mode==='catalog'});
+       if(!sendJson(response,200,result,undefined,2*1024*1024))sendJson(response,503,{errorCode:'FASHION_RESPONSE_TOO_LARGE'});return;
+      }
       if(homePilot) {
         try {const {inspectConfiguredHomePilot}=await import('./server/commercial/home-pilot.js');sendJson(response,200,await inspectConfiguredHomePilot(client));}
         catch(error) {sendJson(response,503,{errorCode:error instanceof Error&&error.message==='PREVIEW_AUTH_UNAVAILABLE'?'MELI_AUTH_UNAVAILABLE':'HOME_PILOT_UNAVAILABLE'});}
