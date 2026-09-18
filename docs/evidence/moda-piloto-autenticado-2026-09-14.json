@@ -1,0 +1,214 @@
+{
+  "checkedAt": "2026-09-14T03:13:12.265Z",
+  "scope": "READ_ONLY_FASHION_PILOT",
+  "activation": false,
+  "categories": [
+    {
+      "id": "MLB108704",
+      "segment": "CLOTHING",
+      "name": "Vestidos",
+      "status": 200,
+      "ranked": 20,
+      "types": {
+        "PRODUCT": 0,
+        "ITEM": 13,
+        "USER_PRODUCT": 7
+      }
+    },
+    {
+      "id": "MLB3112",
+      "segment": "CLOTHING",
+      "name": "Blusas",
+      "status": 200,
+      "ranked": 20,
+      "types": {
+        "PRODUCT": 0,
+        "ITEM": 9,
+        "USER_PRODUCT": 11
+      }
+    },
+    {
+      "id": "MLB188065",
+      "segment": "CLOTHING",
+      "name": "Calças",
+      "status": 200,
+      "ranked": 20,
+      "types": {
+        "PRODUCT": 0,
+        "ITEM": 16,
+        "USER_PRODUCT": 4
+      }
+    },
+    {
+      "id": "MLB31447",
+      "segment": "CLOTHING",
+      "name": "Camisetas e Regatas",
+      "status": 200,
+      "ranked": 20,
+      "types": {
+        "PRODUCT": 0,
+        "ITEM": 14,
+        "USER_PRODUCT": 6
+      }
+    },
+    {
+      "id": "MLB23332",
+      "segment": "FOOTWEAR",
+      "name": "Tênis",
+      "status": 200,
+      "ranked": 20,
+      "types": {
+        "PRODUCT": 14,
+        "ITEM": 6,
+        "USER_PRODUCT": 0
+      }
+    },
+    {
+      "id": "MLB273770",
+      "segment": "FOOTWEAR",
+      "name": "Sandálias e Chinelos",
+      "status": 200,
+      "ranked": 20,
+      "types": {
+        "PRODUCT": 4,
+        "ITEM": 11,
+        "USER_PRODUCT": 5
+      }
+    },
+    {
+      "id": "MLB275574",
+      "segment": "FOOTWEAR",
+      "name": "Sapatilhas",
+      "status": 200,
+      "ranked": 20,
+      "types": {
+        "PRODUCT": 0,
+        "ITEM": 13,
+        "USER_PRODUCT": 7
+      }
+    },
+    {
+      "id": "MLB272202",
+      "segment": "FOOTWEAR",
+      "name": "Botas",
+      "status": 200,
+      "ranked": 20,
+      "types": {
+        "PRODUCT": 0,
+        "ITEM": 15,
+        "USER_PRODUCT": 5
+      }
+    },
+    {
+      "id": "MLB7022",
+      "segment": "ACCESSORIES",
+      "name": "Bolsas",
+      "status": 200,
+      "ranked": 20,
+      "types": {
+        "PRODUCT": 13,
+        "ITEM": 4,
+        "USER_PRODUCT": 3
+      }
+    },
+    {
+      "id": "MLB28108",
+      "segment": "ACCESSORIES",
+      "name": "Carteiras e Porta-Moedas",
+      "status": 200,
+      "ranked": 20,
+      "types": {
+        "PRODUCT": 8,
+        "ITEM": 5,
+        "USER_PRODUCT": 7
+      }
+    },
+    {
+      "id": "MLB3127",
+      "segment": "ACCESSORIES",
+      "name": "Mochilas",
+      "status": 200,
+      "ranked": 20,
+      "types": {
+        "PRODUCT": 16,
+        "ITEM": 3,
+        "USER_PRODUCT": 1
+      }
+    },
+    {
+      "id": "MLB190393",
+      "segment": "ACCESSORIES",
+      "name": "Cintos",
+      "status": 200,
+      "ranked": 20,
+      "types": {
+        "PRODUCT": 10,
+        "ITEM": 7,
+        "USER_PRODUCT": 3
+      }
+    },
+    {
+      "id": "MLB118017",
+      "segment": "ACCESSORIES",
+      "name": "Relógios",
+      "status": 200,
+      "ranked": 20,
+      "types": {
+        "PRODUCT": 18,
+        "ITEM": 0,
+        "USER_PRODUCT": 2
+      }
+    },
+    {
+      "id": "MLB1431",
+      "segment": "ACCESSORIES",
+      "name": "Joias e Bijuterias",
+      "status": 200,
+      "ranked": 20,
+      "types": {
+        "PRODUCT": 5,
+        "ITEM": 7,
+        "USER_PRODUCT": 8
+      }
+    }
+  ],
+  "segments": [
+    {
+      "segment": "CLOTHING",
+      "sampled": 12,
+      "withTitlePicturePrice": 0,
+      "itemPriceLinkVerified": 0,
+      "metadata": 0,
+      "upstreamStatuses": {
+        "403": 20
+      }
+    },
+    {
+      "segment": "FOOTWEAR",
+      "sampled": 12,
+      "withTitlePicturePrice": 5,
+      "itemPriceLinkVerified": 0,
+      "metadata": 5,
+      "upstreamStatuses": {
+        "403": 20,
+        "404": 1
+      }
+    },
+    {
+      "segment": "ACCESSORIES",
+      "sampled": 18,
+      "withTitlePicturePrice": 11,
+      "itemPriceLinkVerified": 0,
+      "metadata": 11,
+      "upstreamStatuses": {
+        "403": 32
+      }
+    }
+  ],
+  "notes": [
+    "Amostra dos três primeiros por categoria; não prova indisponibilidade de toda Moda.",
+    "Modelos masculinos e unissex aparecem nos rankings mistos: não são automaticamente femininos.",
+    "Fontes amplas de relógios e joias serão substituídas por pulso, colares, brincos e pulseiras.",
+    "Nenhum candidato foi admitido; nenhum envio realizado."
+  ]
+}

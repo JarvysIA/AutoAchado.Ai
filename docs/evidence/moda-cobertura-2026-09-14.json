@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-09-14T03:37:46.515Z",
+  "categories": 26,
+  "rankedPositions": 520,
+  "uniqueCatalogProducts": 98,
+  "selected": {
+    "CLOTHING": 0,
+    "FOOTWEAR": 8,
+    "ACCESSORIES": 26
+  },
+  "capacityProven": false,
+  "reasons": {
+    "FEMALE_OR_ADULT_UNISEX_NOT_CONFIRMED": 46,
+    "AUDIENCE_CONFLICT": 41,
+    "INCOMPLETE_COMPARABLE_PRICE": 4,
+    "MODEL_IDENTITY_MISSING": 1
+  },
+  "segments": [
+    {
+      "segment": "CLOTHING",
+      "categories": 14,
+      "catalogOccurrences": 0,
+      "complete": 0
+    },
+    {
+      "segment": "FOOTWEAR",
+      "categories": 4,
+      "catalogOccurrences": 18,
+      "complete": 18
+    },
+    {
+      "segment": "ACCESSORIES",
+      "categories": 8,
+      "catalogOccurrences": 80,
+      "complete": 80
+    }
+  ]
+}

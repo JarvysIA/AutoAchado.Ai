@@ -1,0 +1,774 @@
+{
+  "checked_at": "2026-09-14T02:48:09.904Z",
+  "source": "https://api.mercadolibre.com/categories/MLB1430",
+  "note": "Contagens de anúncios não representam vendas. Ranking sem token retornou 401; cobertura autenticada ainda não testada para Moda.",
+  "nodes": [
+    {
+      "id": "MLB1430",
+      "name": "Calçados, Roupas e Bolsas",
+      "children": [
+        {
+          "id": "MLB1451",
+          "name": "Acessórios de Moda"
+        },
+        {
+          "id": "MLB455528",
+          "name": "Agasalhos"
+        },
+        {
+          "id": "MLB188064",
+          "name": "Bermudas e Shorts"
+        },
+        {
+          "id": "MLB3112",
+          "name": "Blusas"
+        },
+        {
+          "id": "MLB23262",
+          "name": "Calçados"
+        },
+        {
+          "id": "MLB188065",
+          "name": "Calças"
+        },
+        {
+          "id": "MLB107292",
+          "name": "Camisas"
+        },
+        {
+          "id": "MLB31447",
+          "name": "Camisetas e Regatas"
+        },
+        {
+          "id": "MLB271862",
+          "name": "Indumentária Laboral e Escolar"
+        },
+        {
+          "id": "MLB455550",
+          "name": "Kimonos"
+        },
+        {
+          "id": "MLB271219",
+          "name": "Kits de Conjuntos de Roupa"
+        },
+        {
+          "id": "MLB278018",
+          "name": "Leggings"
+        },
+        {
+          "id": "MLB27250",
+          "name": "Macacão"
+        },
+        {
+          "id": "MLB1457",
+          "name": "Malas e Bolsas"
+        },
+        {
+          "id": "MLB270215",
+          "name": "Moda Fitness"
+        },
+        {
+          "id": "MLB430391",
+          "name": "Moda Praia"
+        },
+        {
+          "id": "MLB108786",
+          "name": "Moda Íntima e Lingerie"
+        },
+        {
+          "id": "MLB1911",
+          "name": "Outros"
+        },
+        {
+          "id": "MLB5366",
+          "name": "Roupas para Bebês"
+        },
+        {
+          "id": "MLB185489",
+          "name": "Saias"
+        },
+        {
+          "id": "MLB108831",
+          "name": "Ternos"
+        },
+        {
+          "id": "MLB108704",
+          "name": "Vestidos"
+        }
+      ]
+    },
+    {
+      "id": "MLB1451",
+      "name": "Acessórios de Moda",
+      "children": [
+        {
+          "id": "MLB437215",
+          "name": "Acessórios para Cabelo"
+        },
+        {
+          "id": "MLB430275",
+          "name": "Bonés, Chapéus e Boinas"
+        },
+        {
+          "id": "MLB437677",
+          "name": "Broches"
+        },
+        {
+          "id": "MLB437217",
+          "name": "Cachecóis e Leços"
+        },
+        {
+          "id": "MLB179799",
+          "name": "Cangas de Praia"
+        },
+        {
+          "id": "MLB412060",
+          "name": "Chaveiros"
+        },
+        {
+          "id": "MLB437678",
+          "name": "Cintas"
+        },
+        {
+          "id": "MLB190393",
+          "name": "Cintos"
+        },
+        {
+          "id": "MLB437679",
+          "name": "Espelhos"
+        },
+        {
+          "id": "MLB454755",
+          "name": "Filtros para Máscaras"
+        },
+        {
+          "id": "MLB190430",
+          "name": "Gravatas"
+        },
+        {
+          "id": "MLB190972",
+          "name": "Guarda-Chuvas"
+        },
+        {
+          "id": "MLB271107",
+          "name": "Leques"
+        },
+        {
+          "id": "MLB190437",
+          "name": "Luvas"
+        },
+        {
+          "id": "MLB457382",
+          "name": "Máscara de Dormir Elétrica"
+        },
+        {
+          "id": "MLB445787",
+          "name": "Máscaras de Boca Reutilizáveis"
+        },
+        {
+          "id": "MLB433272",
+          "name": "Máscaras de Dormir"
+        },
+        {
+          "id": "MLB190440",
+          "name": "Outros"
+        },
+        {
+          "id": "MLB270547",
+          "name": "Polainas"
+        },
+        {
+          "id": "MLB190971",
+          "name": "Prendedores de Gravata"
+        },
+        {
+          "id": "MLB271846",
+          "name": "Protetores de Orelhas"
+        },
+        {
+          "id": "MLB190436",
+          "name": "Suspensórios"
+        },
+        {
+          "id": "MLB446854",
+          "name": "Toalhas de Praia"
+        },
+        {
+          "id": "MLB1456",
+          "name": "Óculos"
+        }
+      ]
+    },
+    {
+      "id": "MLB455528",
+      "name": "Agasalhos",
+      "children": [
+        {
+          "id": "MLB108803",
+          "name": "Casacos e Jaquetas"
+        },
+        {
+          "id": "MLB108807",
+          "name": "Moletons"
+        },
+        {
+          "id": "MLB455529",
+          "name": "Outros"
+        },
+        {
+          "id": "MLB438893",
+          "name": "Suéteres, Cardigans e Coletes"
+        }
+      ]
+    },
+    {
+      "id": "MLB3112",
+      "name": "Blusas",
+      "children": []
+    },
+    {
+      "id": "MLB188064",
+      "name": "Bermudas e Shorts",
+      "children": []
+    },
+    {
+      "id": "MLB23262",
+      "name": "Calçados",
+      "children": [
+        {
+          "id": "MLB275584",
+          "name": "Alpargata"
+        },
+        {
+          "id": "MLB272202",
+          "name": "Botas"
+        },
+        {
+          "id": "MLB276629",
+          "name": "Outros"
+        },
+        {
+          "id": "MLB276628",
+          "name": "Pantufas"
+        },
+        {
+          "id": "MLB455893",
+          "name": "Protetor de Sapatos"
+        },
+        {
+          "id": "MLB273770",
+          "name": "Sandálias e Chinelos"
+        },
+        {
+          "id": "MLB275574",
+          "name": "Sapatilhas"
+        },
+        {
+          "id": "MLB274752",
+          "name": "Sapatos Sociais e Mocassims"
+        },
+        {
+          "id": "MLB275575",
+          "name": "Scarpins e Plataformas"
+        },
+        {
+          "id": "MLB23332",
+          "name": "Tênis"
+        }
+      ]
+    },
+    {
+      "id": "MLB107292",
+      "name": "Camisas",
+      "children": []
+    },
+    {
+      "id": "MLB31447",
+      "name": "Camisetas e Regatas",
+      "children": []
+    },
+    {
+      "id": "MLB188065",
+      "name": "Calças",
+      "children": []
+    },
+    {
+      "id": "MLB278018",
+      "name": "Leggings",
+      "children": []
+    },
+    {
+      "id": "MLB271862",
+      "name": "Indumentária Laboral e Escolar",
+      "children": [
+        {
+          "id": "MLB455530",
+          "name": "Acessórios Táticos"
+        },
+        {
+          "id": "MLB271873",
+          "name": "Indumentaria Tática"
+        },
+        {
+          "id": "MLB277428",
+          "name": "Jalecos Escolares"
+        },
+        {
+          "id": "MLB271864",
+          "name": "Outros"
+        },
+        {
+          "id": "MLB12554",
+          "name": "Uniformes Escolares"
+        },
+        {
+          "id": "MLB432965",
+          "name": "Uniformes e Roupa de Trabalho"
+        }
+      ]
+    },
+    {
+      "id": "MLB271219",
+      "name": "Kits de Conjuntos de Roupa",
+      "children": []
+    },
+    {
+      "id": "MLB455550",
+      "name": "Kimonos",
+      "children": []
+    },
+    {
+      "id": "MLB430391",
+      "name": "Moda Praia",
+      "children": []
+    },
+    {
+      "id": "MLB27250",
+      "name": "Macacão",
+      "children": []
+    },
+    {
+      "id": "MLB270215",
+      "name": "Moda Fitness",
+      "children": [
+        {
+          "id": "MLB432028",
+          "name": "Bolsas Esportivas"
+        },
+        {
+          "id": "MLB439241",
+          "name": "Bonés"
+        },
+        {
+          "id": "MLB417370",
+          "name": "Calças e Joggings"
+        },
+        {
+          "id": "MLB270224",
+          "name": "Camisetas e Regatas"
+        },
+        {
+          "id": "MLB270220",
+          "name": "Conjuntos"
+        },
+        {
+          "id": "MLB458017",
+          "name": "Faixas"
+        },
+        {
+          "id": "MLB270221",
+          "name": "Jaquetas"
+        },
+        {
+          "id": "MLB270216",
+          "name": "Leggings"
+        },
+        {
+          "id": "MLB417386",
+          "name": "Luvas"
+        },
+        {
+          "id": "MLB430140",
+          "name": "Mangas de Compressão"
+        },
+        {
+          "id": "MLB270223",
+          "name": "Meias"
+        },
+        {
+          "id": "MLB417369",
+          "name": "Moletons"
+        },
+        {
+          "id": "MLB270230",
+          "name": "Outros"
+        },
+        {
+          "id": "MLB417479",
+          "name": "Roupa de Dança e Patín"
+        },
+        {
+          "id": "MLB270227",
+          "name": "Shorts e Bermudas"
+        },
+        {
+          "id": "MLB270229",
+          "name": "Tops de Fitness"
+        },
+        {
+          "id": "MLB417387",
+          "name": "Tornozeleiras"
+        },
+        {
+          "id": "MLB421969",
+          "name": "Vestidos"
+        }
+      ]
+    },
+    {
+      "id": "MLB1457",
+      "name": "Malas e Bolsas",
+      "children": [
+        {
+          "id": "MLB432014",
+          "name": "Acessórios"
+        },
+        {
+          "id": "MLB432017",
+          "name": "Bagagem e Acessórios de Viagem"
+        },
+        {
+          "id": "MLB7022",
+          "name": "Bolsas"
+        },
+        {
+          "id": "MLB28108",
+          "name": "Carteiras e Porta-Moedas"
+        },
+        {
+          "id": "MLB455760",
+          "name": "Kits de Bolsas"
+        },
+        {
+          "id": "MLB455455",
+          "name": "Kits de Mochilas Escolares"
+        },
+        {
+          "id": "MLB412348",
+          "name": "Lancheiras"
+        },
+        {
+          "id": "MLB3127",
+          "name": "Mochilas"
+        },
+        {
+          "id": "MLB28155",
+          "name": "Necéssaires"
+        },
+        {
+          "id": "MLB432013",
+          "name": "Outros"
+        },
+        {
+          "id": "MLB28144",
+          "name": "Pastas Executivas"
+        },
+        {
+          "id": "MLB28143",
+          "name": "Pochetes"
+        }
+      ]
+    },
+    {
+      "id": "MLB108786",
+      "name": "Moda Íntima e Lingerie",
+      "children": [
+        {
+          "id": "MLB437816",
+          "name": "Roupa Intima"
+        },
+        {
+          "id": "MLB108787",
+          "name": "Roupa de Dormir"
+        }
+      ]
+    },
+    {
+      "id": "MLB5366",
+      "name": "Roupas para Bebês",
+      "children": [
+        {
+          "id": "MLB420393",
+          "name": "Acessórios"
+        },
+        {
+          "id": "MLB28208",
+          "name": "Blusas"
+        },
+        {
+          "id": "MLB28139",
+          "name": "Bodies"
+        },
+        {
+          "id": "MLB28158",
+          "name": "Calçados"
+        },
+        {
+          "id": "MLB28101",
+          "name": "Calças e Culotes"
+        },
+        {
+          "id": "MLB11428",
+          "name": "Camisas"
+        },
+        {
+          "id": "MLB28135",
+          "name": "Camisetas e Regatas"
+        },
+        {
+          "id": "MLB28210",
+          "name": "Casacos"
+        },
+        {
+          "id": "MLB28163",
+          "name": "Conjuntos"
+        },
+        {
+          "id": "MLB28138",
+          "name": "Macacões"
+        },
+        {
+          "id": "MLB278138",
+          "name": "Meias"
+        },
+        {
+          "id": "MLB40577",
+          "name": "Moda Praia"
+        },
+        {
+          "id": "MLB28164",
+          "name": "Moletons"
+        },
+        {
+          "id": "MLB28140",
+          "name": "Outros"
+        },
+        {
+          "id": "MLB113662",
+          "name": "Pijamas"
+        },
+        {
+          "id": "MLB437910",
+          "name": "Roupões"
+        },
+        {
+          "id": "MLB458052",
+          "name": "Sacos de Dormir"
+        },
+        {
+          "id": "MLB278068",
+          "name": "Saias"
+        },
+        {
+          "id": "MLB434729",
+          "name": "Saídas Maternidade"
+        },
+        {
+          "id": "MLB278067",
+          "name": "Shorts"
+        },
+        {
+          "id": "MLB278158",
+          "name": "Suéteres"
+        },
+        {
+          "id": "MLB28174",
+          "name": "Vestidos"
+        }
+      ]
+    },
+    {
+      "id": "MLB1911",
+      "name": "Outros",
+      "children": []
+    },
+    {
+      "id": "MLB185489",
+      "name": "Saias",
+      "children": []
+    },
+    {
+      "id": "MLB108831",
+      "name": "Ternos",
+      "children": []
+    },
+    {
+      "id": "MLB108704",
+      "name": "Vestidos",
+      "children": []
+    },
+    {
+      "id": "MLB273770",
+      "name": "Sandálias e Chinelos",
+      "children": []
+    },
+    {
+      "id": "MLB437816",
+      "name": "Roupa Intima",
+      "children": [
+        {
+          "id": "MLB27533",
+          "name": "Cintas"
+        },
+        {
+          "id": "MLB108789",
+          "name": "Cuecas"
+        },
+        {
+          "id": "MLB187035",
+          "name": "Lingerie"
+        },
+        {
+          "id": "MLB278105",
+          "name": "Meias e Meia Calças"
+        },
+        {
+          "id": "MLB108793",
+          "name": "Outras Roupas Íntimas"
+        }
+      ]
+    },
+    {
+      "id": "MLB108787",
+      "name": "Roupa de Dormir",
+      "children": [
+        {
+          "id": "MLB278114",
+          "name": "Camisolas"
+        },
+        {
+          "id": "MLB437225",
+          "name": "Máscaras de Dormir"
+        },
+        {
+          "id": "MLB278116",
+          "name": "Outros"
+        },
+        {
+          "id": "MLB437226",
+          "name": "Pantufas"
+        },
+        {
+          "id": "MLB278112",
+          "name": "Pijamas"
+        },
+        {
+          "id": "MLB278113",
+          "name": "Roupões"
+        }
+      ]
+    },
+    {
+      "id": "MLB432017",
+      "name": "Bagagem e Acessórios de Viagem",
+      "children": [
+        {
+          "id": "MLB432022",
+          "name": "Acessórios de Viagem"
+        },
+        {
+          "id": "MLB432407",
+          "name": "Bolsas de Viagem"
+        },
+        {
+          "id": "MLB3128",
+          "name": "Malas"
+        },
+        {
+          "id": "MLB432021",
+          "name": "Outros"
+        }
+      ]
+    },
+    {
+      "id": "MLB1456",
+      "name": "Óculos",
+      "children": [
+        {
+          "id": "MLB8379",
+          "name": "Armações e Óculos Sem Grau"
+        },
+        {
+          "id": "MLB119992",
+          "name": "Capas e Estojos"
+        },
+        {
+          "id": "MLB8378",
+          "name": "De Sol"
+        },
+        {
+          "id": "MLB431345",
+          "name": "Lentes de Reposição"
+        },
+        {
+          "id": "MLB457786",
+          "name": "Limpadores Ultrassônicos"
+        },
+        {
+          "id": "MLB5529",
+          "name": "Outros"
+        },
+        {
+          "id": "MLB459670",
+          "name": "Óculos de Leitura"
+        }
+      ]
+    },
+    {
+      "id": "MLB430275",
+      "name": "Bonés, Chapéus e Boinas",
+      "children": []
+    },
+    {
+      "id": "MLB438893",
+      "name": "Suéteres, Cardigans e Coletes",
+      "children": [
+        {
+          "id": "MLB438894",
+          "name": "Blusas de Frio"
+        },
+        {
+          "id": "MLB108805",
+          "name": "Coletes"
+        },
+        {
+          "id": "MLB438904",
+          "name": "Outros"
+        },
+        {
+          "id": "MLB196932",
+          "name": "Ponchos"
+        },
+        {
+          "id": "MLB278010",
+          "name": "Suéteres e Cardigans"
+        }
+      ]
+    }
+  ],
+  "attribute_sources": [
+    "https://api.mercadolibre.com/categories/MLB23262/attributes",
+    "https://api.mercadolibre.com/categories/MLB31447/attributes"
+  ],
+  "gender_values": {
+    "female": "339665",
+    "male": "339666",
+    "adult_unisex": "110461",
+    "excluded_child": [
+      "339668",
+      "339667",
+      "371795",
+      "19159491"
+    ]
+  }
+}
