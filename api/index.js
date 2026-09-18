@@ -220,18 +220,18 @@ var init_client = __esm({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+supabase-js@2.112.3/node_modules/@supabase/supabase-js/dist/tracingRegistry.mjs
+// node_modules/.pnpm/@supabase+supabase-js@2.112.3/node_modules/@supabase/supabase-js/dist/tracingRegistry.mjs
 function getTraceContextExtractor() {
   return globalThis[EXTRACTOR_KEY];
 }
 var EXTRACTOR_KEY;
 var init_tracingRegistry = __esm({
-  "node_modules/.pnpm-clean/@supabase+supabase-js@2.112.3/node_modules/@supabase/supabase-js/dist/tracingRegistry.mjs"() {
+  "node_modules/.pnpm/@supabase+supabase-js@2.112.3/node_modules/@supabase/supabase-js/dist/tracingRegistry.mjs"() {
     EXTRACTOR_KEY = /* @__PURE__ */ Symbol.for("@supabase/supabase-js.traceContextExtractor");
   }
 });
 
-// node_modules/.pnpm-clean/tslib@2.8.1/node_modules/tslib/tslib.es6.mjs
+// node_modules/.pnpm/tslib@2.8.1/node_modules/tslib/tslib.es6.mjs
 var tslib_es6_exports = {};
 __export(tslib_es6_exports, {
   __addDisposableResource: () => __addDisposableResource,
@@ -670,7 +670,7 @@ function __rewriteRelativeImportExtension(path, preserveJsx) {
 }
 var extendStatics, __assign, __createBinding, __setModuleDefault, ownKeys, _SuppressedError, tslib_es6_default;
 var init_tslib_es6 = __esm({
-  "node_modules/.pnpm-clean/tslib@2.8.1/node_modules/tslib/tslib.es6.mjs"() {
+  "node_modules/.pnpm/tslib@2.8.1/node_modules/tslib/tslib.es6.mjs"() {
     extendStatics = function(d, b) {
       extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
         d2.__proto__ = b2;
@@ -756,9 +756,9 @@ var init_tslib_es6 = __esm({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/helper.js
+// node_modules/.pnpm/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/helper.js
 var require_helper = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/helper.js"(exports) {
+  "node_modules/.pnpm/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/helper.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.resolveFetch = void 0;
@@ -772,9 +772,9 @@ var require_helper = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/types.js
+// node_modules/.pnpm/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/types.js
 var require_types = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/types.js"(exports) {
+  "node_modules/.pnpm/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/types.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.FunctionRegion = exports.FunctionsHttpError = exports.FunctionsRelayError = exports.FunctionsFetchError = exports.FunctionsError = void 0;
@@ -832,9 +832,9 @@ var require_types = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/FunctionsClient.js
+// node_modules/.pnpm/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/FunctionsClient.js
 var require_FunctionsClient = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/FunctionsClient.js"(exports) {
+  "node_modules/.pnpm/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/FunctionsClient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.FunctionsClient = void 0;
@@ -1118,9 +1118,9 @@ var require_FunctionsClient = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/index.js
+// node_modules/.pnpm/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/index.js
 var require_main = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/index.js"(exports) {
+  "node_modules/.pnpm/@supabase+functions-js@2.112.3/node_modules/@supabase/functions-js/dist/main/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.FunctionRegion = exports.FunctionsRelayError = exports.FunctionsHttpError = exports.FunctionsFetchError = exports.FunctionsError = exports.FunctionsClient = void 0;
@@ -1147,7 +1147,7 @@ var require_main = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+postgrest-js@2.112.3/node_modules/@supabase/postgrest-js/dist/index.mjs
+// node_modules/.pnpm/@supabase+postgrest-js@2.112.3/node_modules/@supabase/postgrest-js/dist/index.mjs
 function _typeof(o) {
   "@babel/helpers - typeof";
   return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o$1) {
@@ -1224,7 +1224,7 @@ function shouldRetry(method, status, attemptCount, retryEnabled) {
 }
 var DEFAULT_MAX_RETRIES, getRetryDelay, RETRYABLE_STATUS_CODES, RETRYABLE_METHODS, PostgrestError, PostgrestBuilder, PostgrestTransformBuilder, PostgrestReservedCharsRegexp, PostgrestFilterBuilder, PostgrestQueryBuilder, PostgrestClient;
 var init_dist = __esm({
-  "node_modules/.pnpm-clean/@supabase+postgrest-js@2.112.3/node_modules/@supabase/postgrest-js/dist/index.mjs"() {
+  "node_modules/.pnpm/@supabase+postgrest-js@2.112.3/node_modules/@supabase/postgrest-js/dist/index.mjs"() {
     DEFAULT_MAX_RETRIES = 3;
     getRetryDelay = (attemptIndex) => Math.min(1e3 * 2 ** attemptIndex, 3e4);
     RETRYABLE_STATUS_CODES = [520, 503];
@@ -4934,9 +4934,9 @@ ${cause.stack}`;
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.js
+// node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.js
 var require_websocket_factory = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.js"(exports) {
+  "node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.WebSocketFactory = void 0;
@@ -5045,9 +5045,9 @@ Suggested solution: ${env.workaround}`;
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/version.js
+// node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/version.js
 var require_version = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/version.js"(exports) {
+  "node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/version.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.version = void 0;
@@ -5055,9 +5055,9 @@ var require_version = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/constants.js
+// node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/constants.js
 var require_constants = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/constants.js"(exports) {
+  "node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/constants.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CONNECTION_STATE = exports.TRANSPORTS = exports.CHANNEL_EVENTS = exports.CHANNEL_STATES = exports.SOCKET_STATES = exports.MAX_PUSH_BUFFER_SIZE = exports.WS_CLOSE_NORMAL = exports.DEFAULT_TIMEOUT = exports.VERSION = exports.DEFAULT_VSN = exports.VSN_2_0_0 = exports.VSN_1_0_0 = exports.DEFAULT_VERSION = void 0;
@@ -5103,9 +5103,9 @@ var require_constants = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/serializer.js
+// node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/serializer.js
 var require_serializer = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/serializer.js"(exports) {
+  "node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/serializer.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var Serializer = class {
@@ -5257,9 +5257,9 @@ var require_serializer = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/transformers.js
+// node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/transformers.js
 var require_transformers = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/transformers.js"(exports) {
+  "node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/transformers.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.httpEndpointURL = exports.toTimestampString = exports.toArray = exports.toJson = exports.toNumber = exports.toBoolean = exports.convertCell = exports.convertColumn = exports.convertChangeData = exports.PostgresTypes = void 0;
@@ -5436,9 +5436,9 @@ var require_transformers = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+phoenix@0.4.5/node_modules/@supabase/phoenix/priv/static/phoenix.cjs.js
+// node_modules/.pnpm/@supabase+phoenix@0.4.5/node_modules/@supabase/phoenix/priv/static/phoenix.cjs.js
 var require_phoenix_cjs = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+phoenix@0.4.5/node_modules/@supabase/phoenix/priv/static/phoenix.cjs.js"(exports, module) {
+  "node_modules/.pnpm/@supabase+phoenix@0.4.5/node_modules/@supabase/phoenix/priv/static/phoenix.cjs.js"(exports, module) {
     "use strict";
     var __defProp2 = Object.defineProperty;
     var __getOwnPropDesc2 = Object.getOwnPropertyDescriptor;
@@ -7288,9 +7288,9 @@ var require_phoenix_cjs = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.js
+// node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.js
 var require_presenceAdapter = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.js"(exports) {
+  "node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var phoenix_1 = require_phoenix_cjs();
@@ -7388,9 +7388,9 @@ var require_presenceAdapter = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimePresence.js
+// node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimePresence.js
 var require_RealtimePresence = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimePresence.js"(exports) {
+  "node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimePresence.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.REALTIME_PRESENCE_LISTEN_EVENTS = void 0;
@@ -7432,9 +7432,9 @@ var require_RealtimePresence = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.js
+// node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.js
 var require_normalizeChannelError = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.js"(exports) {
+  "node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.normalizeChannelError = normalizeChannelError;
@@ -7458,9 +7458,9 @@ var require_normalizeChannelError = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.js
+// node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.js
 var require_channelAdapter = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.js"(exports) {
+  "node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var constants_1 = require_constants();
@@ -7565,9 +7565,9 @@ var require_channelAdapter = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.js
+// node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.js
 var require_RealtimePostgresFilterBuilder = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.js"(exports) {
+  "node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.postgresChangesFilter = exports.RealtimePostgresFilterBuilder = void 0;
@@ -7689,9 +7689,9 @@ var require_RealtimePostgresFilterBuilder = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.js
+// node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.js
 var require_RealtimeChannel = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.js"(exports) {
+  "node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.REALTIME_CHANNEL_STATES = exports.REALTIME_SUBSCRIBE_STATES = exports.REALTIME_LISTEN_TYPES = exports.REALTIME_POSTGRES_CHANGES_LISTEN_EVENT = exports.postgresChangesFilter = exports.RealtimePostgresFilterBuilder = void 0;
@@ -8443,9 +8443,9 @@ var require_RealtimeChannel = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.js
+// node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.js
 var require_socketAdapter = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.js"(exports) {
+  "node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var phoenix_1 = require_phoenix_cjs();
@@ -8561,9 +8561,9 @@ var require_socketAdapter = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+// node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
 var require_RealtimeClient = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js"(exports) {
+  "node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var tslib_1 = (init_tslib_es6(), __toCommonJS(tslib_es6_exports));
@@ -9229,9 +9229,9 @@ var require_RealtimeClient = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/index.js
+// node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/index.js
 var require_main2 = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/index.js"(exports) {
+  "node_modules/.pnpm/@supabase+realtime-js@2.112.3/node_modules/@supabase/realtime-js/dist/main/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.WebSocketFactory = exports.REALTIME_CHANNEL_STATES = exports.REALTIME_SUBSCRIBE_STATES = exports.REALTIME_PRESENCE_LISTEN_EVENTS = exports.REALTIME_POSTGRES_CHANGES_LISTEN_EVENT = exports.REALTIME_LISTEN_TYPES = exports.postgresChangesFilter = exports.RealtimePostgresFilterBuilder = exports.RealtimeClient = exports.RealtimeChannel = exports.RealtimePresence = void 0;
@@ -9268,7 +9268,7 @@ var require_main2 = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/iceberg-js@0.8.1/node_modules/iceberg-js/dist/index.mjs
+// node_modules/.pnpm/iceberg-js@0.8.1/node_modules/iceberg-js/dist/index.mjs
 function buildUrl(baseUrl, path, query) {
   const url = new URL(path, baseUrl);
   if (query) {
@@ -9344,7 +9344,7 @@ function namespaceToPath2(namespace) {
 }
 var IcebergError, NamespaceOperations, TableOperations, IcebergRestCatalog;
 var init_dist2 = __esm({
-  "node_modules/.pnpm-clean/iceberg-js@0.8.1/node_modules/iceberg-js/dist/index.mjs"() {
+  "node_modules/.pnpm/iceberg-js@0.8.1/node_modules/iceberg-js/dist/index.mjs"() {
     IcebergError = class extends Error {
       constructor(message, opts) {
         super(message);
@@ -9806,7 +9806,7 @@ var init_dist2 = __esm({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+storage-js@2.112.3/node_modules/@supabase/storage-js/dist/index.mjs
+// node_modules/.pnpm/@supabase+storage-js@2.112.3/node_modules/@supabase/storage-js/dist/index.mjs
 function _typeof2(o) {
   "@babel/helpers - typeof";
   return _typeof2 = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o$1) {
@@ -9908,7 +9908,7 @@ function createFetchApi(namespace = "storage") {
 }
 var StorageError, StorageApiError, StorageUnknownError, resolveFetch, isPlainObject, recursiveToCamel, isValidBucketName, encodeStoragePath, _getErrorMessage, handleError, _getRequestParams, defaultApi, get, post, put, head, remove, vectorsApi, BaseApiClient, _Symbol$toStringTag$1, StreamDownloadBuilder, _Symbol$toStringTag, BlobDownloadBuilder, DEFAULT_SEARCH_OPTIONS, DEFAULT_FILE_OPTIONS, StorageFileApi, version, DEFAULT_HEADERS, StorageBucketApi, StorageAnalyticsClient, VectorIndexApi, VectorDataApi, VectorBucketApi, StorageVectorsClient, VectorBucketScope, VectorIndexScope, StorageClient;
 var init_dist3 = __esm({
-  "node_modules/.pnpm-clean/@supabase+storage-js@2.112.3/node_modules/@supabase/storage-js/dist/index.mjs"() {
+  "node_modules/.pnpm/@supabase+storage-js@2.112.3/node_modules/@supabase/storage-js/dist/index.mjs"() {
     init_dist2();
     StorageError = class extends Error {
       constructor(message, namespace = "storage", status, statusCode) {
@@ -12603,9 +12603,9 @@ var init_dist3 = __esm({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/version.js
+// node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/version.js
 var require_version2 = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/version.js"(exports) {
+  "node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/version.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.version = void 0;
@@ -12613,9 +12613,9 @@ var require_version2 = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/constants.js
+// node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/constants.js
 var require_constants2 = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/constants.js"(exports) {
+  "node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/constants.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.JWKS_TTL = exports.PKCE_MAX_CONCURRENT_FLOWS = exports.PKCE_FLOW_ID_PARAM = exports.BASE64URL_REGEX = exports.API_VERSIONS = exports.API_VERSION_HEADER_NAME = exports.NETWORK_FAILURE = exports.DEFAULT_HEADERS = exports.AUDIENCE = exports.STORAGE_KEY = exports.GOTRUE_URL = exports.REFRESH_FAILURE_COOLDOWN_MS = exports.EXPIRY_MARGIN_MS = exports.AUTO_REFRESH_TICK_THRESHOLD = exports.AUTO_REFRESH_TICK_DURATION_MS = void 0;
@@ -12647,9 +12647,9 @@ var require_constants2 = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/errors.js
+// node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/errors.js
 var require_errors = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/errors.js"(exports) {
+  "node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/errors.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.AuthInvalidJwtError = exports.AuthWeakPasswordError = exports.AuthRefreshDiscardedError = exports.AuthRetryableFetchError = exports.AuthPKCECodeVerifierMissingError = exports.AuthPKCEGrantCodeExchangeError = exports.AuthImplicitGrantRedirectError = exports.AuthInvalidCredentialsError = exports.AuthInvalidTokenResponseError = exports.AuthSessionMissingError = exports.CustomAuthError = exports.AuthUnknownError = exports.AuthApiError = exports.AuthError = void 0;
@@ -12805,9 +12805,9 @@ var require_errors = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/base64url.js
+// node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/base64url.js
 var require_base64url = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/base64url.js"(exports) {
+  "node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/base64url.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.byteToBase64URL = byteToBase64URL;
@@ -12995,9 +12995,9 @@ var require_base64url = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/helpers.js
+// node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/helpers.js
 var require_helpers = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/helpers.js"(exports) {
+  "node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/helpers.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.pkceVerifierSlotKey = exports.Deferred = exports.removeItemAsync = exports.getItemAsync = exports.setItemAsync = exports.looksLikeFetchResponse = exports.resolveFetch = exports.supportsLocalStorage = exports.isBrowser = void 0;
@@ -13411,9 +13411,9 @@ var require_helpers = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/fetch.js
+// node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/fetch.js
 var require_fetch = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/fetch.js"(exports) {
+  "node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/fetch.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.handleError = handleError2;
@@ -13598,9 +13598,9 @@ var require_fetch = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/types.js
+// node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/types.js
 var require_types2 = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/types.js"(exports) {
+  "node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/types.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SIGN_OUT_SCOPES = void 0;
@@ -13608,9 +13608,9 @@ var require_types2 = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.js
+// node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.js
 var require_GoTrueAdminApi = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.js"(exports) {
+  "node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var tslib_1 = (init_tslib_es6(), __toCommonJS(tslib_es6_exports));
@@ -14694,9 +14694,9 @@ var require_GoTrueAdminApi = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/local-storage.js
+// node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/local-storage.js
 var require_local_storage = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/local-storage.js"(exports) {
+  "node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/local-storage.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.memoryLocalStorageAdapter = memoryLocalStorageAdapter;
@@ -14716,9 +14716,9 @@ var require_local_storage = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/locks.js
+// node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/locks.js
 var require_locks = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/locks.js"(exports) {
+  "node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/locks.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ProcessLockAcquireTimeoutError = exports.NavigatorLockAcquireTimeoutError = exports.LockAcquireTimeoutError = exports.internals = void 0;
@@ -14894,9 +14894,9 @@ var require_locks = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/polyfills.js
+// node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/polyfills.js
 var require_polyfills = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/polyfills.js"(exports) {
+  "node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/polyfills.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.polyfillGlobalThis = polyfillGlobalThis;
@@ -14921,9 +14921,9 @@ var require_polyfills = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.js
+// node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.js
 var require_ethereum = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.js"(exports) {
+  "node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getAddress = getAddress;
@@ -14999,9 +14999,9 @@ ${suffix}`;
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.js
+// node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.js
 var require_webauthn_errors = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.js"(exports) {
+  "node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.WebAuthnUnknownError = exports.WebAuthnError = void 0;
@@ -15190,9 +15190,9 @@ var require_webauthn_errors = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/webauthn.js
+// node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/webauthn.js
 var require_webauthn = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/webauthn.js"(exports) {
+  "node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/lib/webauthn.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.WebAuthnApi = exports.DEFAULT_REQUEST_OPTIONS = exports.DEFAULT_CREATION_OPTIONS = exports.webAuthnAbortService = exports.WebAuthnAbortService = exports.identifyAuthenticationError = exports.identifyRegistrationError = exports.isWebAuthnError = exports.WebAuthnError = void 0;
@@ -15749,9 +15749,9 @@ var require_webauthn = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/GoTrueClient.js
+// node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/GoTrueClient.js
 var require_GoTrueClient = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/GoTrueClient.js"(exports) {
+  "node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/GoTrueClient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var tslib_1 = (init_tslib_es6(), __toCommonJS(tslib_es6_exports));
@@ -20958,9 +20958,9 @@ var require_GoTrueClient = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/AuthAdminApi.js
+// node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/AuthAdminApi.js
 var require_AuthAdminApi = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/AuthAdminApi.js"(exports) {
+  "node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/AuthAdminApi.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var tslib_1 = (init_tslib_es6(), __toCommonJS(tslib_es6_exports));
@@ -20970,9 +20970,9 @@ var require_AuthAdminApi = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/AuthClient.js
+// node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/AuthClient.js
 var require_AuthClient = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/AuthClient.js"(exports) {
+  "node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/AuthClient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var tslib_1 = (init_tslib_es6(), __toCommonJS(tslib_es6_exports));
@@ -20982,9 +20982,9 @@ var require_AuthClient = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/index.js
+// node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/index.js
 var require_main3 = __commonJS({
-  "node_modules/.pnpm-clean/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/index.js"(exports) {
+  "node_modules/.pnpm/@supabase+auth-js@2.112.3/node_modules/@supabase/auth-js/dist/main/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.processLock = exports.lockInternals = exports.NavigatorLockAcquireTimeoutError = exports.navigatorLock = exports.AuthClient = exports.AuthAdminApi = exports.GoTrueClient = exports.GoTrueAdminApi = void 0;
@@ -21015,7 +21015,7 @@ var require_main3 = __commonJS({
   }
 });
 
-// node_modules/.pnpm-clean/@supabase+supabase-js@2.112.3/node_modules/@supabase/supabase-js/dist/index.mjs
+// node_modules/.pnpm/@supabase+supabase-js@2.112.3/node_modules/@supabase/supabase-js/dist/index.mjs
 var dist_exports = {};
 __export(dist_exports, {
   FunctionRegion: () => import_functions_js.FunctionRegion,
@@ -21215,7 +21215,7 @@ function shouldShowDeprecationWarning() {
 }
 var import_functions_js, import_realtime_js, import_auth_js, version2, JS_ENV, JS_RUNTIME_VERSION, _Deno$version, _process$version, _runtimeMeta, DEFAULT_HEADERS2, DEFAULT_GLOBAL_OPTIONS, DEFAULT_DB_OPTIONS, DEFAULT_AUTH_OPTIONS, DEFAULT_REALTIME_OPTIONS, DEFAULT_TRACE_PROPAGATION_OPTIONS, resolveFetch2, resolveHeadersConstructor, isNewApiKey, TEMP_KEY_PREFIX, warnedKeySubtypes, checkApiKeyFormat, fetchWithAuth, warnedMissingTracingRuntime, warnedNonW3CPropagator, SupabaseAuthClient, SupabaseClient, createClient;
 var init_dist4 = __esm({
-  "node_modules/.pnpm-clean/@supabase+supabase-js@2.112.3/node_modules/@supabase/supabase-js/dist/index.mjs"() {
+  "node_modules/.pnpm/@supabase+supabase-js@2.112.3/node_modules/@supabase/supabase-js/dist/index.mjs"() {
     init_tracingRegistry();
     import_functions_js = __toESM(require_main(), 1);
     init_dist();
@@ -26361,9 +26361,14 @@ var init_service2 = __esm({
 // src/server/commercial/health.ts
 var health_exports = {};
 __export(health_exports, {
+  CONNECTION_BAD_STATUS: () => CONNECTION_BAD_STATUS,
+  CONNECTION_STALE_HOURS: () => CONNECTION_STALE_HOURS,
+  DISCOVERY_STALE_HOURS: () => DISCOVERY_STALE_HOURS,
   FAILURE_STREAK: () => FAILURE_STREAK,
   HEALTH_VERTICALS: () => HEALTH_VERTICALS,
   STALL_HOURS: () => STALL_HOURS,
+  assessConnection: () => assessConnection,
+  assessDiscovery: () => assessDiscovery,
   assessVertical: () => assessVertical,
   collectionHealth: () => collectionHealth,
   safeErrorCode: () => safeErrorCode
@@ -26377,12 +26382,31 @@ function assessVertical(vertical, rows, now) {
   }
   const productive = runs.find((r) => Number(r.collected) > 0) ?? null;
   const lastProductiveAt = productive?.started_at ?? null;
-  const hoursSinceProductive = lastProductiveAt === null ? null : Math.max(0, Math.floor((now - Date.parse(lastProductiveAt)) / 36e5));
+  const hoursSinceProductive = hoursSince(lastProductiveAt, now);
   const base = { vertical: vertical.key, label: vertical.label, lastRunAt: runs[0]?.started_at ?? null, lastProductiveAt, hoursSinceProductive, consecutiveFailures };
   if (!runs.length) return { ...base, state: "NO_RUNS" };
   if (consecutiveFailures >= FAILURE_STREAK) return { ...base, state: "FAILING" };
   if (hoursSinceProductive === null || hoursSinceProductive >= STALL_HOURS) return { ...base, state: "STALLED" };
   return { ...base, state: "OK" };
+}
+function assessDiscovery(vertical, lastDiscoveryAt2, now) {
+  const hoursSinceDiscovery = hoursSince(lastDiscoveryAt2, now);
+  const state = hoursSinceDiscovery === null || hoursSinceDiscovery >= DISCOVERY_STALE_HOURS ? "STALE" : "OK";
+  return { vertical: vertical.key, label: vertical.label, state, lastDiscoveryAt: lastDiscoveryAt2, hoursSinceDiscovery };
+}
+function assessConnection(row, now) {
+  if (!row) return { state: "PROBLEM", reason: "NO_CONNECTION", status: null, reauthRequired: true, consecutiveFailures: 0, lastErrorCode: null, lastSuccessAt: null, hoursSinceSuccess: null };
+  const hoursSinceSuccess = hoursSince(row.last_success_at, now);
+  const base = { status: row.status, reauthRequired: row.reauth_required === true, consecutiveFailures: Number(row.consecutive_failures ?? 0), lastErrorCode: row.last_error_code ?? null, lastSuccessAt: row.last_success_at ?? null, hoursSinceSuccess };
+  if (base.reauthRequired) return { ...base, state: "PROBLEM", reason: "REAUTH_REQUIRED" };
+  if (CONNECTION_BAD_STATUS.includes(row.status)) return { ...base, state: "PROBLEM", reason: "BAD_STATUS" };
+  if (hoursSinceSuccess === null || hoursSinceSuccess >= CONNECTION_STALE_HOURS) return { ...base, state: "PROBLEM", reason: "NO_RECENT_SUCCESS" };
+  return { ...base, state: "OK", reason: null };
+}
+async function lastDiscoveryAt(client, vertical) {
+  const result = vertical.kinded ? await client.from(vertical.table).select("started_at,status").eq("kind", "DISCOVERY").eq("status", "COMPLETED").order("started_at", { ascending: false }).limit(1) : await client.from("scan_runs").select("started_at,status").eq("vertical_key", vertical.key).eq("job_type", "COMMERCE_DISCOVERY").in("status", ["COMPLETED", "PARTIAL"]).order("started_at", { ascending: false }).limit(1);
+  if (result.error) throw new Error("HEALTH_STORAGE_UNAVAILABLE");
+  return (result.data ?? [])[0]?.started_at ?? null;
 }
 async function collectionHealth(client, now = Date.now()) {
   const flags = await client.from("commercial_verticals").select("vertical_key,enabled,executor_ready");
@@ -26392,30 +26416,163 @@ async function collectionHealth(client, now = Date.now()) {
     return row?.enabled === true && (v.key === "AUTOMOTIVE" || row?.executor_ready === true);
   });
   const verticals = [];
+  const discovery = [];
   for (const vertical of active) {
-    const result = await client.from(vertical.table).select("started_at,status,collected").order("started_at", { ascending: false }).limit(RUN_WINDOW);
+    const base = client.from(vertical.table).select("started_at,status,collected");
+    const scoped = vertical.kinded ? base.eq("kind", "HISTORY") : base;
+    const result = await scoped.order("started_at", { ascending: false }).limit(RUN_WINDOW);
     if (result.error) throw new Error("HEALTH_STORAGE_UNAVAILABLE");
     verticals.push(assessVertical(vertical, result.data ?? [], now));
+    discovery.push(assessDiscovery(vertical, await lastDiscoveryAt(client, vertical), now));
   }
-  const attention = verticals.filter((v) => v.state !== "OK");
-  return { checkedAt: new Date(now).toISOString(), stallHours: STALL_HOURS, healthy: attention.length === 0, verticals };
+  const connectionResult = await client.rpc("operational_meli_connection_status");
+  if (connectionResult.error) throw new Error("HEALTH_STORAGE_UNAVAILABLE");
+  const raw = connectionResult.data;
+  const connection = assessConnection((Array.isArray(raw) ? raw[0] : raw) ?? null, now);
+  const healthy = verticals.every((v) => v.state === "OK") && discovery.every((d) => d.state === "OK") && connection.state === "OK";
+  return { checkedAt: new Date(now).toISOString(), stallHours: STALL_HOURS, discoveryStaleHours: DISCOVERY_STALE_HOURS, healthy, verticals, discovery, connection };
 }
 function safeErrorCode(error) {
   const message = error instanceof Error ? error.message : "";
   return /^[A-Z][A-Z0-9_]{2,63}$/.test(message) ? message : "UNCLASSIFIED";
 }
-var HEALTH_VERTICALS, STALL_HOURS, FAILURE_STREAK, RUN_WINDOW;
+var HEALTH_VERTICALS, STALL_HOURS, FAILURE_STREAK, DISCOVERY_STALE_HOURS, CONNECTION_STALE_HOURS, CONNECTION_BAD_STATUS, RUN_WINDOW, hoursSince;
 var init_health = __esm({
   "src/server/commercial/health.ts"() {
     "use strict";
     HEALTH_VERTICALS = [
-      { key: "AUTOMOTIVE", label: "Automotivo", table: "commercial_collection_runs" },
-      { key: "HOME", label: "Casa", table: "home_runs" },
-      { key: "APPLIANCES", label: "Eletrodomésticos", table: "appliances_runs" }
+      { key: "AUTOMOTIVE", label: "Automotivo", table: "commercial_collection_runs", kinded: false },
+      { key: "HOME", label: "Casa", table: "home_runs", kinded: true },
+      { key: "APPLIANCES", label: "Eletrodomésticos", table: "appliances_runs", kinded: true }
     ];
     STALL_HOURS = 6;
     FAILURE_STREAK = 3;
+    DISCOVERY_STALE_HOURS = 30;
+    CONNECTION_STALE_HOURS = 8;
+    CONNECTION_BAD_STATUS = ["REAUTH_REQUIRED", "REFRESH_OUTCOME_UNKNOWN", "DISABLED"];
     RUN_WINDOW = 60;
+    hoursSince = (at, now) => at === null ? null : Math.max(0, Math.floor((now - Date.parse(at)) / 36e5));
+  }
+});
+
+// src/server/commercial/alerts.ts
+var alerts_exports = {};
+__export(alerts_exports, {
+  DASHBOARD_URL: () => DASHBOARD_URL,
+  RECONNECT_URL: () => RECONNECT_URL,
+  REMINDER_HOURS: () => REMINDER_HOURS,
+  TEST_MESSAGE: () => TEST_MESSAGE,
+  composeMessage: () => composeMessage,
+  currentProblems: () => currentProblems,
+  evaluateOperationalAlerts: () => evaluateOperationalAlerts,
+  planNotifications: () => planNotifications,
+  sendOperationalAlertTest: () => sendOperationalAlertTest,
+  sendTelegram: () => sendTelegram
+});
+function collectionTitle(v) {
+  if (v.state === "NO_RUNS") return "Coleta do " + v.label + " sem execuções registradas";
+  if (v.state === "FAILING") return "Coleta do " + v.label + " com " + v.consecutiveFailures + " falhas seguidas";
+  return v.hoursSinceProductive === null ? "Coleta do " + v.label + " parada" : "Coleta do " + v.label + " parada há " + v.hoursSinceProductive + "h";
+}
+function currentProblems(health) {
+  const problems = [];
+  if (health.connection.state !== "OK") problems.push({
+    key: "MELI_AUTH",
+    title: health.connection.reason === "NO_RECENT_SUCCESS" && health.connection.hoursSinceSuccess !== null ? "Conexão com o Mercado Livre sem sucesso há " + health.connection.hoursSinceSuccess + "h" : "Conexão com o Mercado Livre perdida"
+  });
+  for (const v of health.verticals) if (v.state !== "OK") problems.push({ key: "COLLECTION:" + v.vertical, title: collectionTitle(v) });
+  for (const d of health.discovery) if (d.state !== "OK") problems.push({
+    key: "DISCOVERY:" + d.vertical,
+    title: d.hoursSinceDiscovery === null ? "Descoberta do " + d.label + " sem registro" : "Descoberta do " + d.label + " sem rodar há " + d.hoursSinceDiscovery + "h"
+  });
+  return problems;
+}
+function planNotifications(problems, states, now) {
+  const byKey = new Map(states.map((s) => [s.alert_key, s]));
+  const plan = { fresh: [], reminders: [], resolved: [], silent: [] };
+  for (const problem of problems) {
+    const state = byKey.get(problem.key) ?? null;
+    if (!state || state.active !== true) {
+      plan.fresh.push({ problem, state });
+      continue;
+    }
+    const since = state.last_notified_at === null ? Number.POSITIVE_INFINITY : now - Date.parse(state.last_notified_at);
+    if (since >= REMINDER_HOURS * 36e5) plan.reminders.push({ problem, state });
+    else plan.silent.push({ problem, state });
+  }
+  for (const state of states) if (state.active === true && !problems.some((p) => p.key === state.alert_key)) plan.resolved.push(state);
+  return plan;
+}
+function composeMessage(plan) {
+  if (!plan.fresh.length && !plan.reminders.length && !plan.resolved.length) return null;
+  const lines = [];
+  for (const p of plan.fresh) lines.push("🔴 " + p.problem.title);
+  for (const p of plan.reminders) lines.push("🟠 " + p.problem.title + " (continua)");
+  for (const s of plan.resolved) lines.push("✅ " + (s.detail ?? s.alert_key) + " — voltou ao normal");
+  lines.push("");
+  lines.push("Dashboard: " + DASHBOARD_URL);
+  if ([...plan.fresh, ...plan.reminders].some((p) => p.problem.key === "MELI_AUTH")) lines.push("Reconectar Mercado Livre: " + RECONNECT_URL);
+  return lines.join("\n");
+}
+async function sendTelegram(text3) {
+  const token2 = process.env.TELEGRAM_BOT_TOKEN, chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token2 || !chatId) return { ok: false, reason: "TELEGRAM_NOT_CONFIGURED" };
+  try {
+    const response = await fetch("https://api.telegram.org/bot" + token2 + "/sendMessage", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text: text3, disable_web_page_preview: true }),
+      signal: AbortSignal.timeout(SEND_TIMEOUT)
+    });
+    if (!response.ok) {
+      console.error(JSON.stringify({ event: "TELEGRAM_SEND_FAILED", status: response.status }));
+      return { ok: false, reason: "TELEGRAM_SEND_FAILED" };
+    }
+    return { ok: true };
+  } catch {
+    console.error(JSON.stringify({ event: "TELEGRAM_SEND_FAILED", status: "TIMEOUT" }));
+    return { ok: false, reason: "TELEGRAM_SEND_FAILED" };
+  }
+}
+async function persist(client, plan, now) {
+  const stamp = new Date(now).toISOString();
+  const rows = [
+    ...plan.fresh.map((p) => ({ alert_key: p.problem.key, active: true, first_detected_at: p.state?.first_detected_at ?? stamp, last_notified_at: stamp, resolved_at: null, detail: p.problem.title })),
+    ...plan.reminders.map((p) => ({ alert_key: p.problem.key, active: true, first_detected_at: p.state?.first_detected_at ?? stamp, last_notified_at: stamp, resolved_at: null, detail: p.problem.title })),
+    ...plan.resolved.map((s) => ({ alert_key: s.alert_key, active: false, first_detected_at: s.first_detected_at, last_notified_at: s.last_notified_at, resolved_at: stamp, detail: s.detail }))
+  ];
+  if (!rows.length) return;
+  const result = await client.from("operational_alert_state").upsert(rows);
+  if (result.error) throw new Error("ALERT_STATE_UNAVAILABLE");
+}
+async function evaluateOperationalAlerts(client, now = Date.now()) {
+  const health = await collectionHealth(client, now);
+  const problems = currentProblems(health);
+  const stored = await client.from("operational_alert_state").select("alert_key,active,first_detected_at,last_notified_at,resolved_at,detail");
+  if (stored.error) throw new Error("ALERT_STATE_UNAVAILABLE");
+  const plan = planNotifications(problems, stored.data ?? [], now);
+  const message = composeMessage(plan);
+  const summary = { checkedAt: health.checkedAt, problems: problems.length, healthy: health.healthy };
+  if (message === null) return { ...summary, notified: false, reason: "NO_CHANGES" };
+  const sent = await sendTelegram(message);
+  if (!sent.ok) return { ...summary, notified: false, reason: sent.reason };
+  await persist(client, plan, now);
+  return { ...summary, notified: true, sent: plan.fresh.length + plan.reminders.length + plan.resolved.length };
+}
+async function sendOperationalAlertTest() {
+  const sent = await sendTelegram(TEST_MESSAGE);
+  return sent.ok ? { ok: true } : { ok: false, errorCode: sent.reason ?? "TELEGRAM_SEND_FAILED" };
+}
+var REMINDER_HOURS, DASHBOARD_URL, RECONNECT_URL, TEST_MESSAGE, SEND_TIMEOUT;
+var init_alerts = __esm({
+  "src/server/commercial/alerts.ts"() {
+    "use strict";
+    init_health();
+    REMINDER_HOURS = 6;
+    DASHBOARD_URL = "https://autoachado-ai.vercel.app/";
+    RECONNECT_URL = "https://autoachado-ai.vercel.app/auth/start";
+    TEST_MESSAGE = "✅ Teste: alertas do Cyber Ofertas funcionando.";
+    SEND_TIMEOUT = 1e4;
   }
 });
 
@@ -27077,7 +27234,7 @@ function dashboardPage(props) {
 <div class="card">Oportunidades no Banco<strong id="count">—</strong><small>Registros em public.highlight_snapshots</small></div>
 <div class="card">Última Sincronização<strong id="synced">—</strong><small>Atualização automática a cada 30 segundos</small></div></section>
 <section class="panel"><h2>Matriz de Expansão (11 Categorias)</h2><ol class="matrix">${verticals.map(([name, id], i) => `<li><button id="vertical-${i}" class="vertical-button" aria-controls="vertical-products" aria-pressed="${i === 0}">${i + 1}. ${name}<span>${id} · ${i === 0 ? "ATIVO (155 Cats)" : i === 1 ? "PILOTO (55 Cats)" : i === 2 ? "PILOTO (42 Cats)" : i === 3 ? "EM VALIDAÇÃO · 35 roupas / 35 calçados / 30 acessórios" : "PLANEJADO"}</span></button></li>`).join("")}</ol></section>
-<section class="panel" id="vertical-products"><h2 id="vertical-title" tabindex="-1">Automotivo — produtos e ofertas</h2><p>Melhores oportunidades primeiro. Monitorados reúne a carteira da categoria; Prontos para divulgar mostra ofertas com histórico e demanda confirmados, ainda não divulgadas.</p><div class="controls filters"><button id="rank-ALL" aria-pressed="true">Monitorados</button><button id="rank-APPROVED" aria-pressed="false">🔥 Prontos para divulgar</button><button id="rank-SENT" aria-pressed="false">✅ Divulgados</button><button id="refresh">🔄 Atualizar</button></div><p id="message" role="status" aria-live="polite"></p><p id="commercial-status" role="status" aria-live="polite"></p><p id="copy-status" role="status" aria-live="polite"></p><textarea id="manual-copy" hidden readonly aria-label="Texto para copiar manualmente"></textarea><p>Para copiar a divulgação, cole no produto o link criado pelo gerador oficial de afiliados.</p><p id="commercial-summary"></p><div id="commercial-results" class="results"></div><button id="commercial-more" hidden>Mostrar mais desta seleção</button></section>${whatsappPanel}<details id="robot-admin" class="panel"><summary>Administração do robô</summary><p>Ferramentas técnicas de coleta e diagnóstico — Automotivo.</p><div class="controls"><button id="sweep">🚀 Executar varredura</button><button id="smoke">⚡ Teste de coleta (2 categorias)</button><button id="collect-evidence">📊 Coletar evidências agora</button></div><p id="admin-summary"></p><details id="raw-products" class="panel"><summary>Explorar todos os registros minerados (sem aprovação comercial)</summary><section><h2>Produtos encontrados</h2><p>Prévia dos destaques minerados: foto, descrição e preço informado pelo Mercado Livre. Preço e disponibilidade podem mudar; os destaques ainda não representam descontos validados.</p><h2>Central de Cupons Ativos</h2><div id="coupons" class="coupon-bar" aria-live="polite">Consultando campanhas verificadas…</div><p>Cupons sugeridos conforme categoria e valor. Confira as restrições e a aplicação no checkout. Para divulgar com comissão, cole em cada produto o link criado no gerador oficial de afiliados do Mercado Livre. Os links ficam salvos somente neste navegador.</p><div class="filters" aria-label="Filtrar produtos"><button id="filter-all" aria-pressed="true">Todas as ofertas completas</button><button id="filter-discount" aria-pressed="false">🔥 Desconto anunciado ≥ 5%</button><button id="filter-tier" aria-pressed="false">⚡ Prioridade Tier A</button><button id="filter-coupon" aria-pressed="false">🏷️ Cupom sugerido</button><button id="filter-incomplete" aria-pressed="false">Registros incompletos</button></div><p id="results-summary"></p><div id="snapshots" class="results" aria-label="Produtos minerados"></div><button id="more" hidden>Mostrar mais produtos</button></section></details></details></main>
+<section class="panel" id="vertical-products"><h2 id="vertical-title" tabindex="-1">Automotivo — produtos e ofertas</h2><p>Melhores oportunidades primeiro. Monitorados reúne a carteira da categoria; Prontos para divulgar mostra ofertas com histórico e demanda confirmados, ainda não divulgadas.</p><div class="controls filters"><button id="rank-ALL" aria-pressed="true">Monitorados</button><button id="rank-APPROVED" aria-pressed="false">🔥 Prontos para divulgar</button><button id="rank-SENT" aria-pressed="false">✅ Divulgados</button><button id="refresh">🔄 Atualizar</button><button id="alert-test">🔔 Testar alerta</button></div><p id="message" role="status" aria-live="polite"></p><p id="commercial-status" role="status" aria-live="polite"></p><p id="copy-status" role="status" aria-live="polite"></p><textarea id="manual-copy" hidden readonly aria-label="Texto para copiar manualmente"></textarea><p>Para copiar a divulgação, cole no produto o link criado pelo gerador oficial de afiliados.</p><p id="commercial-summary"></p><div id="commercial-results" class="results"></div><button id="commercial-more" hidden>Mostrar mais desta seleção</button></section>${whatsappPanel}<details id="robot-admin" class="panel"><summary>Administração do robô</summary><p>Ferramentas técnicas de coleta e diagnóstico — Automotivo.</p><div class="controls"><button id="sweep">🚀 Executar varredura</button><button id="smoke">⚡ Teste de coleta (2 categorias)</button><button id="collect-evidence">📊 Coletar evidências agora</button></div><p id="admin-summary"></p><details id="raw-products" class="panel"><summary>Explorar todos os registros minerados (sem aprovação comercial)</summary><section><h2>Produtos encontrados</h2><p>Prévia dos destaques minerados: foto, descrição e preço informado pelo Mercado Livre. Preço e disponibilidade podem mudar; os destaques ainda não representam descontos validados.</p><h2>Central de Cupons Ativos</h2><div id="coupons" class="coupon-bar" aria-live="polite">Consultando campanhas verificadas…</div><p>Cupons sugeridos conforme categoria e valor. Confira as restrições e a aplicação no checkout. Para divulgar com comissão, cole em cada produto o link criado no gerador oficial de afiliados do Mercado Livre. Os links ficam salvos somente neste navegador.</p><div class="filters" aria-label="Filtrar produtos"><button id="filter-all" aria-pressed="true">Todas as ofertas completas</button><button id="filter-discount" aria-pressed="false">🔥 Desconto anunciado ≥ 5%</button><button id="filter-tier" aria-pressed="false">⚡ Prioridade Tier A</button><button id="filter-coupon" aria-pressed="false">🏷️ Cupom sugerido</button><button id="filter-incomplete" aria-pressed="false">Registros incompletos</button></div><p id="results-summary"></p><div id="snapshots" class="results" aria-label="Produtos minerados"></div><button id="more" hidden>Mostrar mais produtos</button></section></details></details></main>
 <script>
 const el = id => document.getElementById(id);
 async function loadHealth() {
@@ -27086,12 +27243,15 @@ async function loadHealth() {
     const response=await fetch('/api/commercial/health',{cache:'no-store',credentials:'same-origin'});
     if(!response.ok){box.hidden=true;return;}
     const health=await response.json();
-    const problems=(health.verticals||[]).filter(v=>v.state!=='OK');
+    const problems=(health.verticals||[]).filter(v=>v.state!=='OK').map(v=>v.label+': '+(v.hoursSinceProductive===null?'sem coleta registrada recentemente':'sem coletar há '+v.hoursSinceProductive+'h')+(v.consecutiveFailures>0?' ('+v.consecutiveFailures+' falhas seguidas)':''));
+    for(const d of (health.discovery||[])) if(d.state!=='OK') problems.push('Descoberta do '+d.label+(d.hoursSinceDiscovery===null?' sem registro':' sem rodar há '+d.hoursSinceDiscovery+'h'));
+    const connection=health.connection;
+    if(connection&&connection.state!=='OK') problems.push(connection.reason==='NO_RECENT_SUCCESS'&&connection.hoursSinceSuccess!==null?'Conexão com o Mercado Livre sem sucesso há '+connection.hoursSinceSuccess+'h':'Conexão com o Mercado Livre perdida');
     if(!problems.length){box.hidden=true;box.replaceChildren();return;}
     const title=document.createElement('strong');
     title.textContent='⚠ Coleta de preços parada';
     const detail=document.createElement('p');
-    detail.textContent=problems.map(v=>v.label+': '+(v.hoursSinceProductive===null?'sem coleta registrada recentemente':'sem coletar há '+v.hoursSinceProductive+'h')+(v.consecutiveFailures>0?' ('+v.consecutiveFailures+' falhas seguidas)':'')).join(' · ');
+    detail.textContent=problems.join(' · ');
     const action=document.createElement('p');
     const link=document.createElement('a'); link.href='/auth/start'; link.textContent='Entrar com o Mercado Livre';
     action.append('Causa mais comum: autorização do Mercado Livre expirada. ',link,' para reativar. Dias sem coleta atrasam a comprovação de descontos.');
@@ -27100,6 +27260,16 @@ async function loadHealth() {
 }
 loadHealth();
 setInterval(loadHealth,300000);
+const alertTester=el('alert-test');
+if(alertTester) alertTester.addEventListener('click',async()=>{
+  alertTester.disabled=true; el('message').textContent='Enviando alerta de teste…';
+  try {
+    const response=await fetch('/api/commercial/alerts/test',{method:'POST',cache:'no-store',credentials:'same-origin'});
+    const outcome=await response.json();
+    el('message').textContent=outcome&&outcome.ok?'Alerta de teste enviado ao Telegram':'Falha ao enviar: '+((outcome&&outcome.errorCode)||'TELEGRAM_SEND_FAILED');
+  } catch { el('message').textContent='Falha ao enviar: TELEGRAM_SEND_FAILED'; }
+  finally { alertTester.disabled=false; }
+});
 let busy = false;
 const verticalNames = ["Automotivo","Casa, utilidades e organização","Eletrodomésticos","Moda Feminina","Beleza e cuidado pessoal","Eletrônicos, celulares e acessórios","Infantil — bebês, brinquedos e moda infantil","Games","Esportes e fitness","Pet","Moda Masculina"];
 let selectedVertical = 0;
@@ -27760,16 +27930,18 @@ async function handleRequest(request, response, overrides = {}) {
       const simulation = url.pathname === "/api/commercial/selection-simulation";
       const priority = url.pathname === "/api/commercial/priority";
       const revalidating = url.pathname === "/api/commercial/revalidate";
-      const cron = fashionPilot || appliancesRun || homeRun || homePilot || discovering || probing || preparation || simulation || priority || url.pathname === "/api/commercial/cron";
+      const alerts = url.pathname === "/api/commercial/alerts";
+      const alertsTest = url.pathname === "/api/commercial/alerts/test";
+      const cron = alerts || fashionPilot || appliancesRun || homeRun || homePilot || discovering || probing || preparation || simulation || priority || url.pathname === "/api/commercial/cron";
       const feedback = url.pathname === "/api/commercial/feedback";
       const publication = url.pathname === "/api/commercial/sent";
       const listing = url.pathname === "/api/commercial/opportunities";
       const health = url.pathname === "/api/commercial/health";
-      if (!collecting && !cron && !feedback && !publication && !listing && !revalidating && !health) {
+      if (!collecting && !cron && !feedback && !publication && !listing && !revalidating && !health && !alertsTest) {
         sendJson(response, 404, { errorCode: "NOT_FOUND" });
         return;
       }
-      if (method !== (fashionPilot || homePilot || collecting || feedback || publication || probing || preparation || simulation || revalidating ? "POST" : "GET")) {
+      if (method !== (alertsTest || fashionPilot || homePilot || collecting || feedback || publication || probing || preparation || simulation || revalidating ? "POST" : "GET")) {
         sendJson(response, 405, { errorCode: "METHOD_NOT_ALLOWED" });
         return;
       }
@@ -27786,7 +27958,7 @@ async function handleRequest(request, response, overrides = {}) {
           sendJson(response, 401, { errorCode: "AUTHORIZATION_REQUIRED" });
           return;
         }
-        if ((collecting || feedback || publication || revalidating) && request.headers.origin !== new URL(config.redirectUri).origin) {
+        if ((collecting || feedback || publication || revalidating || alertsTest) && request.headers.origin !== new URL(config.redirectUri).origin) {
           sendJson(response, 403, { errorCode: "ORIGIN_NOT_ALLOWED" });
           return;
         }
@@ -27805,6 +27977,17 @@ async function handleRequest(request, response, overrides = {}) {
       if (health) {
         const { collectionHealth: collectionHealth2 } = await Promise.resolve().then(() => (init_health(), health_exports));
         sendJson(response, 200, await collectionHealth2(client));
+        return;
+      }
+      if (alerts) {
+        const { evaluateOperationalAlerts: evaluateOperationalAlerts2 } = await Promise.resolve().then(() => (init_alerts(), alerts_exports));
+        sendJson(response, 200, await evaluateOperationalAlerts2(client));
+        return;
+      }
+      if (alertsTest) {
+        const { sendOperationalAlertTest: sendOperationalAlertTest2 } = await Promise.resolve().then(() => (init_alerts(), alerts_exports));
+        const outcome = await sendOperationalAlertTest2();
+        sendJson(response, outcome.ok ? 200 : 503, outcome);
         return;
       }
       if (homeRun) {

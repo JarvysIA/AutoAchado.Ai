@@ -10,8 +10,18 @@ vi.mock('../src/server/commercial/home-service.js',()=>({runHome:home.run,homeOp
 const tables=vi.hoisted(()=>({data:{} as Record<string,any[]>}));
 vi.mock('../src/server/discovery/operational.js',()=>({createOperationalDiscoveryAdapter:()=>({client:fakeClient(tables.data)})}));
 
-function fakeClient(data:Record<string,any[]>):any {
- return {from(table:string){const chain:any={select:()=>chain,order:()=>chain,limit:async()=>({data:data[table]??[],error:null}),then:(resolve:any)=>resolve({data:data[table]??[],error:null})};return chain;}};
+function fakeClient(data:Record<string,any[]>,connection:any=null):any {
+ const build=(table:string)=>{
+  let rows=[...(data[table]??[])];
+  const chain:any={select:()=>chain,
+   eq:(column:string,value:any)=>{rows=rows.filter(r=>r[column]===value);return chain;},
+   in:(column:string,values:any[])=>{rows=rows.filter(r=>values.includes(r[column]));return chain;},
+   order:(column:string,options:any)=>{rows=[...rows].sort((a,b)=>options?.ascending===false?Date.parse(b[column])-Date.parse(a[column]):Date.parse(a[column])-Date.parse(b[column]));return chain;},
+   limit:async(count:number)=>({data:rows.slice(0,count),error:null}),
+   then:(resolve:any)=>resolve({data:rows,error:null})};
+  return chain;
+ };
+ return {from:build,rpc:async()=>({data:connection?[connection]:[],error:null})};
 }
 const NOW=Date.parse('2026-09-18T15:00:00Z');
 const hoursAgo=(h:number)=>new Date(NOW-h*3600000).toISOString();
@@ -44,7 +54,7 @@ describe('collection health assessment',()=>{
   const result=await collectionHealth(fakeClient({
    commercial_verticals:[{vertical_key:'AUTOMOTIVE',enabled:true,executor_ready:true},{vertical_key:'HOME',enabled:true,executor_ready:true},{vertical_key:'APPLIANCES',enabled:true,executor_ready:false}],
    commercial_collection_runs:[{started_at:hoursAgo(1),status:'PARTIAL',collected:5}],
-   home_runs:[{started_at:hoursAgo(0),status:'FAILED',collected:0},{started_at:hoursAgo(1),status:'FAILED',collected:0},{started_at:hoursAgo(2),status:'FAILED',collected:0}],
+   home_runs:[{started_at:hoursAgo(0),kind:'HISTORY',status:'FAILED',collected:0},{started_at:hoursAgo(1),kind:'HISTORY',status:'FAILED',collected:0},{started_at:hoursAgo(2),kind:'HISTORY',status:'FAILED',collected:0}],
   }),NOW);
   expect(result.verticals.map(v=>v.vertical)).toEqual(['AUTOMOTIVE','HOME']);
   expect(result.healthy).toBe(false);
