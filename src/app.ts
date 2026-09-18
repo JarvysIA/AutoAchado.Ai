@@ -282,13 +282,15 @@ export async function handleRequest(
       const simulation=url.pathname === '/api/commercial/selection-simulation';
       const priority=url.pathname === '/api/commercial/priority';
       const revalidating=url.pathname === '/api/commercial/revalidate';
-      const cron=fashionPilot || appliancesRun || homeRun || homePilot || discovering || probing || preparation || simulation || priority || url.pathname === "/api/commercial/cron";
+      const alerts=url.pathname === '/api/commercial/alerts';
+      const alertsTest=url.pathname === '/api/commercial/alerts/test';
+      const cron=alerts || fashionPilot || appliancesRun || homeRun || homePilot || discovering || probing || preparation || simulation || priority || url.pathname === "/api/commercial/cron";
       const feedback=url.pathname === "/api/commercial/feedback";
       const publication=url.pathname === '/api/commercial/sent';
       const listing=url.pathname === "/api/commercial/opportunities";
       const health=url.pathname === '/api/commercial/health';
-      if(!collecting && !cron && !feedback && !publication && !listing && !revalidating && !health) { sendJson(response,404,{errorCode:"NOT_FOUND"}); return; }
-      if(method !== (fashionPilot || homePilot || collecting || feedback || publication || probing || preparation || simulation || revalidating ? "POST" : "GET")) {sendJson(response,405,{errorCode:"METHOD_NOT_ALLOWED"});return;}
+      if(!collecting && !cron && !feedback && !publication && !listing && !revalidating && !health && !alertsTest) { sendJson(response,404,{errorCode:"NOT_FOUND"}); return; }
+      if(method !== (alertsTest || fashionPilot || homePilot || collecting || feedback || publication || probing || preparation || simulation || revalidating ? "POST" : "GET")) {sendJson(response,405,{errorCode:"METHOD_NOT_ALLOWED"});return;}
       if(cron) {
         const secret=process.env.CRON_SECRET;
         if(!secret || request.headers.authorization !== "Bearer "+secret) {sendJson(response,401,{errorCode:"AUTHORIZATION_REQUIRED"});return;}
@@ -296,7 +298,7 @@ export async function handleRequest(
         const config=dependencies.loadAppConfig();
         const session=readAuthorizationSession(request.headers.cookie,config.sessionSecret);
         if(!session || session.userId!==296984475) {sendJson(response,401,{errorCode:"AUTHORIZATION_REQUIRED"});return;}
-        if((collecting || feedback || publication || revalidating) && request.headers.origin!==new URL(config.redirectUri).origin) {sendJson(response,403,{errorCode:"ORIGIN_NOT_ALLOWED"});return;}
+        if((collecting || feedback || publication || revalidating || alertsTest) && request.headers.origin!==new URL(config.redirectUri).origin) {sendJson(response,403,{errorCode:"ORIGIN_NOT_ALLOWED"});return;}
       }
       // Until scoped executors are activated, never silently treat another public as Automotive.
       if(!['AUTOMOTIVE','HOME','APPLIANCES'].includes(vertical) || (vertical!=='AUTOMOTIVE' && (discovering||probing||preparation||simulation||priority))) {
@@ -306,6 +308,8 @@ export async function handleRequest(
       const {createOperationalDiscoveryAdapter}=await import("./server/discovery/operational.js");
       const client=createOperationalDiscoveryAdapter().client;
       if(health) {const {collectionHealth}=await import('./server/commercial/health.js');sendJson(response,200,await collectionHealth(client));return;}
+      if(alerts) {const {evaluateOperationalAlerts}=await import('./server/commercial/alerts.js');sendJson(response,200,await evaluateOperationalAlerts(client));return;}
+      if(alertsTest) {const {sendOperationalAlertTest}=await import('./server/commercial/alerts.js');const outcome=await sendOperationalAlertTest();sendJson(response,outcome.ok?200:503,outcome);return;}
       if(homeRun) {const {runHome}=await import('./server/commercial/home-service.js');const kind=url.searchParams.get('kind')??'HISTORY';if(kind==='STATUS'){const offset=Number(url.searchParams.get('offset')??0);if(!Number.isSafeInteger(offset)||offset<0||offset>10000){sendJson(response,400,{errorCode:'INVALID_VIEW'});return;}const {homeOpportunities}=await import('./server/commercial/home-service.js');if(!sendJson(response,200,await homeOpportunities(client,'ALL',offset),undefined,2*1024*1024))sendJson(response,503,{errorCode:'HOME_RESPONSE_TOO_LARGE'});return;}if(!['DISCOVERY','HISTORY'].includes(kind)){sendJson(response,400,{errorCode:'INVALID_KIND'});return;}sendJson(response,200,await runHome(client,kind as 'DISCOVERY'|'HISTORY'));return;}
       if(appliancesRun) {const {runAppliances}=await import('./server/commercial/appliances-service.js');const kind=url.searchParams.get('kind')??'HISTORY';if(kind==='STATUS'){const offset=Number(url.searchParams.get('offset')??0);if(!Number.isSafeInteger(offset)||offset<0||offset>10000){sendJson(response,400,{errorCode:'INVALID_VIEW'});return;}const {appliancesOpportunities}=await import('./server/commercial/appliances-service.js');if(!sendJson(response,200,await appliancesOpportunities(client,'ALL',offset),undefined,2*1024*1024))sendJson(response,503,{errorCode:'APPLIANCES_RESPONSE_TOO_LARGE'});return;}if(!['DISCOVERY','HISTORY'].includes(kind)){sendJson(response,400,{errorCode:'INVALID_KIND'});return;}sendJson(response,200,await runAppliances(client,kind as 'DISCOVERY'|'HISTORY'));return;}
       if(fashionPilot) {
