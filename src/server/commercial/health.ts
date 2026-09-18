@@ -8,6 +8,8 @@ export const HEALTH_VERTICALS=[
  {key:'APPLIANCES',label:'Eletrodomésticos',table:'appliances_runs',kinded:true},
 ] as const;
 
+// Portuguese needs the article glued to the vertical: "Coleta da Casa", not "Coleta Casa".
+export const VERTICAL_ARTICLE_LABEL:Record<string,string>={AUTOMOTIVE:'do Automotivo',HOME:'da Casa',APPLIANCES:'de Eletrodomésticos'};
 export const STALL_HOURS=6;
 export const FAILURE_STREAK=3;
 export const DISCOVERY_STALE_HOURS=30;
@@ -17,13 +19,13 @@ const RUN_WINDOW=60;
 
 export type RunRow={started_at:string;status:string;collected:number|null};
 export type VerticalHealth={
- vertical:string;label:string;
+ vertical:string;label:string;articleLabel:string;
  state:'OK'|'STALLED'|'FAILING'|'NO_RUNS';
  lastRunAt:string|null;lastProductiveAt:string|null;
  hoursSinceProductive:number|null;consecutiveFailures:number;
 };
 export type DiscoveryHealth={
- vertical:string;label:string;state:'OK'|'STALE';
+ vertical:string;label:string;articleLabel:string;state:'OK'|'STALE';
  lastDiscoveryAt:string|null;hoursSinceDiscovery:number|null;
 };
 export type ConnectionRow={status:string;reauth_required:boolean;consecutive_failures:number|null;last_error_code:string|null;last_success_at:string|null;last_refresh_at:string|null};
@@ -33,6 +35,7 @@ export type ConnectionHealth={
  lastSuccessAt:string|null;hoursSinceSuccess:number|null;
 };
 
+const articleOf=(key:string,label:string)=>VERTICAL_ARTICLE_LABEL[key]??label;
 const hoursSince=(at:string|null,now:number)=>at===null?null:Math.max(0,Math.floor((now-Date.parse(at))/3600000));
 
 export function assessVertical(vertical:{key:string;label:string},rows:RunRow[],now:number):VerticalHealth {
@@ -42,7 +45,7 @@ export function assessVertical(vertical:{key:string;label:string},rows:RunRow[],
  const productive=runs.find(r=>Number(r.collected)>0)??null;
  const lastProductiveAt=productive?.started_at??null;
  const hoursSinceProductive=hoursSince(lastProductiveAt,now);
- const base={vertical:vertical.key,label:vertical.label,lastRunAt:runs[0]?.started_at??null,lastProductiveAt,hoursSinceProductive,consecutiveFailures};
+ const base={vertical:vertical.key,label:vertical.label,articleLabel:articleOf(vertical.key,vertical.label),lastRunAt:runs[0]?.started_at??null,lastProductiveAt,hoursSinceProductive,consecutiveFailures};
  if(!runs.length)return {...base,state:'NO_RUNS'};
  if(consecutiveFailures>=FAILURE_STREAK)return {...base,state:'FAILING'};
  if(hoursSinceProductive===null||hoursSinceProductive>=STALL_HOURS)return {...base,state:'STALLED'};
@@ -53,7 +56,7 @@ export function assessVertical(vertical:{key:string;label:string},rows:RunRow[],
 export function assessDiscovery(vertical:{key:string;label:string},lastDiscoveryAt:string|null,now:number):DiscoveryHealth {
  const hoursSinceDiscovery=hoursSince(lastDiscoveryAt,now);
  const state=hoursSinceDiscovery===null||hoursSinceDiscovery>=DISCOVERY_STALE_HOURS?'STALE':'OK';
- return {vertical:vertical.key,label:vertical.label,state,lastDiscoveryAt,hoursSinceDiscovery};
+ return {vertical:vertical.key,label:vertical.label,articleLabel:articleOf(vertical.key,vertical.label),state,lastDiscoveryAt,hoursSinceDiscovery};
 }
 
 export function assessConnection(row:ConnectionRow|null,now:number):ConnectionHealth {

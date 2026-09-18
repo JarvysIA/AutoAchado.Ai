@@ -98,12 +98,12 @@ describe('dashboard health alert',()=>{
   elements.set('health-alert',node());
   const {Script,createContext}=await import('node:vm');
   const context=createContext({document:{getElementById:(id:string)=>elements.get(id),createElement:node},
-   fetch:async()=>({ok:true,json:async()=>({verticals:[{label:'Casa',state:'FAILING',hoursSinceProductive:96,consecutiveFailures:90},{label:'Automotivo',state:'OK'}]})})});
+   fetch:async()=>({ok:true,json:async()=>({verticals:[{label:'Casa',articleLabel:'da Casa',state:'FAILING',hoursSinceProductive:96,consecutiveFailures:90},{label:'Automotivo',articleLabel:'do Automotivo',state:'OK'}]})})});
   new Script(healthScript).runInContext(context);
   await new Promise(resolve=>setImmediate(resolve));
   const box=elements.get('health-alert');
   expect(box.hidden).toBe(false);
-  expect(box.children[1].textContent).toBe('Casa: sem coletar há 96h (90 falhas seguidas)');
+  expect(box.children[1].textContent).toBe('Coleta da Casa parada há 96h (90 falhas seguidas)');
   expect(box.children[2].children[1].href).toBe('/auth/start');
  });
 });

@@ -1,5 +1,5 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
-import {collectionHealth,type CollectionHealth,type VerticalHealth} from './health.js';
+import {collectionHealth,VERTICAL_ARTICLE_LABEL,type CollectionHealth,type VerticalHealth} from './health.js';
 
 // Operational alerting over Telegram. The bot token lives only in process.env and is never
 // logged, returned or stored: failures report the HTTP status alone.
@@ -15,9 +15,17 @@ export type Planned={problem:AlertProblem;state:AlertStateRow|null};
 export type AlertPlan={fresh:Planned[];reminders:Planned[];resolved:AlertStateRow[];silent:Planned[]};
 
 function collectionTitle(v:VerticalHealth):string {
- if(v.state==='NO_RUNS')return 'Coleta do '+v.label+' sem execuções registradas';
- if(v.state==='FAILING')return 'Coleta do '+v.label+' com '+v.consecutiveFailures+' falhas seguidas';
- return v.hoursSinceProductive===null?'Coleta do '+v.label+' parada':'Coleta do '+v.label+' parada há '+v.hoursSinceProductive+'h';
+ if(v.state==='NO_RUNS')return 'Coleta '+v.articleLabel+' sem execuções registradas';
+ if(v.state==='FAILING')return 'Coleta '+v.articleLabel+' com '+v.consecutiveFailures+' falhas seguidas';
+ return v.hoursSinceProductive===null?'Coleta '+v.articleLabel+' parada':'Coleta '+v.articleLabel+' parada há '+v.hoursSinceProductive+'h';
+}
+
+// Recovery names the subject only: the hours that described the problem are already history.
+export function recoveryLine(alertKey:string):string {
+ if(alertKey==='MELI_AUTH')return 'Conexão com o Mercado Livre restabelecida';
+ const [kind,vertical]=alertKey.split(':');
+ const subject=kind==='DISCOVERY'?'Descoberta':'Coleta';
+ return subject+' '+(VERTICAL_ARTICLE_LABEL[vertical??'']??vertical??'')+' voltou ao normal';
 }
 
 export function currentProblems(health:CollectionHealth):AlertProblem[] {
@@ -28,7 +36,7 @@ export function currentProblems(health:CollectionHealth):AlertProblem[] {
    :'Conexão com o Mercado Livre perdida'});
  for(const v of health.verticals)if(v.state!=='OK')problems.push({key:'COLLECTION:'+v.vertical,title:collectionTitle(v)});
  for(const d of health.discovery)if(d.state!=='OK')problems.push({key:'DISCOVERY:'+d.vertical,
-  title:d.hoursSinceDiscovery===null?'Descoberta do '+d.label+' sem registro':'Descoberta do '+d.label+' sem rodar há '+d.hoursSinceDiscovery+'h'});
+  title:d.hoursSinceDiscovery===null?'Descoberta '+d.articleLabel+' sem registro':'Descoberta '+d.articleLabel+' sem rodar há '+d.hoursSinceDiscovery+'h'});
  return problems;
 }
 
@@ -52,7 +60,7 @@ export function composeMessage(plan:AlertPlan):string|null {
  const lines:string[]=[];
  for(const p of plan.fresh)lines.push('🔴 '+p.problem.title);
  for(const p of plan.reminders)lines.push('🟠 '+p.problem.title+' (continua)');
- for(const s of plan.resolved)lines.push('✅ '+(s.detail??s.alert_key)+' — voltou ao normal');
+ for(const s of plan.resolved)lines.push('✅ '+recoveryLine(s.alert_key));
  lines.push('');
  lines.push('Dashboard: '+DASHBOARD_URL);
  if([...plan.fresh,...plan.reminders].some(p=>p.problem.key==='MELI_AUTH'))lines.push('Reconectar Mercado Livre: '+RECONNECT_URL);

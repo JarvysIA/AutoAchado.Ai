@@ -24,11 +24,5 @@
     "api/index.js": {
       "maxDuration": 300
     }
-  },
-  "crons": [
-    {
-      "path": "/api/commercial/discover",
-      "schedule": "0 6 * * *"
-    }
-  ]
+  }
 }
