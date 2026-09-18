@@ -26358,6 +26358,67 @@ var init_service2 = __esm({
   }
 });
 
+// src/server/commercial/health.ts
+var health_exports = {};
+__export(health_exports, {
+  FAILURE_STREAK: () => FAILURE_STREAK,
+  HEALTH_VERTICALS: () => HEALTH_VERTICALS,
+  STALL_HOURS: () => STALL_HOURS,
+  assessVertical: () => assessVertical,
+  collectionHealth: () => collectionHealth,
+  safeErrorCode: () => safeErrorCode
+});
+function assessVertical(vertical, rows, now) {
+  const runs = [...rows].sort((a, b) => Date.parse(b.started_at) - Date.parse(a.started_at));
+  let consecutiveFailures = 0;
+  for (const run of runs) {
+    if (run.status === "FAILED") consecutiveFailures++;
+    else break;
+  }
+  const productive = runs.find((r) => Number(r.collected) > 0) ?? null;
+  const lastProductiveAt = productive?.started_at ?? null;
+  const hoursSinceProductive = lastProductiveAt === null ? null : Math.max(0, Math.floor((now - Date.parse(lastProductiveAt)) / 36e5));
+  const base = { vertical: vertical.key, label: vertical.label, lastRunAt: runs[0]?.started_at ?? null, lastProductiveAt, hoursSinceProductive, consecutiveFailures };
+  if (!runs.length) return { ...base, state: "NO_RUNS" };
+  if (consecutiveFailures >= FAILURE_STREAK) return { ...base, state: "FAILING" };
+  if (hoursSinceProductive === null || hoursSinceProductive >= STALL_HOURS) return { ...base, state: "STALLED" };
+  return { ...base, state: "OK" };
+}
+async function collectionHealth(client, now = Date.now()) {
+  const flags = await client.from("commercial_verticals").select("vertical_key,enabled,executor_ready");
+  if (flags.error) throw new Error("HEALTH_STORAGE_UNAVAILABLE");
+  const active = HEALTH_VERTICALS.filter((v) => {
+    const row = (flags.data ?? []).find((f) => f.vertical_key === v.key);
+    return row?.enabled === true && (v.key === "AUTOMOTIVE" || row?.executor_ready === true);
+  });
+  const verticals = [];
+  for (const vertical of active) {
+    const result = await client.from(vertical.table).select("started_at,status,collected").order("started_at", { ascending: false }).limit(RUN_WINDOW);
+    if (result.error) throw new Error("HEALTH_STORAGE_UNAVAILABLE");
+    verticals.push(assessVertical(vertical, result.data ?? [], now));
+  }
+  const attention = verticals.filter((v) => v.state !== "OK");
+  return { checkedAt: new Date(now).toISOString(), stallHours: STALL_HOURS, healthy: attention.length === 0, verticals };
+}
+function safeErrorCode(error) {
+  const message = error instanceof Error ? error.message : "";
+  return /^[A-Z][A-Z0-9_]{2,63}$/.test(message) ? message : "UNCLASSIFIED";
+}
+var HEALTH_VERTICALS, STALL_HOURS, FAILURE_STREAK, RUN_WINDOW;
+var init_health = __esm({
+  "src/server/commercial/health.ts"() {
+    "use strict";
+    HEALTH_VERTICALS = [
+      { key: "AUTOMOTIVE", label: "Automotivo", table: "commercial_collection_runs" },
+      { key: "HOME", label: "Casa", table: "home_runs" },
+      { key: "APPLIANCES", label: "Eletrodomésticos", table: "appliances_runs" }
+    ];
+    STALL_HOURS = 6;
+    FAILURE_STREAK = 3;
+    RUN_WINDOW = 60;
+  }
+});
+
 // src/server/commercial/fashion-pilot.ts
 var fashion_pilot_exports = {};
 __export(fashion_pilot_exports, {
@@ -27008,9 +27069,9 @@ function dashboardPage(props) {
 <style>
 *{box-sizing:border-box}body{margin:0;background:#090d16;color:#e2e8f0;font:15px system-ui,sans-serif}header{padding:24px max(24px,calc((100% - 1200px)/2));background:#111827;border-bottom:1px solid #25324a;display:flex;gap:20px;align-items:center;justify-content:space-between}h1{margin:0;font-size:24px}h2{font-size:19px;margin-top:0}p,small{color:#9bacc4}main{max-width:1250px;margin:auto;padding:28px 24px}.stats,.matrix{display:grid;gap:16px;grid-template-columns:repeat(4,minmax(0,1fr))}.matrix{grid-template-columns:repeat(2,minmax(0,1fr));padding:0;list-style:none}.card,.panel,.matrix li{border:1px solid #25324a;border-radius:12px;background:#131d31;padding:20px}.card strong{display:block;font-size:24px;margin:12px 0}.panel{margin-top:24px}.matrix li{background:#0e1728;padding:14px}.matrix span{display:block;color:#9bacc4;margin-top:6px}.badge{color:#6ee7b7}.controls{display:flex;flex-wrap:wrap;gap:12px}button,a{color:#93c5fd}button{border:1px solid #3b82f6;background:#1d4ed8;color:white;border-radius:8px;padding:12px 16px;font:inherit;cursor:pointer}button:disabled{opacity:.5;cursor:wait}button:focus-visible,a:focus-visible{outline:3px solid #fcd34d;outline-offset:3px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;text-align:left}th,td{padding:14px 10px;border-bottom:1px solid #25324a}th{color:#9bacc4;font-size:12px;text-transform:uppercase}#message{min-height:24px}@media(max-width:850px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:520px){.stats,.matrix{grid-template-columns:1fr}header{align-items:flex-start;flex-direction:column}.card strong{font-size:22px}}
 .results{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px}.product-card{background:#0e1728;border:1px solid #25324a;border-radius:12px;overflow:hidden;display:flex;flex-direction:column}.product-photo{height:200px;background:#fff;display:flex;align-items:center;justify-content:center;color:#64748b}.product-photo img{height:100%;width:100%;object-fit:contain}.product-body{padding:16px;display:flex;flex-direction:column;gap:10px;flex:1}.product-body h3{font-size:16px;margin:0;line-height:1.4}.product-body p{margin:0;font-size:13px;line-height:1.5;overflow-wrap:anywhere}.product-price{font-size:23px;color:#6ee7b7}.product-link{display:block;background:#1d4ed8;color:white;padding:12px;border-radius:8px;text-align:center;text-decoration:none;margin-top:auto}.product-meta{font-size:11px;color:#9bacc4;overflow-wrap:anywhere}#more{margin-top:20px}#more[hidden]{display:none}.affiliate-input{width:100%;padding:10px;background:#131d31;color:#e2e8f0;border:1px solid #64748b;border-radius:6px}.coupon-bar{display:flex;gap:10px;overflow:auto;padding:12px 0}.copy-button{background:#065f46}.filters{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.filters [aria-pressed="true"]{background:#065f46;border-color:#6ee7b7}#manual-copy{width:100%;min-height:160px}#manual-copy[hidden]{display:none}.matrix li{padding:0}.vertical-button{width:100%;height:100%;text-align:left;padding:16px;background:transparent;border-color:transparent}.vertical-button:hover{background:#1a2942}.vertical-button[aria-pressed="true"]{border-color:#60a5fa;background:#172b49}#vertical-products{scroll-margin-top:20px}.product-details,.price-history{border-top:1px solid #25324a;padding-top:12px;margin-top:4px}.product-details summary,.price-history summary{cursor:pointer;color:#bcd0e8;font-size:13px;line-height:1.5}.product-details[open] summary,.price-history[open] summary{margin-bottom:12px}.product-details>.product-body{padding:12px 0 0}.product-details>span{display:block;margin-top:8px}.product-actions{display:grid;gap:8px}.product-actions button{background:transparent;border-color:#41516a;font-size:13px}.history-table{font-size:11px;font-variant-numeric:tabular-nums}.history-table th,.history-table td{padding:10px 3px;white-space:nowrap}.history-table th{font-size:10px;text-transform:none}.history-table caption{text-align:left;color:#9bacc4;font-size:11px;margin:10px 0}.price-history p{font-size:11px;margin-top:10px}.product-link{margin-top:0}.product-card{align-self:start}.product-body del{color:#9bacc4;font-size:14px}summary:focus-visible{outline:2px solid #fcd34d;outline-offset:3px}@media(max-width:520px){main{padding:20px 14px}.results{grid-template-columns:minmax(0,1fr)}.product-photo{height:240px}}
-.wa-destination{display:grid;gap:10px;margin:12px 0;padding:12px;border:1px solid #25324a;border-radius:8px}dialog::backdrop{background:#000b}
+.wa-destination{display:grid;gap:10px;margin:12px 0;padding:12px;border:1px solid #25324a;border-radius:8px}dialog::backdrop{background:#000b}.health-alert{background:#3b1d0f;border:1px solid #f59e0b;color:#fde68a;border-radius:12px;padding:14px 18px;margin-bottom:20px;line-height:1.5}.health-alert strong{color:#fff}.health-alert a{color:#fcd34d;font-weight:600}
 </style></head><body><header><div><h1>AutoAchado.AI</h1><p>Dashboard Operacional · Robô de mineração · MLB / Brasil · 0B3D-C</p></div><div class="badge">${connected ? "● Mercado Livre conectado" : "⚠ Mercado Livre não conectado"}<br><small>ID: 296984475</small> · <a href="/auth/start">Conectar conta</a></div></header>
-<main><section class="stats" aria-label="Indicadores">
+<main><div id="health-alert" class="health-alert" role="alert" hidden></div><section class="stats" aria-label="Indicadores">
 <div class="card">Status do Robô<strong>Operacional ✅</strong><small>Automotivo V1</small></div>
 <div class="card">Verticais Planejadas<strong>11 Categorias</strong><small>Automotivo V1 Ativa com 155 categorias: 28 Tier A + 127 Tier B</small></div>
 <div class="card">Oportunidades no Banco<strong id="count">—</strong><small>Registros em public.highlight_snapshots</small></div>
@@ -27019,6 +27080,26 @@ function dashboardPage(props) {
 <section class="panel" id="vertical-products"><h2 id="vertical-title" tabindex="-1">Automotivo — produtos e ofertas</h2><p>Melhores oportunidades primeiro. Monitorados reúne a carteira da categoria; Prontos para divulgar mostra ofertas com histórico e demanda confirmados, ainda não divulgadas.</p><div class="controls filters"><button id="rank-ALL" aria-pressed="true">Monitorados</button><button id="rank-APPROVED" aria-pressed="false">🔥 Prontos para divulgar</button><button id="rank-SENT" aria-pressed="false">✅ Divulgados</button><button id="refresh">🔄 Atualizar</button></div><p id="message" role="status" aria-live="polite"></p><p id="commercial-status" role="status" aria-live="polite"></p><p id="copy-status" role="status" aria-live="polite"></p><textarea id="manual-copy" hidden readonly aria-label="Texto para copiar manualmente"></textarea><p>Para copiar a divulgação, cole no produto o link criado pelo gerador oficial de afiliados.</p><p id="commercial-summary"></p><div id="commercial-results" class="results"></div><button id="commercial-more" hidden>Mostrar mais desta seleção</button></section>${whatsappPanel}<details id="robot-admin" class="panel"><summary>Administração do robô</summary><p>Ferramentas técnicas de coleta e diagnóstico — Automotivo.</p><div class="controls"><button id="sweep">🚀 Executar varredura</button><button id="smoke">⚡ Teste de coleta (2 categorias)</button><button id="collect-evidence">📊 Coletar evidências agora</button></div><p id="admin-summary"></p><details id="raw-products" class="panel"><summary>Explorar todos os registros minerados (sem aprovação comercial)</summary><section><h2>Produtos encontrados</h2><p>Prévia dos destaques minerados: foto, descrição e preço informado pelo Mercado Livre. Preço e disponibilidade podem mudar; os destaques ainda não representam descontos validados.</p><h2>Central de Cupons Ativos</h2><div id="coupons" class="coupon-bar" aria-live="polite">Consultando campanhas verificadas…</div><p>Cupons sugeridos conforme categoria e valor. Confira as restrições e a aplicação no checkout. Para divulgar com comissão, cole em cada produto o link criado no gerador oficial de afiliados do Mercado Livre. Os links ficam salvos somente neste navegador.</p><div class="filters" aria-label="Filtrar produtos"><button id="filter-all" aria-pressed="true">Todas as ofertas completas</button><button id="filter-discount" aria-pressed="false">🔥 Desconto anunciado ≥ 5%</button><button id="filter-tier" aria-pressed="false">⚡ Prioridade Tier A</button><button id="filter-coupon" aria-pressed="false">🏷️ Cupom sugerido</button><button id="filter-incomplete" aria-pressed="false">Registros incompletos</button></div><p id="results-summary"></p><div id="snapshots" class="results" aria-label="Produtos minerados"></div><button id="more" hidden>Mostrar mais produtos</button></section></details></details></main>
 <script>
 const el = id => document.getElementById(id);
+async function loadHealth() {
+  const box=el('health-alert'); if(!box) return;
+  try {
+    const response=await fetch('/api/commercial/health',{cache:'no-store',credentials:'same-origin'});
+    if(!response.ok){box.hidden=true;return;}
+    const health=await response.json();
+    const problems=(health.verticals||[]).filter(v=>v.state!=='OK');
+    if(!problems.length){box.hidden=true;box.replaceChildren();return;}
+    const title=document.createElement('strong');
+    title.textContent='⚠ Coleta de preços parada';
+    const detail=document.createElement('p');
+    detail.textContent=problems.map(v=>v.label+': '+(v.hoursSinceProductive===null?'sem coleta registrada recentemente':'sem coletar há '+v.hoursSinceProductive+'h')+(v.consecutiveFailures>0?' ('+v.consecutiveFailures+' falhas seguidas)':'')).join(' · ');
+    const action=document.createElement('p');
+    const link=document.createElement('a'); link.href='/auth/start'; link.textContent='Entrar com o Mercado Livre';
+    action.append('Causa mais comum: autorização do Mercado Livre expirada. ',link,' para reativar. Dias sem coleta atrasam a comprovação de descontos.');
+    box.replaceChildren(title,detail,action); box.hidden=false;
+  } catch { box.hidden=true; }
+}
+loadHealth();
+setInterval(loadHealth,300000);
 let busy = false;
 const verticalNames = ["Automotivo","Casa, utilidades e organização","Eletrodomésticos","Moda Feminina","Beleza e cuidado pessoal","Eletrônicos, celulares e acessórios","Infantil — bebês, brinquedos e moda infantil","Games","Esportes e fitness","Pet","Moda Masculina"];
 let selectedVertical = 0;
@@ -27562,7 +27643,7 @@ function liveSmokeHttpOutcome(result) {
   }
   return { status: 207, gateStatus: "PARTIAL_0B3D_B_LIVE_SMOKE_CATEGORY_FAILURE" };
 }
-function safeErrorCode(error) {
+function safeErrorCode2(error) {
   const value = record3(error)?.code;
   return typeof value === "string" ? value : "DISCOVERY_LIVE_UNEXPECTED";
 }
@@ -27683,7 +27764,8 @@ async function handleRequest(request, response, overrides = {}) {
       const feedback = url.pathname === "/api/commercial/feedback";
       const publication = url.pathname === "/api/commercial/sent";
       const listing = url.pathname === "/api/commercial/opportunities";
-      if (!collecting && !cron && !feedback && !publication && !listing && !revalidating) {
+      const health = url.pathname === "/api/commercial/health";
+      if (!collecting && !cron && !feedback && !publication && !listing && !revalidating && !health) {
         sendJson(response, 404, { errorCode: "NOT_FOUND" });
         return;
       }
@@ -27720,6 +27802,11 @@ async function handleRequest(request, response, overrides = {}) {
       }
       const { createOperationalDiscoveryAdapter: createOperationalDiscoveryAdapter2 } = await Promise.resolve().then(() => (init_operational(), operational_exports));
       const client = createOperationalDiscoveryAdapter2().client;
+      if (health) {
+        const { collectionHealth: collectionHealth2 } = await Promise.resolve().then(() => (init_health(), health_exports));
+        sendJson(response, 200, await collectionHealth2(client));
+        return;
+      }
       if (homeRun) {
         const { runHome: runHome2 } = await Promise.resolve().then(() => (init_home_service(), home_service_exports));
         const kind = url.searchParams.get("kind") ?? "HISTORY";
@@ -27850,8 +27937,11 @@ async function handleRequest(request, response, overrides = {}) {
       }
       if (!sendJson(response, 200, vertical === "APPLIANCES" ? await (await Promise.resolve().then(() => (init_appliances_service(), appliances_service_exports))).appliancesOpportunities(client, view, offset) : vertical === "HOME" ? await (await Promise.resolve().then(() => (init_home_service(), home_service_exports))).homeOpportunities(client, view, offset) : await service.commercialOpportunities(client, view, offset), void 0, 2 * 1024 * 1024))
         sendJson(response, 503, { errorCode: "COMMERCIAL_RESPONSE_TOO_LARGE" });
-    } catch {
-      sendJson(response, 503, { errorCode: "COMMERCIAL_UNAVAILABLE" });
+    } catch (error) {
+      const { safeErrorCode: safeErrorCode3 } = await Promise.resolve().then(() => (init_health(), health_exports));
+      const code = safeErrorCode3(error);
+      console.error(JSON.stringify({ event: "COMMERCIAL_OPERATION_FAILED", path: url.pathname, vertical: /^[A-Z_]{1,20}$/.test(url.searchParams.get("vertical") ?? "") ? url.searchParams.get("vertical") : null, kind: /^[A-Z]{1,12}$/.test(url.searchParams.get("kind") ?? "") ? url.searchParams.get("kind") : null, code }));
+      sendJson(response, 503, { errorCode: code === "PREVIEW_AUTH_UNAVAILABLE" ? "MELI_AUTH_UNAVAILABLE" : "COMMERCIAL_UNAVAILABLE" });
     }
     return;
   }
@@ -28010,7 +28100,7 @@ async function handleRequest(request, response, overrides = {}) {
         durationMs: Math.max(0, Math.round(performance.now() - routeStartedAt))
       });
     } catch (error) {
-      const outcome = liveSmokeErrorOutcome(safeErrorCode(error));
+      const outcome = liveSmokeErrorOutcome(safeErrorCode2(error));
       sendJson(response, outcome.status, {
         contractVersion: DISCOVERY_LIVE_HTTP_CONTRACT,
         correlationId,

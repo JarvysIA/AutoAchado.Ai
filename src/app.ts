@@ -286,7 +286,8 @@ export async function handleRequest(
       const feedback=url.pathname === "/api/commercial/feedback";
       const publication=url.pathname === '/api/commercial/sent';
       const listing=url.pathname === "/api/commercial/opportunities";
-      if(!collecting && !cron && !feedback && !publication && !listing && !revalidating) { sendJson(response,404,{errorCode:"NOT_FOUND"}); return; }
+      const health=url.pathname === '/api/commercial/health';
+      if(!collecting && !cron && !feedback && !publication && !listing && !revalidating && !health) { sendJson(response,404,{errorCode:"NOT_FOUND"}); return; }
       if(method !== (fashionPilot || homePilot || collecting || feedback || publication || probing || preparation || simulation || revalidating ? "POST" : "GET")) {sendJson(response,405,{errorCode:"METHOD_NOT_ALLOWED"});return;}
       if(cron) {
         const secret=process.env.CRON_SECRET;
@@ -304,6 +305,7 @@ export async function handleRequest(
       if(discovering) { const {runConfiguredDiscoveryLiveSmoke}=await import("./server/discovery/operational.js");sendJson(response,200,await runConfiguredDiscoveryLiveSmoke("FULL_SWEEP"));return;}
       const {createOperationalDiscoveryAdapter}=await import("./server/discovery/operational.js");
       const client=createOperationalDiscoveryAdapter().client;
+      if(health) {const {collectionHealth}=await import('./server/commercial/health.js');sendJson(response,200,await collectionHealth(client));return;}
       if(homeRun) {const {runHome}=await import('./server/commercial/home-service.js');const kind=url.searchParams.get('kind')??'HISTORY';if(kind==='STATUS'){const offset=Number(url.searchParams.get('offset')??0);if(!Number.isSafeInteger(offset)||offset<0||offset>10000){sendJson(response,400,{errorCode:'INVALID_VIEW'});return;}const {homeOpportunities}=await import('./server/commercial/home-service.js');if(!sendJson(response,200,await homeOpportunities(client,'ALL',offset),undefined,2*1024*1024))sendJson(response,503,{errorCode:'HOME_RESPONSE_TOO_LARGE'});return;}if(!['DISCOVERY','HISTORY'].includes(kind)){sendJson(response,400,{errorCode:'INVALID_KIND'});return;}sendJson(response,200,await runHome(client,kind as 'DISCOVERY'|'HISTORY'));return;}
       if(appliancesRun) {const {runAppliances}=await import('./server/commercial/appliances-service.js');const kind=url.searchParams.get('kind')??'HISTORY';if(kind==='STATUS'){const offset=Number(url.searchParams.get('offset')??0);if(!Number.isSafeInteger(offset)||offset<0||offset>10000){sendJson(response,400,{errorCode:'INVALID_VIEW'});return;}const {appliancesOpportunities}=await import('./server/commercial/appliances-service.js');if(!sendJson(response,200,await appliancesOpportunities(client,'ALL',offset),undefined,2*1024*1024))sendJson(response,503,{errorCode:'APPLIANCES_RESPONSE_TOO_LARGE'});return;}if(!['DISCOVERY','HISTORY'].includes(kind)){sendJson(response,400,{errorCode:'INVALID_KIND'});return;}sendJson(response,200,await runAppliances(client,kind as 'DISCOVERY'|'HISTORY'));return;}
       if(fashionPilot) {
@@ -362,7 +364,12 @@ export async function handleRequest(
       if(!['ALL','SENT','APPROVED','OBSERVING','REJECTED'].includes(view) || !Number.isSafeInteger(offset) || offset<0 || offset>10000) {sendJson(response,400,{errorCode:'INVALID_VIEW'});return;}
       if(!sendJson(response,200,vertical==='APPLIANCES'?await (await import('./server/commercial/appliances-service.js')).appliancesOpportunities(client,view,offset):vertical==='HOME'?await (await import('./server/commercial/home-service.js')).homeOpportunities(client,view,offset):await service.commercialOpportunities(client,view,offset),undefined,2*1024*1024))
         sendJson(response,503,{errorCode:'COMMERCIAL_RESPONSE_TOO_LARGE'});
-    } catch {sendJson(response,503,{errorCode:'COMMERCIAL_UNAVAILABLE'});}
+    } catch(error) {
+      const {safeErrorCode}=await import('./server/commercial/health.js');
+      const code=safeErrorCode(error);
+      console.error(JSON.stringify({event:'COMMERCIAL_OPERATION_FAILED',path:url.pathname,vertical:/^[A-Z_]{1,20}$/.test(url.searchParams.get('vertical')??'')?url.searchParams.get('vertical'):null,kind:/^[A-Z]{1,12}$/.test(url.searchParams.get('kind')??'')?url.searchParams.get('kind'):null,code}));
+      sendJson(response,503,{errorCode:code==='PREVIEW_AUTH_UNAVAILABLE'?'MELI_AUTH_UNAVAILABLE':'COMMERCIAL_UNAVAILABLE'});
+    }
     return;
   }
   if (["/api/affiliate/coupons", "/api/discovery/preview", "/api/discovery/latest-snapshots", "/api/discovery/smoke", "/api/discovery/sweep"].includes(url.pathname)) {
