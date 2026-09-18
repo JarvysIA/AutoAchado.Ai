@@ -22,9 +22,9 @@ import { runDiscoveryOrchestrator } from "./orchestrator.js";
 
 export const COMMERCE_DISCOVERY_LIVE_SMOKE_CONTRACT = "commerce-discovery-live-smoke/v1" as const;
 export const DISCOVERY_LIVE_SMOKE_OPERATION_ID = "0b3d-b-runtime-smoke-v1" as const;
-const EXPECTED_ELIGIBLE = 155;
+const EXPECTED_ELIGIBLE = 180;
 const EXPECTED_A = 28;
-const EXPECTED_B = 127;
+const EXPECTED_B = 152;
 const SAMPLE_LIMIT = 10;
 const SUPABASE_RUNTIME_TIMEOUT_MS = 10_000;
 

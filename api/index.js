@@ -22744,16 +22744,17 @@ var init_planner = __esm({
 });
 
 // src/commerce/discovery/automotive-tools.ts
-var AUTOMOTIVE_TOOL_CATEGORY_IDS, AUTOMOTIVE_MLB_DISCOVERY_TOOLS;
+var AUTOMOTIVE_TOOL_CATEGORY_IDS, AUTOMOTIVE_CURATED_V3_CATEGORY_IDS, AUTOMOTIVE_MLB_DISCOVERY_TOOLS;
 var init_automotive_tools = __esm({
   "src/commerce/discovery/automotive-tools.ts"() {
     "use strict";
     init_planner();
     AUTOMOTIVE_TOOL_CATEGORY_IDS = Object.freeze(["MLB115943", "MLB115944", "MLB115945", "MLB437802", "MLB437783", "MLB437784", "MLB459157", "MLB459347", "MLB459348", "MLB271712", "MLB455313"]);
+    AUTOMOTIVE_CURATED_V3_CATEGORY_IDS = Object.freeze(["MLB271108", "MLB46692", "MLB431858", "MLB277952", "MLB430923", "MLB430913", "MLB429491", "MLB459455", "MLB459471", "MLB6170", "MLB255106", "MLB459195", "MLB459150", "MLB430581", "MLB429029", "MLB5759", "MLB418074", "MLB22204", "MLB22879", "MLB277590", "MLB430631", "MLB438313", "MLB438314", "MLB3930", "MLB271558"]);
     AUTOMOTIVE_MLB_DISCOVERY_TOOLS = Object.freeze({
       ...AUTOMOTIVE_MLB_DISCOVERY_V1,
-      configVersion: "automotive-mlb-discovery/tools-v2",
-      expectedEligibleCategories: 155
+      configVersion: "automotive-mlb-discovery/curated-v3",
+      expectedEligibleCategories: 180
     });
   }
 });
@@ -23427,9 +23428,9 @@ var init_live_smoke = __esm({
     init_orchestrator();
     COMMERCE_DISCOVERY_LIVE_SMOKE_CONTRACT = "commerce-discovery-live-smoke/v1";
     DISCOVERY_LIVE_SMOKE_OPERATION_ID = "0b3d-b-runtime-smoke-v1";
-    EXPECTED_ELIGIBLE = 155;
+    EXPECTED_ELIGIBLE = 180;
     EXPECTED_A = 28;
-    EXPECTED_B = 127;
+    EXPECTED_B = 152;
     SAMPLE_LIMIT = 10;
     SUPABASE_RUNTIME_TIMEOUT_MS = 1e4;
     DiscoveryLiveSmokeError = class extends Error {
@@ -23462,7 +23463,7 @@ function timestamp(value, code) {
   if (!ISO_TIMESTAMP.test(value) || !Number.isFinite(Date.parse(value))) fail2(code, "Timestamp de persistence inválido");
 }
 function validatePlan(plan) {
-  if (plan.contractVersion !== COMMERCE_DISCOVERY_RUN_CONTRACT || !["automotive-mlb-discovery/v1", "automotive-mlb-discovery/tools-v2"].includes(plan.config.configVersion) || plan.config.adapterVersion !== "meli-highlights-discovery/v1" || plan.config.marketplaceKey !== "MERCADO_LIVRE" || plan.config.siteId !== "MLB" || plan.config.verticalKey !== "AUTOMOTIVE" || plan.mode !== "SMOKE" && plan.mode !== "FULL_SWEEP" || !SHA256.test(plan.registryDigest)) {
+  if (plan.contractVersion !== COMMERCE_DISCOVERY_RUN_CONTRACT || !["automotive-mlb-discovery/v1", "automotive-mlb-discovery/tools-v2", "automotive-mlb-discovery/curated-v3"].includes(plan.config.configVersion) || plan.config.adapterVersion !== "meli-highlights-discovery/v1" || plan.config.marketplaceKey !== "MERCADO_LIVRE" || plan.config.siteId !== "MLB" || plan.config.verticalKey !== "AUTOMOTIVE" || plan.mode !== "SMOKE" && plan.mode !== "FULL_SWEEP" || !SHA256.test(plan.registryDigest)) {
     fail2("DISCOVERY_PERSISTENCE_INVALID_RUN", "Contrato de discovery run inválido");
   }
 }
@@ -27240,10 +27241,10 @@ function dashboardPage(props) {
 </style></head><body><header><div><h1>AutoAchado.AI</h1><p>Dashboard Operacional · Robô de mineração · MLB / Brasil · 0B3D-C</p></div><div class="badge">${connected ? "● Mercado Livre conectado" : "⚠ Mercado Livre não conectado"}<br><small>ID: 296984475</small> · <a href="/auth/start">Conectar conta</a></div></header>
 <main><div id="health-alert" class="health-alert" role="alert" hidden></div><section class="stats" aria-label="Indicadores">
 <div class="card">Status do Robô<strong>Operacional ✅</strong><small>Automotivo V1</small></div>
-<div class="card">Verticais Planejadas<strong>11 Categorias</strong><small>Automotivo V1 Ativa com 155 categorias: 28 Tier A + 127 Tier B</small></div>
+<div class="card">Verticais Planejadas<strong>11 Categorias</strong><small>Automotivo V1 Ativa com 180 categorias: 28 Tier A + 152 Tier B</small></div>
 <div class="card">Oportunidades no Banco<strong id="count">—</strong><small>Registros em public.highlight_snapshots</small></div>
 <div class="card">Última Sincronização<strong id="synced">—</strong><small>Atualização automática a cada 30 segundos</small></div></section>
-<section class="panel"><h2>Matriz de Expansão (11 Categorias)</h2><ol class="matrix">${verticals.map(([name, id], i) => `<li><button id="vertical-${i}" class="vertical-button" aria-controls="vertical-products" aria-pressed="${i === 0}">${i + 1}. ${name}<span>${id} · ${i === 0 ? "ATIVO (155 Cats)" : i === 1 ? "PILOTO (55 Cats)" : i === 2 ? "PILOTO (42 Cats)" : i === 3 ? "EM VALIDAÇÃO · 35 roupas / 35 calçados / 30 acessórios" : "PLANEJADO"}</span></button></li>`).join("")}</ol></section>
+<section class="panel"><h2>Matriz de Expansão (11 Categorias)</h2><ol class="matrix">${verticals.map(([name, id], i) => `<li><button id="vertical-${i}" class="vertical-button" aria-controls="vertical-products" aria-pressed="${i === 0}">${i + 1}. ${name}<span>${id} · ${i === 0 ? "ATIVO (180 Cats)" : i === 1 ? "PILOTO (55 Cats)" : i === 2 ? "PILOTO (42 Cats)" : i === 3 ? "EM VALIDAÇÃO · 35 roupas / 35 calçados / 30 acessórios" : "PLANEJADO"}</span></button></li>`).join("")}</ol></section>
 <section class="panel" id="vertical-products"><h2 id="vertical-title" tabindex="-1">Automotivo — produtos e ofertas</h2><p>Melhores oportunidades primeiro. Monitorados reúne a carteira da categoria; Prontos para divulgar mostra ofertas com histórico e demanda confirmados, ainda não divulgadas.</p><div class="controls filters"><button id="rank-ALL" aria-pressed="true">Monitorados</button><button id="rank-APPROVED" aria-pressed="false">🔥 Prontos para divulgar</button><button id="rank-SENT" aria-pressed="false">✅ Divulgados</button><button id="refresh">🔄 Atualizar</button><button id="alert-test">🔔 Testar alerta</button></div><p id="message" role="status" aria-live="polite"></p><p id="commercial-status" role="status" aria-live="polite"></p><p id="copy-status" role="status" aria-live="polite"></p><textarea id="manual-copy" hidden readonly aria-label="Texto para copiar manualmente"></textarea><p>Para copiar a divulgação, cole no produto o link criado pelo gerador oficial de afiliados.</p><p id="commercial-summary"></p><div id="commercial-results" class="results"></div><button id="commercial-more" hidden>Mostrar mais desta seleção</button></section>${whatsappPanel}<details id="robot-admin" class="panel"><summary>Administração do robô</summary><p>Ferramentas técnicas de coleta e diagnóstico — Automotivo.</p><div class="controls"><button id="sweep">🚀 Executar varredura</button><button id="smoke">⚡ Teste de coleta (2 categorias)</button><button id="collect-evidence">📊 Coletar evidências agora</button></div><p id="admin-summary"></p><details id="raw-products" class="panel"><summary>Explorar todos os registros minerados (sem aprovação comercial)</summary><section><h2>Produtos encontrados</h2><p>Prévia dos destaques minerados: foto, descrição e preço informado pelo Mercado Livre. Preço e disponibilidade podem mudar; os destaques ainda não representam descontos validados.</p><h2>Central de Cupons Ativos</h2><div id="coupons" class="coupon-bar" aria-live="polite">Consultando campanhas verificadas…</div><p>Cupons sugeridos conforme categoria e valor. Confira as restrições e a aplicação no checkout. Para divulgar com comissão, cole em cada produto o link criado no gerador oficial de afiliados do Mercado Livre. Os links ficam salvos somente neste navegador.</p><div class="filters" aria-label="Filtrar produtos"><button id="filter-all" aria-pressed="true">Todas as ofertas completas</button><button id="filter-discount" aria-pressed="false">🔥 Desconto anunciado ≥ 5%</button><button id="filter-tier" aria-pressed="false">⚡ Prioridade Tier A</button><button id="filter-coupon" aria-pressed="false">🏷️ Cupom sugerido</button><button id="filter-incomplete" aria-pressed="false">Registros incompletos</button></div><p id="results-summary"></p><div id="snapshots" class="results" aria-label="Produtos minerados"></div><button id="more" hidden>Mostrar mais produtos</button></section></details></details></main>
 <script>
 const el = id => document.getElementById(id);
