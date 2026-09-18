@@ -26367,6 +26367,7 @@ __export(health_exports, {
   FAILURE_STREAK: () => FAILURE_STREAK,
   HEALTH_VERTICALS: () => HEALTH_VERTICALS,
   STALL_HOURS: () => STALL_HOURS,
+  VERTICAL_ARTICLE_LABEL: () => VERTICAL_ARTICLE_LABEL,
   assessConnection: () => assessConnection,
   assessDiscovery: () => assessDiscovery,
   assessVertical: () => assessVertical,
@@ -26383,7 +26384,7 @@ function assessVertical(vertical, rows, now) {
   const productive = runs.find((r) => Number(r.collected) > 0) ?? null;
   const lastProductiveAt = productive?.started_at ?? null;
   const hoursSinceProductive = hoursSince(lastProductiveAt, now);
-  const base = { vertical: vertical.key, label: vertical.label, lastRunAt: runs[0]?.started_at ?? null, lastProductiveAt, hoursSinceProductive, consecutiveFailures };
+  const base = { vertical: vertical.key, label: vertical.label, articleLabel: articleOf(vertical.key, vertical.label), lastRunAt: runs[0]?.started_at ?? null, lastProductiveAt, hoursSinceProductive, consecutiveFailures };
   if (!runs.length) return { ...base, state: "NO_RUNS" };
   if (consecutiveFailures >= FAILURE_STREAK) return { ...base, state: "FAILING" };
   if (hoursSinceProductive === null || hoursSinceProductive >= STALL_HOURS) return { ...base, state: "STALLED" };
@@ -26392,7 +26393,7 @@ function assessVertical(vertical, rows, now) {
 function assessDiscovery(vertical, lastDiscoveryAt2, now) {
   const hoursSinceDiscovery = hoursSince(lastDiscoveryAt2, now);
   const state = hoursSinceDiscovery === null || hoursSinceDiscovery >= DISCOVERY_STALE_HOURS ? "STALE" : "OK";
-  return { vertical: vertical.key, label: vertical.label, state, lastDiscoveryAt: lastDiscoveryAt2, hoursSinceDiscovery };
+  return { vertical: vertical.key, label: vertical.label, articleLabel: articleOf(vertical.key, vertical.label), state, lastDiscoveryAt: lastDiscoveryAt2, hoursSinceDiscovery };
 }
 function assessConnection(row, now) {
   if (!row) return { state: "PROBLEM", reason: "NO_CONNECTION", status: null, reauthRequired: true, consecutiveFailures: 0, lastErrorCode: null, lastSuccessAt: null, hoursSinceSuccess: null };
@@ -26436,7 +26437,7 @@ function safeErrorCode(error) {
   const message = error instanceof Error ? error.message : "";
   return /^[A-Z][A-Z0-9_]{2,63}$/.test(message) ? message : "UNCLASSIFIED";
 }
-var HEALTH_VERTICALS, STALL_HOURS, FAILURE_STREAK, DISCOVERY_STALE_HOURS, CONNECTION_STALE_HOURS, CONNECTION_BAD_STATUS, RUN_WINDOW, hoursSince;
+var HEALTH_VERTICALS, VERTICAL_ARTICLE_LABEL, STALL_HOURS, FAILURE_STREAK, DISCOVERY_STALE_HOURS, CONNECTION_STALE_HOURS, CONNECTION_BAD_STATUS, RUN_WINDOW, articleOf, hoursSince;
 var init_health = __esm({
   "src/server/commercial/health.ts"() {
     "use strict";
@@ -26445,12 +26446,14 @@ var init_health = __esm({
       { key: "HOME", label: "Casa", table: "home_runs", kinded: true },
       { key: "APPLIANCES", label: "Eletrodomésticos", table: "appliances_runs", kinded: true }
     ];
+    VERTICAL_ARTICLE_LABEL = { AUTOMOTIVE: "do Automotivo", HOME: "da Casa", APPLIANCES: "de Eletrodomésticos" };
     STALL_HOURS = 6;
     FAILURE_STREAK = 3;
     DISCOVERY_STALE_HOURS = 30;
     CONNECTION_STALE_HOURS = 8;
     CONNECTION_BAD_STATUS = ["REAUTH_REQUIRED", "REFRESH_OUTCOME_UNKNOWN", "DISABLED"];
     RUN_WINDOW = 60;
+    articleOf = (key, label) => VERTICAL_ARTICLE_LABEL[key] ?? label;
     hoursSince = (at, now) => at === null ? null : Math.max(0, Math.floor((now - Date.parse(at)) / 36e5));
   }
 });
@@ -26466,13 +26469,20 @@ __export(alerts_exports, {
   currentProblems: () => currentProblems,
   evaluateOperationalAlerts: () => evaluateOperationalAlerts,
   planNotifications: () => planNotifications,
+  recoveryLine: () => recoveryLine,
   sendOperationalAlertTest: () => sendOperationalAlertTest,
   sendTelegram: () => sendTelegram
 });
 function collectionTitle(v) {
-  if (v.state === "NO_RUNS") return "Coleta do " + v.label + " sem execuções registradas";
-  if (v.state === "FAILING") return "Coleta do " + v.label + " com " + v.consecutiveFailures + " falhas seguidas";
-  return v.hoursSinceProductive === null ? "Coleta do " + v.label + " parada" : "Coleta do " + v.label + " parada há " + v.hoursSinceProductive + "h";
+  if (v.state === "NO_RUNS") return "Coleta " + v.articleLabel + " sem execuções registradas";
+  if (v.state === "FAILING") return "Coleta " + v.articleLabel + " com " + v.consecutiveFailures + " falhas seguidas";
+  return v.hoursSinceProductive === null ? "Coleta " + v.articleLabel + " parada" : "Coleta " + v.articleLabel + " parada há " + v.hoursSinceProductive + "h";
+}
+function recoveryLine(alertKey) {
+  if (alertKey === "MELI_AUTH") return "Conexão com o Mercado Livre restabelecida";
+  const [kind, vertical] = alertKey.split(":");
+  const subject = kind === "DISCOVERY" ? "Descoberta" : "Coleta";
+  return subject + " " + (VERTICAL_ARTICLE_LABEL[vertical ?? ""] ?? vertical ?? "") + " voltou ao normal";
 }
 function currentProblems(health) {
   const problems = [];
@@ -26483,7 +26493,7 @@ function currentProblems(health) {
   for (const v of health.verticals) if (v.state !== "OK") problems.push({ key: "COLLECTION:" + v.vertical, title: collectionTitle(v) });
   for (const d of health.discovery) if (d.state !== "OK") problems.push({
     key: "DISCOVERY:" + d.vertical,
-    title: d.hoursSinceDiscovery === null ? "Descoberta do " + d.label + " sem registro" : "Descoberta do " + d.label + " sem rodar há " + d.hoursSinceDiscovery + "h"
+    title: d.hoursSinceDiscovery === null ? "Descoberta " + d.articleLabel + " sem registro" : "Descoberta " + d.articleLabel + " sem rodar há " + d.hoursSinceDiscovery + "h"
   });
   return problems;
 }
@@ -26508,7 +26518,7 @@ function composeMessage(plan) {
   const lines = [];
   for (const p of plan.fresh) lines.push("🔴 " + p.problem.title);
   for (const p of plan.reminders) lines.push("🟠 " + p.problem.title + " (continua)");
-  for (const s of plan.resolved) lines.push("✅ " + (s.detail ?? s.alert_key) + " — voltou ao normal");
+  for (const s of plan.resolved) lines.push("✅ " + recoveryLine(s.alert_key));
   lines.push("");
   lines.push("Dashboard: " + DASHBOARD_URL);
   if ([...plan.fresh, ...plan.reminders].some((p) => p.problem.key === "MELI_AUTH")) lines.push("Reconectar Mercado Livre: " + RECONNECT_URL);
@@ -27243,8 +27253,8 @@ async function loadHealth() {
     const response=await fetch('/api/commercial/health',{cache:'no-store',credentials:'same-origin'});
     if(!response.ok){box.hidden=true;return;}
     const health=await response.json();
-    const problems=(health.verticals||[]).filter(v=>v.state!=='OK').map(v=>v.label+': '+(v.hoursSinceProductive===null?'sem coleta registrada recentemente':'sem coletar há '+v.hoursSinceProductive+'h')+(v.consecutiveFailures>0?' ('+v.consecutiveFailures+' falhas seguidas)':''));
-    for(const d of (health.discovery||[])) if(d.state!=='OK') problems.push('Descoberta do '+d.label+(d.hoursSinceDiscovery===null?' sem registro':' sem rodar há '+d.hoursSinceDiscovery+'h'));
+    const problems=(health.verticals||[]).filter(v=>v.state!=='OK').map(v=>'Coleta '+(v.articleLabel||v.label)+' '+(v.hoursSinceProductive===null?'sem coleta registrada recentemente':'parada há '+v.hoursSinceProductive+'h')+(v.consecutiveFailures>0?' ('+v.consecutiveFailures+' falhas seguidas)':''));
+    for(const d of (health.discovery||[])) if(d.state!=='OK') problems.push('Descoberta '+(d.articleLabel||d.label)+(d.hoursSinceDiscovery===null?' sem registro':' sem rodar há '+d.hoursSinceDiscovery+'h'));
     const connection=health.connection;
     if(connection&&connection.state!=='OK') problems.push(connection.reason==='NO_RECENT_SUCCESS'&&connection.hoursSinceSuccess!==null?'Conexão com o Mercado Livre sem sucesso há '+connection.hoursSinceSuccess+'h':'Conexão com o Mercado Livre perdida');
     if(!problems.length){box.hidden=true;box.replaceChildren();return;}

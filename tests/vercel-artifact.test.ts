@@ -16,6 +16,7 @@ describe("artefato da função Vercel", () => {
       framework?: unknown;
       routes?: { src: string; dest: string }[];
       builds?: unknown;
+      crons?: unknown;
     };
     const apiEntrypoints = readdirSync("api", { recursive: true })
       .map(String)
@@ -30,6 +31,8 @@ describe("artefato da função Vercel", () => {
       { src: "/(.*)", dest: "/api/index.js" },
     ]);
     expect(config.builds).toBeUndefined();
+    // Automotive discovery is scheduled by pg_cron now; a Vercel cron here would run it twice.
+    expect(config.crons).toBeUndefined();
     expect(apiEntrypoints).toEqual(["index.js"]);
     expect(existsSync("src/app.js")).toBe(false);
     expect(existsSync("dist/src/app.js")).toBe(false);

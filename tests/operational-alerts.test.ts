@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import {afterEach,describe,expect,it,vi} from 'vitest';
-import {composeMessage,currentProblems,evaluateOperationalAlerts,planNotifications,REMINDER_HOURS,type AlertStateRow} from '../src/server/commercial/alerts.js';
+import {composeMessage,currentProblems,evaluateOperationalAlerts,planNotifications,recoveryLine,REMINDER_HOURS,type AlertStateRow} from '../src/server/commercial/alerts.js';
 import {assessConnection,assessDiscovery,collectionHealth} from '../src/server/commercial/health.js';
 import {handleRequest} from '../src/app.js';
 import {createAuthorizationCookie} from '../src/oauth/session.js';
@@ -67,10 +67,18 @@ describe('alert state machine',()=>{
  it('closes an active alert that is no longer a problem',()=>{
   const plan=planNotifications([],[state({})],NOW);
   expect(plan.resolved.map(s=>s.alert_key)).toEqual(['MELI_AUTH']);
-  expect(composeMessage(plan)).toContain('✅ Conexão com o Mercado Livre perdida — voltou ao normal');
+  expect(composeMessage(plan)).toContain('✅ Conexão com o Mercado Livre restabelecida');
+ });
+ it('names only the subject when something recovers, without the old hours',()=>{
+  expect(recoveryLine('DISCOVERY:HOME')).toBe('Descoberta da Casa voltou ao normal');
+  expect(recoveryLine('COLLECTION:APPLIANCES')).toBe('Coleta de Eletrodomésticos voltou ao normal');
+  expect(recoveryLine('MELI_AUTH')).toBe('Conexão com o Mercado Livre restabelecida');
+  const plan=planNotifications([],[state({alert_key:'COLLECTION:HOME',detail:'Coleta da Casa parada há 9h'})],NOW);
+  expect(composeMessage(plan)).toContain('✅ Coleta da Casa voltou ao normal');
+  expect(composeMessage(plan)).not.toContain('9h');
  });
  it('groups every problem into a single message with the dashboard link',()=>{
-  const plan=planNotifications([problem('COLLECTION:HOME','Coleta do Casa parada há 9h'),problem('DISCOVERY:AUTOMOTIVE','Descoberta do Automotivo sem rodar há 31h')],[],NOW);
+  const plan=planNotifications([problem('COLLECTION:HOME','Coleta da Casa parada há 9h'),problem('DISCOVERY:AUTOMOTIVE','Descoberta do Automotivo sem rodar há 31h')],[],NOW);
   const message=composeMessage(plan)!;
   expect(message.split('🔴')).toHaveLength(3);
   expect(message).toContain('Dashboard: https://autoachado-ai.vercel.app/');

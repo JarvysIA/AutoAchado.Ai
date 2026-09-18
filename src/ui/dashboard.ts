@@ -36,8 +36,8 @@ async function loadHealth() {
     const response=await fetch('/api/commercial/health',{cache:'no-store',credentials:'same-origin'});
     if(!response.ok){box.hidden=true;return;}
     const health=await response.json();
-    const problems=(health.verticals||[]).filter(v=>v.state!=='OK').map(v=>v.label+': '+(v.hoursSinceProductive===null?'sem coleta registrada recentemente':'sem coletar há '+v.hoursSinceProductive+'h')+(v.consecutiveFailures>0?' ('+v.consecutiveFailures+' falhas seguidas)':''));
-    for(const d of (health.discovery||[])) if(d.state!=='OK') problems.push('Descoberta do '+d.label+(d.hoursSinceDiscovery===null?' sem registro':' sem rodar há '+d.hoursSinceDiscovery+'h'));
+    const problems=(health.verticals||[]).filter(v=>v.state!=='OK').map(v=>'Coleta '+(v.articleLabel||v.label)+' '+(v.hoursSinceProductive===null?'sem coleta registrada recentemente':'parada há '+v.hoursSinceProductive+'h')+(v.consecutiveFailures>0?' ('+v.consecutiveFailures+' falhas seguidas)':''));
+    for(const d of (health.discovery||[])) if(d.state!=='OK') problems.push('Descoberta '+(d.articleLabel||d.label)+(d.hoursSinceDiscovery===null?' sem registro':' sem rodar há '+d.hoursSinceDiscovery+'h'));
     const connection=health.connection;
     if(connection&&connection.state!=='OK') problems.push(connection.reason==='NO_RECENT_SUCCESS'&&connection.hoursSinceSuccess!==null?'Conexão com o Mercado Livre sem sucesso há '+connection.hoursSinceSuccess+'h':'Conexão com o Mercado Livre perdida');
     if(!problems.length){box.hidden=true;box.replaceChildren();return;}
