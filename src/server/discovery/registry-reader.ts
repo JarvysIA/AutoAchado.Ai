@@ -4,9 +4,23 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export const DISCOVERY_REGISTRY_PAGE_SIZE = 1000;
 const MAX_PAGES = 100_000;
 
+// The Supabase edge has been refusing exactly one of several simultaneous registry reads with 401,
+// a different table each time and with the same key. Reads are sequential and each one is retried
+// a bounded number of times; only transient refusals qualify, so a real 400/404 still fails at once.
+export const DISCOVERY_READ_RETRY_DELAYS_MS: readonly number[] = Object.freeze([500, 1500]);
+const DISCOVERY_READ_MAX_ATTEMPTS = DISCOVERY_READ_RETRY_DELAYS_MS.length + 1;
+const TRANSIENT_STATUS = Object.freeze([401, 408, 429]);
+
+function transientStatus(status: number | undefined): boolean {
+  return status !== undefined && (TRANSIENT_STATUS.includes(status) || (status >= 500 && status <= 599));
+}
+
+const realSleep = (ms: number): Promise<void> => new Promise((resolve) => { setTimeout(resolve, ms); });
+
 export interface DiscoveryRegistryReadResult {
   readonly data: unknown;
   readonly error: unknown;
+  readonly status?: number;
 }
 
 export interface DiscoveryRegistryReadQuery {
@@ -33,6 +47,8 @@ export interface LoadDiscoveryEligibleCategoriesInput {
   readonly marketplaceKey: string;
   readonly siteId: string;
   readonly verticalKey: string;
+  /** Test seam for the retry backoff; production uses setTimeout. */
+  readonly sleep?: (ms: number) => Promise<void>;
 }
 
 function fail(code: "DISCOVERY_REGISTRY_READ_FAILED" | "DISCOVERY_REGISTRY_RESPONSE_INVALID", message: string): never {
@@ -72,24 +88,48 @@ function uuid(row: Record<string, unknown>, key: string): string {
   return value;
 }
 
+async function readPage(
+  client: DiscoveryRegistryReadClient,
+  table: string,
+  columns: string,
+  filters: readonly (readonly [string, string])[],
+  orderBy: string,
+  from: number,
+  sleep: (ms: number) => Promise<void>,
+): Promise<DiscoveryRegistryReadResult> {
+  for (let attempt = 1; attempt <= DISCOVERY_READ_MAX_ATTEMPTS; attempt += 1) {
+    let status: number | "NETWORK";
+    try {
+      let query = client.from(table).select(columns);
+      for (const [column, value] of filters) query = query.eq(column, value);
+      const result = await query.order(orderBy, { ascending: true }).range(from, from + DISCOVERY_REGISTRY_PAGE_SIZE - 1);
+      if (result.error === null) return result;
+      const httpStatus = typeof result.status === "number" ? result.status : undefined;
+      if (!transientStatus(httpStatus)) return result;
+      status = httpStatus as number;
+    } catch {
+      status = "NETWORK";
+    }
+    if (attempt === DISCOVERY_READ_MAX_ATTEMPTS) break;
+    // Table name and status only: never the URL, headers or key.
+    console.error(JSON.stringify({ event: "SUPABASE_READ_RETRY", table, status, attempt }));
+    await sleep(DISCOVERY_READ_RETRY_DELAYS_MS[attempt - 1] as number);
+  }
+  return fail("DISCOVERY_REGISTRY_READ_FAILED", "Falha sanitizada ao ler o Commerce Registry");
+}
+
 async function pages(
   client: DiscoveryRegistryReadClient,
   table: string,
   columns: string,
   filters: readonly (readonly [string, string])[],
   orderBy: string,
+  sleep: (ms: number) => Promise<void>,
 ): Promise<readonly unknown[]> {
   const output: unknown[] = [];
   for (let page = 0; page < MAX_PAGES; page += 1) {
-    let query = client.from(table).select(columns);
-    for (const [column, value] of filters) query = query.eq(column, value);
     const from = page * DISCOVERY_REGISTRY_PAGE_SIZE;
-    let result: DiscoveryRegistryReadResult;
-    try {
-      result = await query.order(orderBy, { ascending: true }).range(from, from + DISCOVERY_REGISTRY_PAGE_SIZE - 1);
-    } catch {
-      return fail("DISCOVERY_REGISTRY_READ_FAILED", "Falha sanitizada ao ler o Commerce Registry");
-    }
+    const result = await readPage(client, table, columns, filters, orderBy, from, sleep);
     if (result.error !== null || !Array.isArray(result.data)) {
       return fail(result.error === null ? "DISCOVERY_REGISTRY_RESPONSE_INVALID" : "DISCOVERY_REGISTRY_READ_FAILED",
         "Resposta sanitizada do Commerce Registry inválida");
@@ -115,18 +155,18 @@ export async function loadDiscoveryEligibleCategories(
   for (const value of [input.marketplaceKey, input.siteId, input.verticalKey]) {
     if (value.trim().length === 0) fail("DISCOVERY_REGISTRY_RESPONSE_INVALID", "Contexto de eligibility inválido");
   }
-  const [marketplaceRows, verticalRows, categoryRows, mappingRows] = await Promise.all([
-    pages(input.client, "marketplaces", "marketplace_key,active,config_version",
-      [["marketplace_key", input.marketplaceKey]], "marketplace_key"),
-    pages(input.client, "commerce_verticals", "vertical_key,active,config_version",
-      [["vertical_key", input.verticalKey]], "vertical_key"),
-    pages(input.client, "marketplace_categories",
-      "marketplace_category_id,marketplace_key,site_id,external_category_id,active,source_version,config_version",
-      [["marketplace_key", input.marketplaceKey], ["site_id", input.siteId]], "external_category_id"),
-    pages(input.client, "vertical_category_mappings",
-      "vertical_key,marketplace_category_id,scope_status,priority_tier,classification_version,manual_override,decision_source,active",
-      [["vertical_key", input.verticalKey]], "marketplace_category_id"),
-  ]);
+  // Sequential on purpose: the simultaneous burst is what the edge has been refusing.
+  const sleep = input.sleep ?? realSleep;
+  const marketplaceRows = await pages(input.client, "marketplaces", "marketplace_key,active,config_version",
+    [["marketplace_key", input.marketplaceKey]], "marketplace_key", sleep);
+  const verticalRows = await pages(input.client, "commerce_verticals", "vertical_key,active,config_version",
+    [["vertical_key", input.verticalKey]], "vertical_key", sleep);
+  const categoryRows = await pages(input.client, "marketplace_categories",
+    "marketplace_category_id,marketplace_key,site_id,external_category_id,active,source_version,config_version",
+    [["marketplace_key", input.marketplaceKey], ["site_id", input.siteId]], "external_category_id", sleep);
+  const mappingRows = await pages(input.client, "vertical_category_mappings",
+    "vertical_key,marketplace_category_id,scope_status,priority_tier,classification_version,manual_override,decision_source,active",
+    [["vertical_key", input.verticalKey]], "marketplace_category_id", sleep);
   const marketplaceConfigVersion = activeMaster(marketplaceRows, "marketplace_key", input.marketplaceKey);
   const verticalConfigVersion = activeMaster(verticalRows, "vertical_key", input.verticalKey);
   const categories = new Map<string, Record<string, unknown>>();
