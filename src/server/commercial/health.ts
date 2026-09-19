@@ -106,8 +106,13 @@ export async function collectionHealth(client:SupabaseClient,now=Date.now()) {
 export type CollectionHealth=Awaited<ReturnType<typeof collectionHealth>>;
 
 // Error messages in this codebase are fixed codes (e.g. HOME_DISABLED, PREVIEW_AUTH_UNAVAILABLE).
-// Anything that does not look like one is reported as UNCLASSIFIED so no free text reaches logs.
+// Typed errors such as DiscoveryError carry the real code on `code`, which is preferred over the
+// message. Anything that does not look like a code is reported as UNCLASSIFIED, so no free text
+// and no interpolated value ever reaches the logs.
+const ERROR_CODE=/^[A-Z][A-Z0-9_]{2,63}$/;
 export function safeErrorCode(error:unknown):string {
+ const code=(error as {code?:unknown}|null|undefined)?.code;
+ if(typeof code==='string'&&ERROR_CODE.test(code))return code;
  const message=error instanceof Error?error.message:'';
- return /^[A-Z][A-Z0-9_]{2,63}$/.test(message)?message:'UNCLASSIFIED';
+ return ERROR_CODE.test(message)?message:'UNCLASSIFIED';
 }

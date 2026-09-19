@@ -22878,6 +22878,9 @@ var init_highlights_discovery_adapter = __esm({
 });
 
 // src/server/discovery/registry-reader.ts
+function transientStatus(status) {
+  return status !== void 0 && (TRANSIENT_STATUS.includes(status) || status >= 500 && status <= 599);
+}
 function discoveryRegistryReadClientFromSupabase(client) {
   return Object.freeze({
     from(table) {
@@ -22916,18 +22919,31 @@ function uuid(row, key) {
   }
   return value;
 }
-async function pages(client, table, columns, filters, orderBy) {
+async function readPage(client, table, columns, filters, orderBy, from, sleep3) {
+  for (let attempt = 1; attempt <= DISCOVERY_READ_MAX_ATTEMPTS; attempt += 1) {
+    let status;
+    try {
+      let query = client.from(table).select(columns);
+      for (const [column, value] of filters) query = query.eq(column, value);
+      const result = await query.order(orderBy, { ascending: true }).range(from, from + DISCOVERY_REGISTRY_PAGE_SIZE - 1);
+      if (result.error === null) return result;
+      const httpStatus = typeof result.status === "number" ? result.status : void 0;
+      if (!transientStatus(httpStatus)) return result;
+      status = httpStatus;
+    } catch {
+      status = "NETWORK";
+    }
+    if (attempt === DISCOVERY_READ_MAX_ATTEMPTS) break;
+    console.error(JSON.stringify({ event: "SUPABASE_READ_RETRY", table, status, attempt }));
+    await sleep3(DISCOVERY_READ_RETRY_DELAYS_MS[attempt - 1]);
+  }
+  return fail("DISCOVERY_REGISTRY_READ_FAILED", "Falha sanitizada ao ler o Commerce Registry");
+}
+async function pages(client, table, columns, filters, orderBy, sleep3) {
   const output = [];
   for (let page = 0; page < MAX_PAGES; page += 1) {
-    let query = client.from(table).select(columns);
-    for (const [column, value] of filters) query = query.eq(column, value);
     const from = page * DISCOVERY_REGISTRY_PAGE_SIZE;
-    let result;
-    try {
-      result = await query.order(orderBy, { ascending: true }).range(from, from + DISCOVERY_REGISTRY_PAGE_SIZE - 1);
-    } catch {
-      return fail("DISCOVERY_REGISTRY_READ_FAILED", "Falha sanitizada ao ler o Commerce Registry");
-    }
+    const result = await readPage(client, table, columns, filters, orderBy, from, sleep3);
     if (result.error !== null || !Array.isArray(result.data)) {
       return fail(
         result.error === null ? "DISCOVERY_REGISTRY_RESPONSE_INVALID" : "DISCOVERY_REGISTRY_READ_FAILED",
@@ -22951,36 +22967,39 @@ async function loadDiscoveryEligibleCategories(input) {
   for (const value of [input.marketplaceKey, input.siteId, input.verticalKey]) {
     if (value.trim().length === 0) fail("DISCOVERY_REGISTRY_RESPONSE_INVALID", "Contexto de eligibility inválido");
   }
-  const [marketplaceRows, verticalRows, categoryRows, mappingRows] = await Promise.all([
-    pages(
-      input.client,
-      "marketplaces",
-      "marketplace_key,active,config_version",
-      [["marketplace_key", input.marketplaceKey]],
-      "marketplace_key"
-    ),
-    pages(
-      input.client,
-      "commerce_verticals",
-      "vertical_key,active,config_version",
-      [["vertical_key", input.verticalKey]],
-      "vertical_key"
-    ),
-    pages(
-      input.client,
-      "marketplace_categories",
-      "marketplace_category_id,marketplace_key,site_id,external_category_id,active,source_version,config_version",
-      [["marketplace_key", input.marketplaceKey], ["site_id", input.siteId]],
-      "external_category_id"
-    ),
-    pages(
-      input.client,
-      "vertical_category_mappings",
-      "vertical_key,marketplace_category_id,scope_status,priority_tier,classification_version,manual_override,decision_source,active",
-      [["vertical_key", input.verticalKey]],
-      "marketplace_category_id"
-    )
-  ]);
+  const sleep3 = input.sleep ?? realSleep;
+  const marketplaceRows = await pages(
+    input.client,
+    "marketplaces",
+    "marketplace_key,active,config_version",
+    [["marketplace_key", input.marketplaceKey]],
+    "marketplace_key",
+    sleep3
+  );
+  const verticalRows = await pages(
+    input.client,
+    "commerce_verticals",
+    "vertical_key,active,config_version",
+    [["vertical_key", input.verticalKey]],
+    "vertical_key",
+    sleep3
+  );
+  const categoryRows = await pages(
+    input.client,
+    "marketplace_categories",
+    "marketplace_category_id,marketplace_key,site_id,external_category_id,active,source_version,config_version",
+    [["marketplace_key", input.marketplaceKey], ["site_id", input.siteId]],
+    "external_category_id",
+    sleep3
+  );
+  const mappingRows = await pages(
+    input.client,
+    "vertical_category_mappings",
+    "vertical_key,marketplace_category_id,scope_status,priority_tier,classification_version,manual_override,decision_source,active",
+    [["vertical_key", input.verticalKey]],
+    "marketplace_category_id",
+    sleep3
+  );
   const marketplaceConfigVersion = activeMaster(marketplaceRows, "marketplace_key", input.marketplaceKey);
   const verticalConfigVersion = activeMaster(verticalRows, "vertical_key", input.verticalKey);
   const categories = /* @__PURE__ */ new Map();
@@ -23031,13 +23050,19 @@ async function loadDiscoveryEligibleCategories(input) {
   }
   return Object.freeze(eligible.sort((left, right) => left.externalCategoryId.localeCompare(right.externalCategoryId)));
 }
-var DISCOVERY_REGISTRY_PAGE_SIZE, MAX_PAGES;
+var DISCOVERY_REGISTRY_PAGE_SIZE, MAX_PAGES, DISCOVERY_READ_RETRY_DELAYS_MS, DISCOVERY_READ_MAX_ATTEMPTS, TRANSIENT_STATUS, realSleep;
 var init_registry_reader = __esm({
   "src/server/discovery/registry-reader.ts"() {
     "use strict";
     init_types();
     DISCOVERY_REGISTRY_PAGE_SIZE = 1e3;
     MAX_PAGES = 1e5;
+    DISCOVERY_READ_RETRY_DELAYS_MS = Object.freeze([500, 1500]);
+    DISCOVERY_READ_MAX_ATTEMPTS = DISCOVERY_READ_RETRY_DELAYS_MS.length + 1;
+    TRANSIENT_STATUS = Object.freeze([401, 408, 429]);
+    realSleep = (ms) => new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
   }
 });
 
@@ -26435,10 +26460,12 @@ async function collectionHealth(client, now = Date.now()) {
   return { checkedAt: new Date(now).toISOString(), stallHours: STALL_HOURS, discoveryStaleHours: DISCOVERY_STALE_HOURS, healthy, verticals, discovery, connection };
 }
 function safeErrorCode(error) {
+  const code = error?.code;
+  if (typeof code === "string" && ERROR_CODE.test(code)) return code;
   const message = error instanceof Error ? error.message : "";
-  return /^[A-Z][A-Z0-9_]{2,63}$/.test(message) ? message : "UNCLASSIFIED";
+  return ERROR_CODE.test(message) ? message : "UNCLASSIFIED";
 }
-var HEALTH_VERTICALS, VERTICAL_ARTICLE_LABEL, STALL_HOURS, FAILURE_STREAK, DISCOVERY_STALE_HOURS, CONNECTION_STALE_HOURS, CONNECTION_BAD_STATUS, RUN_WINDOW, articleOf, hoursSince;
+var HEALTH_VERTICALS, VERTICAL_ARTICLE_LABEL, STALL_HOURS, FAILURE_STREAK, DISCOVERY_STALE_HOURS, CONNECTION_STALE_HOURS, CONNECTION_BAD_STATUS, RUN_WINDOW, articleOf, hoursSince, ERROR_CODE;
 var init_health = __esm({
   "src/server/commercial/health.ts"() {
     "use strict";
@@ -26456,6 +26483,7 @@ var init_health = __esm({
     RUN_WINDOW = 60;
     articleOf = (key, label) => VERTICAL_ARTICLE_LABEL[key] ?? label;
     hoursSince = (at, now) => at === null ? null : Math.max(0, Math.floor((now - Date.parse(at)) / 36e5));
+    ERROR_CODE = /^[A-Z][A-Z0-9_]{2,63}$/;
   }
 });
 
