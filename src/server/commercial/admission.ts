@@ -1,8 +1,18 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
 import {configuredProductPreview,safePreviewUrl,type ProductPreview} from '../discovery/product-preview.js';
 import {assessAutomotive} from './editorial.js';
+import {familyForCategory} from './automotive-families.js';
+import {safeErrorCode} from './health.js';
 import {reviewAutomotiveCohort} from './cohort-review.js';
 import {renewAutomotiveSelection} from './selection-renewal.js';
+
+// USER_PRODUCT answers 403 on /user-products/* and ITEM almost never qualifies; both were eating the
+// admission budget ahead of catalog products. Reversible: add the type back here and in
+// seed_commercial_watchlist, and move the parked rows back to PENDING.
+export const ADMITTED_TYPES=['PRODUCT'] as const;
+const RETRY_AFTER_FAILURE=6*3600000;
+export const MAX_UPSTREAM_ATTEMPTS=4;
+const BATCH_COMPACT=30,BATCH_FULL=20;
 
 export function admissionDecision(p:ProductPreview, attempts:number, categoryId:string|null|undefined) {
  const editorial=assessAutomotive(p,categoryId);
@@ -15,20 +25,33 @@ export function admissionDecision(p:ProductPreview, attempts:number, categoryId:
 }
 function checked<T>(r:{data:T;error:unknown}):T {if(r.error) throw new Error('ADMISSION_STORAGE_FAILED');return r.data;}
 
+/** Out-of-scope categories are decided from the frozen map, with no call to Mercado Livre. */
+export function outOfScope(categoryId:string|null|undefined):boolean {
+ const family=familyForCategory(categoryId);
+ return family===null||family==='EXCLUDED';
+}
+
 // Called under the collector's database lock, after its reserved history budget.
 export async function exploreCandidates(client:SupabaseClient, deadline:number, compact=false) {
- const due=()=>client.from('commercial_candidate_queue').select('*')
-  .in('state',['PENDING','RETRY']).lte('next_check_at',new Date().toISOString());
- const order=(query:ReturnType<typeof due>)=>query.order('next_check_at').order('best_position').order('first_seen_at').order('source_key');
- // Retain exploration of other types without allowing restricted USER_PRODUCTs to consume the whole budget.
- const [catalog,others]=await Promise.all([order(due().eq('type','PRODUCT')).limit(compact?6:20),order(due().neq('type','PRODUCT')).limit(compact?2:4)]);
- const rows=[...(checked(catalog)??[]),...(checked(others)??[])];
- let evaluated=0,failed=0;
- const queue=[...(rows??[])];
+ // Best ranked first, then the most recently seen: a product discovered today is worth more than
+ // one that has been waiting at the back of the queue since the sweep started.
+ const due=client.from('commercial_candidate_queue').select('*')
+  .in('state',['PENDING','RETRY']).lte('next_check_at',new Date().toISOString())
+  .eq('type','PRODUCT')
+  .order('best_position').order('first_seen_at',{ascending:false}).order('source_key')
+  .limit(compact?BATCH_COMPACT:BATCH_FULL);
+ const rows=checked(await due)??[];
+ let evaluated=0,failed=0,skipped=0;
+ const queue=[...rows];
  async function worker() {
   while(queue.length && Date.now()<deadline) {
    const row=queue.shift()!;
    const attempts=row.attempts+1;
+   if(outOfScope(row.category_id)) {
+    checked(await client.from('commercial_candidate_queue').update({state:'REJECTED',reason:'EXCLUDED_CATEGORY',
+     attempts,evaluated_at:new Date().toISOString()}).eq('source_key',row.source_key));
+    skipped++;continue;
+   }
    try {
     const p=await configuredProductPreview(client,row.product_id,row.type);
     const decision=admissionDecision(p,attempts,row.category_id);
@@ -41,15 +64,22 @@ export async function exploreCandidates(client:SupabaseClient, deadline:number, 
     checked(await client.from('commercial_candidate_queue').update({...decision,attempts,evaluated_at:new Date().toISOString(),
      next_check_at:new Date(Date.now()+86400000*Math.min(attempts,3)).toISOString()}).eq('source_key',row.source_key));
     evaluated++;
-   } catch {
+   } catch(error) {
     failed++;
-    checked(await client.from('commercial_candidate_queue').update({state:'RETRY',reason:'UPSTREAM_OR_STORAGE_FAILURE',attempts,
-     next_check_at:new Date(Date.now()+86400000).toISOString()}).eq('source_key',row.source_key));
+    // Product id, url and key stay out of the log; only the sanitized code and the upstream status.
+    const status=(error as {status?:unknown}).status;
+    console.error(JSON.stringify({event:'ADMISSION_ITEM_FAILED',code:safeErrorCode(error),
+     status:typeof status==='number'?status:null}));
+    const exhausted=attempts>=MAX_UPSTREAM_ATTEMPTS;
+    checked(await client.from('commercial_candidate_queue').update({
+     state:exhausted?'REJECTED':'RETRY',reason:exhausted?'PERSISTENT_UPSTREAM_FAILURE':'UPSTREAM_OR_STORAGE_FAILURE',
+     attempts,...(exhausted?{evaluated_at:new Date().toISOString()}:{next_check_at:new Date(Date.now()+RETRY_AFTER_FAILURE).toISOString()}),
+    }).eq('source_key',row.source_key));
    }
   }
  }
  await Promise.all([worker(),worker()]);
  await reviewAutomotiveCohort(client);
  const promoted=await renewAutomotiveSelection(client);
- return {evaluated,failed,promoted,deferred:queue.length};
+ return {evaluated,failed,skipped,promoted,deferred:queue.length};
 }
