@@ -5,14 +5,16 @@ const compressor:ProductPreview={title:'Compressor portátil digital',descriptio
  price:62,currency:'BRL',comparable:true,seller_trusted:true,status:'CATALOG'};
 describe('admission independent of historical approval',()=>{
  it('admits a useful comparable compressor without requiring mature history',()=>{
-  expect(admissionDecision(compressor,1).state).toBe('QUALIFIED');
+  expect(admissionDecision(compressor,1,'MLB63533').state).toBe('QUALIFIED');
  });
  it('does not qualify inaccessible or specialized candidates just because they have a price',()=>{
-  expect(admissionDecision({...compressor,seller_trusted:false},1).state).toBe('RETRY');
-  expect(admissionDecision({...compressor,title:'Rastreador com mensalidade'},1).state).toBe('REJECTED');
-  expect(admissionDecision({...compressor,status:'UNAVAILABLE'},1).state).toBe('REJECTED');
+  expect(admissionDecision({...compressor,seller_trusted:false},1,'MLB63533').state).toBe('RETRY');
+  // The category decides scope now: same product, out-of-scope category, still refused.
+  expect(admissionDecision({...compressor,title:'Rastreador com mensalidade'},1,'MLB440490').state).toBe('REJECTED');
+  expect(admissionDecision(compressor,1,'MLB999999').state).toBe('REJECTED');
+  expect(admissionDecision({...compressor,status:'UNAVAILABLE'},1,'MLB63533').state).toBe('REJECTED');
  });
  it('finishes repeated incomplete evaluations without approving them',()=>{
-  expect(admissionDecision({...compressor,comparable:false},3).state).toBe('REJECTED');
+  expect(admissionDecision({...compressor,comparable:false},3,'MLB63533').state).toBe('REJECTED');
  });
 });

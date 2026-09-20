@@ -4,8 +4,8 @@ import {assessAutomotive} from './editorial.js';
 import {reviewAutomotiveCohort} from './cohort-review.js';
 import {renewAutomotiveSelection} from './selection-renewal.js';
 
-export function admissionDecision(p:ProductPreview, attempts:number) {
- const editorial=assessAutomotive(p);
+export function admissionDecision(p:ProductPreview, attempts:number, categoryId:string|null|undefined) {
+ const editorial=assessAutomotive(p,categoryId);
  if(editorial.state==='EXCLUDE' || p.status==='UNAVAILABLE') return {state:'REJECTED',reason:'UNSUITABLE_OR_UNAVAILABLE'};
  if(p.comparable && p.seller_trusted && p.currency==='BRL' && typeof p.price==='number' && Number.isFinite(p.price) && p.price>0
   && safePreviewUrl(p.image,true) && safePreviewUrl(p.url) && editorial.state==='ELIGIBLE')
@@ -31,7 +31,7 @@ export async function exploreCandidates(client:SupabaseClient, deadline:number, 
    const attempts=row.attempts+1;
    try {
     const p=await configuredProductPreview(client,row.product_id,row.type);
-    const decision=admissionDecision(p,attempts);
+    const decision=admissionDecision(p,attempts,row.category_id);
     const identity=p.comparable && p.catalog_product_id ? 'catalog:'+p.catalog_product_id+':new:BRL:public' : row.source_key;
     // Ignore conflicts: an existing historical watch must never be reset by exploration.
     checked(await client.from('commercial_watchlist').upsert({source_key:row.source_key,product_id:row.product_id,

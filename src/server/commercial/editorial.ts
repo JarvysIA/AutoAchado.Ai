@@ -1,21 +1,27 @@
 import type {ProductPreview} from '../discovery/product-preview.js';
-import {commercialProfile} from './profile.js';
-export const EDITORIAL_VERSION='automotive-pre-home-v1';
-const normalize=(value:string)=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-export function assessAutomotive(p:Pick<ProductPreview,'title'|'description'>) {
- const text=normalize(p.title),profile=commercialProfile(p.title);
- let state:'ELIGIBLE'|'REVIEW'|'EXCLUDE'=profile.group==='avaliar'?'REVIEW':profile.group==='especializado'?'EXCLUDE':'ELIGIBLE';
- let reason=state==='ELIGIBLE'?'Utilidade reconhecida; confirmar condições atuais antes de divulgar.':state==='REVIEW'?
-  'Dados insuficientes para validar instalação, compatibilidade ou utilidade ampla.':'Uso especializado fora do público amplo inicial.';
- if(/\balarme\b|\bstart stop\b|partida remota|chaveiro|\broda (ferro|traseira)\b|\bpneu \d|\bmodulo\b|\bamplificador\b|\bdriver fenolico\b|alto falantes|\bbateria de moto\b|sensor de estacionamento|camera de re\b|\boleo motor\b|\boleo 5w|\boleo \d+w|\bradiador|arrefecimento|valvulas e injetores/.test(text)
-  || /kit macaco.*(fiat|argo|cronos)/.test(text)) {
-  state='EXCLUDE';reason='Exige aplicação veicular, instalação ou manutenção específica; fora da seleção para público amplo.';
- }
- // Only explicit plug-in adapters enter this additional family; generic audio stays in review.
- const simpleBluetooth=/adaptador bluetooth|adaptador.*bluetooth/.test(text)&&/usb|p2/.test(text)&&!/(modulo|instalacao|central)/.test(text);
- return {state,reason,family:simpleBluetooth?'celular':profile.group,
-  ...(simpleBluetooth&&state==='REVIEW'?{state:'ELIGIBLE' as const,reason:'Adaptador USB/P2; conferir a entrada compatível no aparelho.'}:{}),version:EDITORIAL_VERSION};
+import {familyForCategory,type AutomotiveFamilyKey} from './automotive-families.js';
+export const EDITORIAL_VERSION='automotive-category-families-v2';
+const normalize=(value:string)=>value.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+// The only title rule left. Everything else about what belongs in the portfolio is decided by the
+// official category, so a product whose title matches no pattern is no longer silently dropped.
+const CONDITION_BLOCK=/\busado\b|\bseminovo\b|\brecondicionado\b|\bpara pecas\b|\bcom defeito\b|\bretirada de pecas\b/;
+
+export function assessAutomotive(p:Pick<ProductPreview,'title'|'description'>,categoryId:string|null|undefined) {
+ const family=familyForCategory(categoryId);
+ const base={family,version:EDITORIAL_VERSION};
+ if(family===null) return {...base,state:'EXCLUDE' as const,
+  reason:'Categoria de origem desconhecida; sem categoria oficial não há como avaliar o encaixe.'};
+ if(family==='EXCLUDED') return {...base,state:'EXCLUDE' as const,
+  reason:'Categoria fora da seleção para público amplo (peça, fluido, roda, alarme ou instalação especializada).'};
+ if(CONDITION_BLOCK.test(normalize(p.title))) return {...base,state:'REVIEW' as const,
+  reason:'Anúncio indica item usado, com defeito ou para peças; confirmar a condição antes de divulgar.'};
+ return {...base,state:'ELIGIBLE' as const,
+  reason:'Utilidade reconhecida pela categoria; confirmar condições atuais antes de divulgar.'};
 }
+
+export type AutomotiveAssessment=ReturnType<typeof assessAutomotive>;
+export type {AutomotiveFamilyKey};
+
 // This is an inspection hint only. It must never be used as a price identity.
 export function possibleVariantKey(description:string|null):string|null {
  const brand=description?.match(/(?:^| · )Marca: ([^·]+)/)?.[1]?.trim();

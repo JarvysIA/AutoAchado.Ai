@@ -3,8 +3,11 @@ import {revalidateProduct} from '../src/server/commercial/revalidate.js';
 import type {SupabaseClient} from '@supabase/supabase-js';
 const mocks=vi.hoisted(()=>({preview:vi.fn()}));
 vi.mock('../src/server/discovery/product-preview.js',async importOriginal=>({...await importOriginal<object>(),configuredProductPreview:mocks.preview}));
-const client={from:()=>{
- const q:any={select:()=>q,eq:()=>q,gte:()=>q,order:()=>q,range:()=>Promise.resolve({data:[],error:null}),
+// A família vem da categoria mais específica em que o produto apareceu no ranking.
+const rankRows=[{identity_key:'catalog:MLB123',category_id:'MLB63533',observed_at:new Date().toISOString(),position:4}];
+const client={from:(table:string)=>{
+ const rows=table==='commercial_rank_observations'?rankRows:[];
+ const q:any={select:()=>q,eq:()=>q,gte:()=>q,order:()=>q,range:(start:number)=>Promise.resolve({data:start===0?rows:[],error:null}),
   maybeSingle:()=>Promise.resolve({data:null,error:null}),update:()=>q,then:(resolve:any)=>resolve({data:[],error:null})};return q;
 }} as unknown as SupabaseClient;
 const preview={priceLinkVerified:true,title:'Compressor portátil',image:'https://http2.mlstatic.com/a.jpg',description:null,

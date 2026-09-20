@@ -3,11 +3,11 @@ import {scoreCandidate,simulateSelection,demandPotential,type SelectionCandidate
 import {analyzePriceTruth} from '../src/server/commercial/price-truth.js';
 import type {Observation} from '../src/server/commercial/ranking.js';
 const DAY=86400000,now=Date.parse('2026-11-20T12:00:00Z');
-function candidate(id:string,title='Mini aspirador portátil'):SelectionCandidate {
- return {source_key:'PRODUCT:'+id,identity_key:id,monitor:false,protected:false,
+function candidate(id:string,title='Mini aspirador portátil',category='MLB22723'):SelectionCandidate {
+ return {source_key:'PRODUCT:'+id,identity_key:id,monitor:false,protected:false,category_id:category,
   preview:{title,description:null,image:'https://http2.mlstatic.com/a.jpg',url:'https://www.mercadolivre.com.br/p/MLB1',
    price:80,currency:'BRL',seller_id:'1',seller_trusted:true,comparable:true,status:'CATALOG',priceCheckedAt:new Date(now).toISOString()},
-  ranks:Array.from({length:10},(_,i)=>({category:'cat1',position:3,observed_at:new Date(now-i*DAY).toISOString()}))};
+  ranks:Array.from({length:10},(_,i)=>({category,position:3,observed_at:new Date(now-i*DAY).toISOString()}))};
 }
 function prices(start:string,count:number,price:number):Observation[] {
  return Array.from({length:count},(_,i)=>({observed_at:new Date(Date.parse(start)+i*DAY).toISOString(),price,currency:'BRL',seller_id:String(i%2+1),comparable:true,trusted:true,position:null}));
@@ -30,18 +30,24 @@ describe('selection hypothesis independent of discount',()=>{
  });
  it('requires fresh complete data and does not admit unsuitable products',()=>{
   const c=candidate('a');
-  for(const patch of [{image:null},{seller_trusted:false},{priceCheckedAt:new Date(now-2*DAY).toISOString()},{title:'Rastreador com mensalidade'}])
+  for(const patch of [{image:null},{seller_trusted:false},{priceCheckedAt:new Date(now-2*DAY).toISOString()}])
    expect(scoreCandidate({...c,preview:{...c.preview!,...patch}},now).eligible).toBe(false);
+  // The title no longer decides: an out-of-scope category does.
+  expect(scoreCandidate(candidate('tracker','Rastreador com mensalidade','MLB440490'),now).eligible).toBe(false);
+  expect(scoreCandidate(candidate('unknown','Produto qualquer','MLB999999'),now).reasonCodes).toContain('UNKNOWN_CATEGORY');
  });
  it('uses a trend bonus only with several independent days',()=>{
   const signals=Array.from({length:6},(_,i)=>({category:'one',position:12-i*2,observed_at:new Date(now-(6-i)*DAY).toISOString()}));
   expect(demandPotential(signals,now).improvement).toBeGreaterThan(0);
   expect(demandPotential(signals.slice(0,3),now).improvement).toBe(0);
  });
- it('keeps family ceilings, canonical deduplication and protected incumbents without filling weak slots',()=>{
-  const entries=Array.from({length:30},(_,i)=>candidate('a'+i));const p=candidate('protected','Rastreador GPS');p.monitor=true;p.protected=true;
-  const r=simulateSelection([...entries,{...entries[0]!,source_key:'ITEM:other'},p],now,100,25);
-  expect(r.selectedCount).toBe(26);expect(r.unfilled).toBe(74);expect(r.protectedRetained).toBe(1);
+ it('caps one type at three, keeps canonical deduplication and never drops protected incumbents',()=>{
+  const entries=Array.from({length:30},(_,i)=>candidate('a'+i));
+  // Protected members stay whatever their category says, and still take their diversity slot.
+  const p=candidate('protected','Rastreador GPS','MLB440490');p.monitor=true;p.protected=true;
+  const r=simulateSelection([...entries,{...entries[0]!,source_key:'ITEM:other'},p],now,100);
+  expect(r.selectedCount).toBe(4);expect(r.protectedRetained).toBe(1);
+  expect(r.selected.filter(c=>c.category_id==='MLB22723')).toHaveLength(3);
   expect(r.selected.some(c=>c.identity_key==='protected')).toBe(true);expect(r.applied).toBe(false);
  });
  it('does not propose churn without seven demand days, tenure and a meaningful advantage',()=>{

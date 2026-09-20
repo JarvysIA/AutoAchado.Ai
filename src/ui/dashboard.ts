@@ -118,6 +118,7 @@ async function loadCommercial(append = false) {
       const extra=card.querySelector('.product-details');
       const body=textNode('div','','product-body');
       const selection=entry.selection, priceEvidence=entry.price_analysis;
+      if(entry.family_label) body.append(textNode('p','Família: '+entry.family_label,'product-meta'));
       if(selection) {
         body.append(textNode('strong','Potencial de acompanhamento: '+selection.score+'/100','badge'));
         body.append(textNode('p',selection.demand.days+' dias no mesmo ranking · posição mediana '+(selection.demand.median_position??'indisponível')+'.'));

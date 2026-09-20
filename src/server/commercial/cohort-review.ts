@@ -4,14 +4,14 @@ import {safePreviewUrl} from '../discovery/product-preview.js';
 export async function reviewAutomotiveCohort(client:SupabaseClient) {
  const rows=[];
  for(let page=0;;page++) {
-  const result=await client.from('commercial_watchlist').select('source_key,identity_key,preview,monitor').order('source_key').range(page*500,page*500+499);
+  const result=await client.from('commercial_watchlist').select('source_key,identity_key,category_id,preview,monitor').order('source_key').range(page*500,page*500+499);
   if(result.error) throw new Error('COHORT_REVIEW_UNAVAILABLE');
   rows.push(...(result.data??[]));
   if(!result.data||result.data.length<500) break;
   if(page>=99) throw new Error('COHORT_REVIEW_LIMIT');
  }
  const assessments=rows.map(row=>{
-  const p=row.preview??{},assessment=assessAutomotive({title:p.title??'',description:p.description??null});
+  const p=row.preview??{},assessment=assessAutomotive({title:p.title??'',description:p.description??null},row.category_id);
   const eligible=assessment.state==='ELIGIBLE'&&p.comparable&&p.seller_trusted&&p.currency==='BRL'
    &&typeof p.price==='number'&&Number.isFinite(p.price)&&p.price>0&&safePreviewUrl(p.image,true)&&safePreviewUrl(p.url)
    &&p.status!=='UNAVAILABLE'&&Date.parse(p.priceCheckedAt??'')>=Date.now()-86400000&&Date.parse(p.priceCheckedAt??'')<=Date.now();
