@@ -4,6 +4,7 @@ import {affiliateIntelligence} from '../affiliate/coupon-service.js';
 import {productIdentity} from './service.js';
 import {rankProduct,type Observation} from './ranking.js';
 import {priceHistoryStart} from './price-truth.js';
+import {resolveCategory} from './automotive-families.js';
 function checked<T>(r:{data:T;error:unknown}):T {if(r.error) throw new Error('REVALIDATION_STORAGE_FAILED');return r.data;}
 export async function revalidateProduct(client:SupabaseClient,id:string,type:string) {
  const preview=await configuredProductPreview(client,id,type,true);
@@ -19,7 +20,9 @@ export async function revalidateProduct(client:SupabaseClient,id:string,type:str
   if(page>=99) throw new Error('REVALIDATION_HISTORY_LIMIT');
  }
  const feedback=checked(await client.from('commercial_vertical_feedback').select('action').eq('vertical_key','AUTOMOTIVE').eq('identity_key',identity).maybeSingle());
- const commercial=rankProduct(preview,rows,feedback?.action??null);
+ // Same rule as the selection: the most specific category the product ranked in.
+ const categoryId=resolveCategory(rows.map(r=>(r as {demand_category?:string}).demand_category).filter((v):v is string=>typeof v==='string'));
+ const commercial=rankProduct(preview,rows,feedback?.action??null,Date.now(),{categoryId});
  checked(await client.from('commercial_watchlist').update({preview,identity_key:identity}).eq('source_key',type+':'+id));
  const ready=preview.status!=='UNAVAILABLE'&&!!preview.title&&preview.title!==id&&!!safePreviewUrl(preview.image,true)
   &&!!safePreviewUrl(preview.url)&&!!preview.price&&preview.currency==='BRL'&&Date.parse(preview.priceCheckedAt??'')>=Date.now()-60000;

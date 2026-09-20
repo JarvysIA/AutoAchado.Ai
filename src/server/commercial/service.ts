@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { catalogOfferPreview, configuredMeliReader, configuredProductPreview, type ProductPreview } from "../discovery/product-preview.js";
 import { affiliateIntelligence } from "../affiliate/coupon-service.js";
 import { commercialProfile, rankProduct, type Observation } from "./ranking.js";
+import { familyLabel, familyForCategory } from "./automotive-families.js";
 import {exploreCandidates} from './admission.js';
 import {nextEvidenceCheck,validEvidenceAt} from './collection-policy.js';
 import {automotiveCollectionScope} from './collection-scope.js';
@@ -181,7 +182,8 @@ export async function commercialOpportunities(client:SupabaseClient, view:string
       feedback:action,selection:selections.get(w.identity_key)??null,
       price_analysis:analyzePriceTruth(w.preview,historyByIdentity.get(w.identity_key)??[],now),
       price_timeline:priceTimeline(w.preview,historyByIdentity.get(w.identity_key)??[],now),
-      rank:rankProduct(w.preview,historyByIdentity.get(w.identity_key)??[],action,now)};
+      family_label:familyLabel(familyForCategory(w.category_id)),
+      rank:rankProduct(w.preview,historyByIdentity.get(w.identity_key)??[],action,now,{categoryId:w.category_id})};
   });
   const order={APPROVED:0,OBSERVING:1,REJECTED:2};
   const sorted=allEvaluated.sort((a,b)=>Number(b.monitor)-Number(a.monitor) || order[a.rank.state]-order[b.rank.state] || b.rank.score-a.rank.score || (a.preview.price??Infinity)-(b.preview.price??Infinity));

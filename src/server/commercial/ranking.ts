@@ -54,10 +54,12 @@ export function orderCommercialFamilies<T extends {rank:Pick<CommercialRank,'sta
 }
 
 export function rankProduct(preview: ProductPreview, history: Observation[], feedback: string | null = null, now = Date.now(), context?: {
- profile:{appeal:number;ease:number;reason:string|null};editorial:{state:string;family:string;reason:string}
+ profile?:{appeal:number;ease:number;reason:string|null};editorial?:{state:string;family:string;reason:string};
+ // Automotive resolves its family from the official category; other verticals pass editorial ready.
+ categoryId?:string|null;
 }): CommercialRank {
   const profile = context?.profile ?? commercialProfile(preview.title);
-  const editorial=context?.editorial ?? assessAutomotive(preview);
+  const editorial=context?.editorial ?? assessAutomotive(preview,context?.categoryId);
   const reasons: string[] = [], evidence: string[] = [];
   let rejected = false;
   const fail = (text: string, hard = false) => { reasons.push(text); rejected ||= hard; };
@@ -110,7 +112,7 @@ export function rankProduct(preview: ProductPreview, history: Observation[], fee
   const score = Math.round(demandScore * .30 + discountScore * .25 + profile.appeal * .15
     + profile.ease * .15 + (preview.seller_trusted ? 100 : 0) * .10 + commercial * .05);
   return {version:RANKING_VERSION,state:rejected ? "REJECTED" : reasons.length ? "OBSERVING" : "APPROVED",score,
-    group:editorial.family,reasons,evidence,reference_price:reference,historical_discount_percent:sufficient && discount !== null ? Math.round(discount) : null,
+    group:editorial.family??'desconhecida',reasons,evidence,reference_price:reference,historical_discount_percent:sufficient && discount !== null ? Math.round(discount) : null,
     history_days:coverage.days,history_sufficient:sufficient,seller_count:coverage.sellers,demand_days:demand.size,checked_at:new Date(now).toISOString()};
 }
 
