@@ -1526,7 +1526,7 @@ ${cause.stack}`;
         var _this2 = this;
         let error = null;
         let data2 = null;
-        let count3 = null;
+        let count2 = null;
         let status = res.status;
         let statusText = res.statusText;
         if (res.ok) {
@@ -1552,7 +1552,7 @@ ${cause.stack}`;
           }
           const countHeader = (_this$headers$get2 = _this2.headers.get("Prefer")) === null || _this$headers$get2 === void 0 ? void 0 : _this$headers$get2.match(/count=(exact|planned|estimated)/);
           const contentRange = (_res$headers$get2 = res.headers.get("content-range")) === null || _res$headers$get2 === void 0 ? void 0 : _res$headers$get2.split("/");
-          if (countHeader && contentRange && contentRange.length > 1) count3 = parseInt(contentRange[1]);
+          if (countHeader && contentRange && contentRange.length > 1) count2 = parseInt(contentRange[1]);
           if (_this2.isMaybeSingle && Array.isArray(data2)) if (data2.length > 1) {
             error = {
               code: "PGRST116",
@@ -1561,7 +1561,7 @@ ${cause.stack}`;
               message: "JSON object requested, multiple (or no) rows returned"
             };
             data2 = null;
-            count3 = null;
+            count2 = null;
             status = 406;
             statusText = "Not Acceptable";
             if (_this2.shouldThrowOnError) {
@@ -1592,7 +1592,7 @@ ${cause.stack}`;
           success: error === null,
           error,
           data: data2,
-          count: count3,
+          count: count2,
           status,
           statusText
         };
@@ -3919,7 +3919,7 @@ ${cause.stack}`;
       * ```
       */
       select(columns, options) {
-        const { head: head2 = false, count: count3 } = options !== null && options !== void 0 ? options : {};
+        const { head: head2 = false, count: count2 } = options !== null && options !== void 0 ? options : {};
         const method = head2 ? "HEAD" : "GET";
         let quoted = false;
         const cleanedColumns = (columns !== null && columns !== void 0 ? columns : "*").split("").map((c) => {
@@ -3929,7 +3929,7 @@ ${cause.stack}`;
         }).join("");
         const { url, headers } = this.cloneRequestState();
         url.searchParams.set("select", cleanedColumns);
-        if (count3) headers.append("Prefer", `count=${count3}`);
+        if (count2) headers.append("Prefer", `count=${count2}`);
         return new PostgrestFilterBuilder({
           method,
           url,
@@ -4060,11 +4060,11 @@ ${cause.stack}`;
       * }
       * ```
       */
-      insert(values, { count: count3, defaultToNull = true } = {}) {
+      insert(values, { count: count2, defaultToNull = true } = {}) {
         var _this$fetch;
         const method = "POST";
         const { url, headers } = this.cloneRequestState();
-        if (count3) headers.append("Prefer", `count=${count3}`);
+        if (count2) headers.append("Prefer", `count=${count2}`);
         if (!defaultToNull) headers.append("Prefer", `missing=default`);
         if (Array.isArray(values)) {
           const columns = values.reduce((acc, x) => acc.concat(Object.keys(x)), []);
@@ -4301,13 +4301,13 @@ ${cause.stack}`;
       * }
       * ```
       */
-      upsert(values, { onConflict, ignoreDuplicates = false, count: count3, defaultToNull = true } = {}) {
+      upsert(values, { onConflict, ignoreDuplicates = false, count: count2, defaultToNull = true } = {}) {
         var _this$fetch2;
         const method = "POST";
         const { url, headers } = this.cloneRequestState();
         headers.append("Prefer", `resolution=${ignoreDuplicates ? "ignore" : "merge"}-duplicates`);
         if (onConflict !== void 0) url.searchParams.set("on_conflict", onConflict);
-        if (count3) headers.append("Prefer", `count=${count3}`);
+        if (count2) headers.append("Prefer", `count=${count2}`);
         if (!defaultToNull) headers.append("Prefer", "missing=default");
         if (Array.isArray(values)) {
           const columns = values.reduce((acc, x) => acc.concat(Object.keys(x)), []);
@@ -4475,11 +4475,11 @@ ${cause.stack}`;
       * }
       * ```
       */
-      update(values, { count: count3 } = {}) {
+      update(values, { count: count2 } = {}) {
         var _this$fetch3;
         const method = "PATCH";
         const { url, headers } = this.cloneRequestState();
-        if (count3) headers.append("Prefer", `count=${count3}`);
+        if (count2) headers.append("Prefer", `count=${count2}`);
         return new PostgrestFilterBuilder({
           method,
           url,
@@ -4618,11 +4618,11 @@ ${cause.stack}`;
       * }
       * ```
       */
-      delete({ count: count3 } = {}) {
+      delete({ count: count2 } = {}) {
         var _this$fetch4;
         const method = "DELETE";
         const { url, headers } = this.cloneRequestState();
-        if (count3) headers.append("Prefer", `count=${count3}`);
+        if (count2) headers.append("Prefer", `count=${count2}`);
         return new PostgrestFilterBuilder({
           method,
           url,
@@ -4897,7 +4897,7 @@ ${cause.stack}`;
       * }
       * ```
       */
-      rpc(fn, args = {}, { head: head2 = false, get: get2 = false, count: count3 } = {}) {
+      rpc(fn, args = {}, { head: head2 = false, get: get2 = false, count: count2 } = {}) {
         var _this$fetch;
         let method;
         const url = new URL(`${this.url}/rpc/${fn}`);
@@ -4917,8 +4917,8 @@ ${cause.stack}`;
           body = args;
         }
         const headers = new Headers(this.headers);
-        if (_hasObjectArg) headers.set("Prefer", count3 ? `count=${count3},return=minimal` : "return=minimal");
-        else if (count3) headers.set("Prefer", `count=${count3}`);
+        if (_hasObjectArg) headers.set("Prefer", count2 ? `count=${count2},return=minimal` : "return=minimal");
+        else if (count2) headers.set("Prefer", `count=${count2}`);
         return new PostgrestFilterBuilder({
           method,
           url,
@@ -23770,9 +23770,9 @@ var init_operational = __esm({
       }
       client;
       async latestSnapshots() {
-        const { data: data2, count: count3, error } = await this.client.schema("public").from("highlight_snapshots").select("product_id,marketplace_category_id,position,type,priority_tier,observed_at", { count: "exact" }).order("observed_at", { ascending: false }).order("product_id").limit(100);
+        const { data: data2, count: count2, error } = await this.client.schema("public").from("highlight_snapshots").select("product_id,marketplace_category_id,position,type,priority_tier,observed_at", { count: "exact" }).order("observed_at", { ascending: false }).order("product_id").limit(100);
         if (error) throw new Error("SNAPSHOTS_READ_FAILED");
-        return { snapshots: data2 ?? [], total: count3 ?? 0, syncedAt: (/* @__PURE__ */ new Date()).toISOString() };
+        return { snapshots: data2 ?? [], total: count2 ?? 0, syncedAt: (/* @__PURE__ */ new Date()).toISOString() };
       }
     };
     LiveSmokeDiscoveryRunner = class {
@@ -24915,20 +24915,20 @@ function scoreCandidate(c, now = Date.now()) {
 function diversityViolation(c, counts2) {
   if (c.family === null) return "UNKNOWN_CATEGORY";
   if (c.family === "EXCLUDED") return "EXCLUDED_CATEGORY";
-  if (c.duplicate_key !== null && counts2.duplicates.has(c.duplicate_key)) return "DUPLICATE";
+  if (c.duplicate_key !== null && (counts2.duplicates.get(c.duplicate_key) ?? 0) >= DUPLICATE_LIMIT) return "DUPLICATE";
   if (c.brand !== null && (counts2.brands.get(c.brand) ?? 0) >= BRAND_LIMIT) return "BRAND_LIMIT";
   if (c.category_id !== null && (counts2.types.get(c.category_id) ?? 0) >= TYPE_LIMIT) return "TYPE_LIMIT";
   if ((counts2.families.get(c.family) ?? 0) >= FAMILY_LIMIT) return "FAMILY_LIMIT";
   return null;
 }
 function emptyCounts() {
-  return { types: /* @__PURE__ */ new Map(), families: /* @__PURE__ */ new Map(), brands: /* @__PURE__ */ new Map(), duplicates: /* @__PURE__ */ new Set() };
+  return { types: /* @__PURE__ */ new Map(), families: /* @__PURE__ */ new Map(), brands: /* @__PURE__ */ new Map(), duplicates: /* @__PURE__ */ new Map() };
 }
-function count(c, counts2) {
-  if (c.category_id !== null) counts2.types.set(c.category_id, (counts2.types.get(c.category_id) ?? 0) + 1);
-  if (c.family !== null && c.family !== "EXCLUDED") counts2.families.set(c.family, (counts2.families.get(c.family) ?? 0) + 1);
-  if (c.brand !== null) counts2.brands.set(c.brand, (counts2.brands.get(c.brand) ?? 0) + 1);
-  if (c.duplicate_key !== null) counts2.duplicates.add(c.duplicate_key);
+function count(c, counts2, by = 1) {
+  if (c.category_id !== null) bump(counts2.types, c.category_id, by);
+  if (c.family !== null && c.family !== "EXCLUDED") bump(counts2.families, c.family, by);
+  if (c.brand !== null) bump(counts2.brands, c.brand, by);
+  if (c.duplicate_key !== null) bump(counts2.duplicates, c.duplicate_key, by);
 }
 function simulateSelection(candidates, now = Date.now(), capacity = 100) {
   const identities = /* @__PURE__ */ new Map();
@@ -24993,7 +24993,7 @@ function simulateSelection(candidates, now = Date.now(), capacity = 100) {
     warning: "As notas não estimam unidades vendidas ou probabilidade de conversão. Não são ofertas aprovadas nem substituições executadas."
   };
 }
-var SELECTION_VERSION, DAY3, TYPE_LIMIT, FAMILY_LIMIT, BRAND_LIMIT, median3;
+var SELECTION_VERSION, DAY3, TYPE_LIMIT, FAMILY_LIMIT, BRAND_LIMIT, median3, DUPLICATE_LIMIT, bump, uncount;
 var init_selection_algorithm = __esm({
   "src/server/commercial/selection-algorithm.ts"() {
     "use strict";
@@ -25010,6 +25010,9 @@ var init_selection_algorithm = __esm({
       const a = [...v].sort((a2, b) => a2 - b);
       return a.length % 2 ? a[Math.floor(a.length / 2)] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2;
     };
+    DUPLICATE_LIMIT = 1;
+    bump = (map, key, by) => map.set(key, Math.max(0, (map.get(key) ?? 0) + by));
+    uncount = (c, counts2) => count(c, counts2, -1);
   }
 });
 
@@ -25126,20 +25129,22 @@ var init_selection_simulation = __esm({
 });
 
 // src/server/commercial/automotive-rebalance.ts
-function emptyCounts2() {
-  return { types: /* @__PURE__ */ new Map(), families: /* @__PURE__ */ new Map(), brands: /* @__PURE__ */ new Map(), duplicates: /* @__PURE__ */ new Set() };
-}
-function count2(c, counts2) {
-  if (c.category_id !== null) counts2.types.set(c.category_id, (counts2.types.get(c.category_id) ?? 0) + 1);
-  if (c.family !== null && c.family !== "EXCLUDED") counts2.families.set(c.family, (counts2.families.get(c.family) ?? 0) + 1);
-  if (c.brand !== null) counts2.brands.set(c.brand, (counts2.brands.get(c.brand) ?? 0) + 1);
-  if (c.duplicate_key !== null) counts2.duplicates.add(c.duplicate_key);
-}
-function uncount(c, counts2) {
-  if (c.category_id !== null) counts2.types.set(c.category_id, Math.max(0, (counts2.types.get(c.category_id) ?? 0) - 1));
-  if (c.family !== null && c.family !== "EXCLUDED") counts2.families.set(c.family, Math.max(0, (counts2.families.get(c.family) ?? 0) - 1));
-  if (c.brand !== null) counts2.brands.set(c.brand, Math.max(0, (counts2.brands.get(c.brand) ?? 0) - 1));
-  if (c.duplicate_key !== null) counts2.duplicates.delete(c.duplicate_key);
+function assertOnlyImproves(before, after, removed) {
+  const dimensions = [
+    ["types", TYPE_LIMIT],
+    ["families", FAMILY_LIMIT],
+    ["brands", BRAND_LIMIT],
+    ["duplicates", DUPLICATE_LIMIT]
+  ];
+  for (const [dimension, limit] of dimensions) {
+    const keys = /* @__PURE__ */ new Set([...before[dimension].keys(), ...after[dimension].keys()]);
+    for (const key of keys) {
+      const was = before[dimension].get(key) ?? 0, is = after[dimension].get(key) ?? 0;
+      const left = removed[dimension].get(key) ?? 0;
+      if (was > limit && is > was - left) throw new Error("REBALANCE_INVARIANT_VIOLATED");
+      if (was <= limit && is > limit) throw new Error("REBALANCE_INVARIANT_VIOLATED");
+    }
+  }
 }
 function planRebalance(result, now = Date.now(), appliedToday2 = {}, guards = {}) {
   const capacityDiversity = Math.max(0, DIVERSITY_DAILY_LIMIT - (appliedToday2.DIVERSITY ?? 0));
@@ -25150,16 +25155,20 @@ function planRebalance(result, now = Date.now(), appliedToday2 = {}, guards = {}
   const current = [...result.currentIds].map((id) => byIdentity.get(id)).filter((c) => c !== void 0);
   const kept = current.filter((c) => blocked.has(c.identity_key));
   const removable = current.filter((c) => !blocked.has(c.identity_key)).sort((a, b) => b.score - a.score || a.identity_key.localeCompare(b.identity_key));
-  const counts2 = emptyCounts2();
-  for (const c of kept) count2(c, counts2);
+  const portfolio = emptyCounts();
+  for (const c of current) count(c, portfolio);
+  const before = snapshot(portfolio);
+  const removedCounts = emptyCounts();
+  const fitting = emptyCounts();
+  for (const c of kept) count(c, fitting);
   const violations = [];
   for (const c of removable) {
-    const violation = !c.eligible && diversityViolation(c, counts2) === null ? "INELIGIBLE" : diversityViolation(c, counts2);
+    const violation = !c.eligible && diversityViolation(c, fitting) === null ? "INELIGIBLE" : diversityViolation(c, fitting);
     if (violation !== null) {
       violations.push({ member: c, violation });
       continue;
     }
-    count2(c, counts2);
+    count(c, fitting);
   }
   violations.sort((a, b) => SEVERITY.indexOf(a.violation) - SEVERITY.indexOf(b.violation) || a.member.score - b.member.score || a.member.identity_key.localeCompare(b.member.identity_key));
   const pool = [];
@@ -25174,17 +25183,20 @@ function planRebalance(result, now = Date.now(), appliedToday2 = {}, guards = {}
   const swaps = [];
   const tally = {};
   let blockedWithoutReplacement = 0, diversity = 0;
+  const admissible = (addition) => !used.has(addition.identity_key) && !result.currentIds.has(addition.identity_key) && diversityViolation(addition, portfolio) === null;
   for (const { member, violation } of violations) {
     tally[violation] = (tally[violation] ?? 0) + 1;
     if (diversity >= capacityDiversity) continue;
-    uncount(member, counts2);
-    const replacement = pool.find((a) => !used.has(a.identity_key) && diversityViolation(a, counts2) === null);
+    uncount(member, portfolio);
+    const sameGroup = SAME_GROUP[violation];
+    const replacement = pool.find((a) => admissible(a) && !(sameGroup?.(member, a) ?? false));
     if (!replacement) {
-      count2(member, counts2);
+      count(member, portfolio);
       blockedWithoutReplacement++;
       continue;
     }
-    count2(replacement, counts2);
+    count(replacement, portfolio);
+    count(member, removedCounts);
     used.add(replacement.identity_key);
     used.add(member.identity_key);
     diversity++;
@@ -25204,6 +25216,13 @@ function planRebalance(result, now = Date.now(), appliedToday2 = {}, guards = {}
     if (!victim || !newcomer || used.has(victim.identity_key) || used.has(newcomer.identity_key)) continue;
     if (blocked.has(victim.identity_key)) continue;
     if (recentlyRemoved2.has(newcomer.source_key) || recentlyRemoved2.has(newcomer.identity_key)) continue;
+    uncount(victim, portfolio);
+    if (!admissible(newcomer)) {
+      count(victim, portfolio);
+      continue;
+    }
+    count(newcomer, portfolio);
+    count(victim, removedCounts);
     used.add(victim.identity_key);
     used.add(newcomer.identity_key);
     advantage++;
@@ -25221,8 +25240,8 @@ function planRebalance(result, now = Date.now(), appliedToday2 = {}, guards = {}
   let fill = 0;
   for (const addition of pool) {
     if (fill >= vacancies) break;
-    if (used.has(addition.identity_key) || diversityViolation(addition, counts2) !== null) continue;
-    count2(addition, counts2);
+    if (!admissible(addition)) continue;
+    count(addition, portfolio);
     used.add(addition.identity_key);
     fill++;
     swaps.push({
@@ -25234,6 +25253,7 @@ function planRebalance(result, now = Date.now(), appliedToday2 = {}, guards = {}
       detail: "VACANCY"
     });
   }
+  assertOnlyImproves(before, portfolio, removedCounts);
   return { swaps, summary: {
     diversity,
     advantage,
@@ -25242,7 +25262,13 @@ function planRebalance(result, now = Date.now(), appliedToday2 = {}, guards = {}
     blockedWithoutReplacement,
     vacancies,
     capacityDiversity,
-    capacityAdvantage
+    capacityAdvantage,
+    after: {
+      maxType: peak(portfolio.types),
+      maxFamily: peak(portfolio.families),
+      maxBrand: peak(portfolio.brands),
+      maxDuplicate: peak(portfolio.duplicates)
+    }
   } };
 }
 function appliedToday(changes, now = Date.now()) {
@@ -25268,7 +25294,7 @@ function recentlyRemoved(changes, now = Date.now()) {
 function saoPauloDay(time) {
   return new Date(time - 3 * 36e5).toISOString().slice(0, 10);
 }
-var DIVERSITY_DAILY_LIMIT, ADVANTAGE_DAILY_LIMIT, READD_BLOCK_DAYS, SEVERITY;
+var DIVERSITY_DAILY_LIMIT, ADVANTAGE_DAILY_LIMIT, READD_BLOCK_DAYS, SEVERITY, SAME_GROUP, peak, snapshot;
 var init_automotive_rebalance = __esm({
   "src/server/commercial/automotive-rebalance.ts"() {
     "use strict";
@@ -25277,6 +25303,19 @@ var init_automotive_rebalance = __esm({
     ADVANTAGE_DAILY_LIMIT = 5;
     READD_BLOCK_DAYS = 30;
     SEVERITY = ["UNKNOWN_CATEGORY", "EXCLUDED_CATEGORY", "INELIGIBLE", "DUPLICATE", "BRAND_LIMIT", "TYPE_LIMIT", "FAMILY_LIMIT"];
+    SAME_GROUP = {
+      BRAND_LIMIT: (m, a) => a.brand !== null && a.brand === m.brand,
+      TYPE_LIMIT: (m, a) => a.category_id !== null && a.category_id === m.category_id,
+      FAMILY_LIMIT: (m, a) => a.family !== null && a.family === m.family,
+      DUPLICATE: (m, a) => a.duplicate_key !== null && a.duplicate_key === m.duplicate_key
+    };
+    peak = (map) => [...map.values()].reduce((top, value) => Math.max(top, value), 0);
+    snapshot = (counts2) => ({
+      types: new Map(counts2.types),
+      families: new Map(counts2.families),
+      brands: new Map(counts2.brands),
+      duplicates: new Map(counts2.duplicates)
+    });
   }
 });
 

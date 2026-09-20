@@ -71,26 +71,33 @@ export function scoreCandidate(c:SelectionCandidate,now=Date.now()) {
 
 export type ScoredCandidate=ReturnType<typeof scoreCandidate>;
 
+export const DUPLICATE_LIMIT=1;
+// Counts are kept as tallies, never as presence flags: the rebalance has to be able to take a
+// member back out and see the real remaining count, which a Set cannot express.
+export interface DiversityCounts {types:Map<string,number>;families:Map<string,number>;brands:Map<string,number>;duplicates:Map<string,number>}
+
 /** Which diversity rule a member breaks, most serious first; null when it fits. */
-export function diversityViolation(c:ScoredCandidate,counts:{types:Map<string,number>;families:Map<string,number>;brands:Map<string,number>;duplicates:Set<string>}):string|null {
+export function diversityViolation(c:ScoredCandidate,counts:DiversityCounts):string|null {
  if(c.family===null) return 'UNKNOWN_CATEGORY';
  if(c.family==='EXCLUDED') return 'EXCLUDED_CATEGORY';
- if(c.duplicate_key!==null&&counts.duplicates.has(c.duplicate_key)) return 'DUPLICATE';
+ if(c.duplicate_key!==null&&(counts.duplicates.get(c.duplicate_key)??0)>=DUPLICATE_LIMIT) return 'DUPLICATE';
  if(c.brand!==null&&(counts.brands.get(c.brand)??0)>=BRAND_LIMIT) return 'BRAND_LIMIT';
  if(c.category_id!==null&&(counts.types.get(c.category_id)??0)>=TYPE_LIMIT) return 'TYPE_LIMIT';
  if((counts.families.get(c.family)??0)>=FAMILY_LIMIT) return 'FAMILY_LIMIT';
  return null;
 }
 
-function emptyCounts() {
- return {types:new Map<string,number>(),families:new Map<string,number>(),brands:new Map<string,number>(),duplicates:new Set<string>()};
+export function emptyCounts():DiversityCounts {
+ return {types:new Map(),families:new Map(),brands:new Map(),duplicates:new Map()};
 }
-function count(c:ScoredCandidate,counts:ReturnType<typeof emptyCounts>) {
- if(c.category_id!==null) counts.types.set(c.category_id,(counts.types.get(c.category_id)??0)+1);
- if(c.family!==null&&c.family!=='EXCLUDED') counts.families.set(c.family,(counts.families.get(c.family)??0)+1);
- if(c.brand!==null) counts.brands.set(c.brand,(counts.brands.get(c.brand)??0)+1);
- if(c.duplicate_key!==null) counts.duplicates.add(c.duplicate_key);
+const bump=(map:Map<string,number>,key:string,by:number)=>map.set(key,Math.max(0,(map.get(key)??0)+by));
+export function count(c:ScoredCandidate,counts:DiversityCounts,by=1) {
+ if(c.category_id!==null) bump(counts.types,c.category_id,by);
+ if(c.family!==null&&c.family!=='EXCLUDED') bump(counts.families,c.family,by);
+ if(c.brand!==null) bump(counts.brands,c.brand,by);
+ if(c.duplicate_key!==null) bump(counts.duplicates,c.duplicate_key,by);
 }
+export const uncount=(c:ScoredCandidate,counts:DiversityCounts)=>count(c,counts,-1);
 
 export function simulateSelection(candidates:SelectionCandidate[],now=Date.now(),capacity=100) {
  const identities=new Map<string,SelectionCandidate[]>();
