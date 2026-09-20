@@ -241,3 +241,65 @@ describe('categories decided in review',()=>{
   expect(familyForCategory('MLB2239')).toBe('emergencia_seguranca');
  });
 });
+
+describe('replacements never rebuild the concentration they removed',()=>{
+ const brandMember=(prefix:string,i:number,brand:string|null,over:Record<string,unknown>={})=>
+  scored(prefix+i,{category_id:'CAT-'+prefix+i,family:FAMILIES[i%FAMILIES.length]!,brand,...over});
+ /** The guard inside the planner already throws; this re-checks the published summary. */
+ const withinLimits=(plan:ReturnType<typeof planRebalance>)=>{
+  expect(plan.summary.after.maxType).toBeLessThanOrEqual(3);
+  expect(plan.summary.after.maxFamily).toBeLessThanOrEqual(15);
+  expect(plan.summary.after.maxBrand).toBeLessThanOrEqual(4);
+  expect(plan.summary.after.maxDuplicate).toBeLessThanOrEqual(1);
+ };
+
+ it('never swaps one Vonixx for another when the brand is already over the limit',()=>{
+  const members=Array.from({length:20},(_,i)=>brandMember('m',i,'vonixx'));
+  const reserve=[...Array.from({length:10},(_,i)=>brandMember('v',i,'vonixx')),
+   ...Array.from({length:10},(_,i)=>brandMember('o',i,'outra'+i))];
+  const plan=planRebalance(planInput(members,reserve),now);
+  expect(plan.swaps.length).toBeGreaterThan(0);
+  const added=plan.swaps.map(s=>s.identity_add);
+  expect(added.some(id=>id.startsWith('v'))).toBe(false);
+  expect(added.every(id=>id.startsWith('o'))).toBe(true);
+  expect(plan.summary.violations.BRAND_LIMIT).toBe(16);
+ });
+ it('makes no swap at all when the only reserve left is the excess brand',()=>{
+  const members=Array.from({length:20},(_,i)=>brandMember('m',i,'vonixx'));
+  const reserve=Array.from({length:10},(_,i)=>brandMember('v',i,'vonixx'));
+  const plan=planRebalance(planInput(members,reserve),now);
+  expect(plan.swaps).toHaveLength(0);
+  expect(plan.summary.blockedWithoutReplacement).toBe(16);
+ });
+ it('does not replace an unknown category with a brand that is already at its limit',()=>{
+  const members=[...Array.from({length:4},(_,i)=>brandMember('m',i,'vonixx')),
+   brandMember('unknown',9,'britania',{family:null})];
+  const plan=planRebalance(planInput(members,[brandMember('v',0,'vonixx'),brandMember('o',0,'outra')]),now);
+  expect(plan.swaps.map(s=>s.identity_add)).toEqual(['o0']);
+  withinLimits(plan);
+ });
+ it('does not replace a crowded type with the same type',()=>{
+  const members=Array.from({length:4},(_,i)=>scored('m'+i));
+  const plan=planRebalance(planInput(members,
+   [scored('same',{category_id:'MLB263726'}),scored('other',{category_id:'MLB263727'})]),now);
+  expect(plan.swaps.map(s=>s.identity_add)).toEqual(['other']);
+  withinLimits(plan);
+ });
+ it('never adds a product whose brand and model are already in the portfolio',()=>{
+  const members=[...Array.from({length:4},(_,i)=>scored('m'+i)),
+   scored('twin',{category_id:'CAT-twin',family:'moto',duplicate_key:'wap:gtw-compact'})];
+  const plan=planRebalance(planInput(members,
+   [scored('clone',{category_id:'CAT-clone',family:'moto',duplicate_key:'wap:gtw-compact'}),
+    scored('fresh',{category_id:'MLB263727'})]),now);
+  expect(plan.swaps.map(s=>s.identity_add)).toEqual(['fresh']);
+  withinLimits(plan);
+ });
+ it('reports the resulting peaks so the dry run can be checked in the database',()=>{
+  const members=Array.from({length:20},(_,i)=>brandMember('m',i,'vonixx'));
+  const reserve=Array.from({length:20},(_,i)=>brandMember('o',i,'outra'+i));
+  const plan=planRebalance(planInput(members,reserve),now);
+  // Sixteen were over the brand limit but only twenty diversity swaps a day are allowed.
+  expect(plan.summary.after.maxBrand).toBe(4);
+  withinLimits(plan);
+ });
+});
