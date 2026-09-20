@@ -24798,6 +24798,109 @@ var init_ranking = __esm({
   }
 });
 
+// src/server/commercial/health.ts
+var health_exports = {};
+__export(health_exports, {
+  CONNECTION_BAD_STATUS: () => CONNECTION_BAD_STATUS,
+  CONNECTION_STALE_HOURS: () => CONNECTION_STALE_HOURS,
+  DISCOVERY_STALE_HOURS: () => DISCOVERY_STALE_HOURS,
+  FAILURE_STREAK: () => FAILURE_STREAK,
+  HEALTH_VERTICALS: () => HEALTH_VERTICALS,
+  STALL_HOURS: () => STALL_HOURS,
+  VERTICAL_ARTICLE_LABEL: () => VERTICAL_ARTICLE_LABEL,
+  assessConnection: () => assessConnection,
+  assessDiscovery: () => assessDiscovery,
+  assessVertical: () => assessVertical,
+  collectionHealth: () => collectionHealth,
+  safeErrorCode: () => safeErrorCode
+});
+function assessVertical(vertical, rows, now) {
+  const runs = [...rows].sort((a, b) => Date.parse(b.started_at) - Date.parse(a.started_at));
+  let consecutiveFailures = 0;
+  for (const run of runs) {
+    if (run.status === "FAILED") consecutiveFailures++;
+    else break;
+  }
+  const productive = runs.find((r) => Number(r.collected) > 0) ?? null;
+  const lastProductiveAt = productive?.started_at ?? null;
+  const hoursSinceProductive = hoursSince(lastProductiveAt, now);
+  const base = { vertical: vertical.key, label: vertical.label, articleLabel: articleOf(vertical.key, vertical.label), lastRunAt: runs[0]?.started_at ?? null, lastProductiveAt, hoursSinceProductive, consecutiveFailures };
+  if (!runs.length) return { ...base, state: "NO_RUNS" };
+  if (consecutiveFailures >= FAILURE_STREAK) return { ...base, state: "FAILING" };
+  if (hoursSinceProductive === null || hoursSinceProductive >= STALL_HOURS) return { ...base, state: "STALLED" };
+  return { ...base, state: "OK" };
+}
+function assessDiscovery(vertical, lastDiscoveryAt2, now) {
+  const hoursSinceDiscovery = hoursSince(lastDiscoveryAt2, now);
+  const state = hoursSinceDiscovery === null || hoursSinceDiscovery >= DISCOVERY_STALE_HOURS ? "STALE" : "OK";
+  return { vertical: vertical.key, label: vertical.label, articleLabel: articleOf(vertical.key, vertical.label), state, lastDiscoveryAt: lastDiscoveryAt2, hoursSinceDiscovery };
+}
+function assessConnection(row, now) {
+  if (!row) return { state: "PROBLEM", reason: "NO_CONNECTION", status: null, reauthRequired: true, consecutiveFailures: 0, lastErrorCode: null, lastSuccessAt: null, hoursSinceSuccess: null };
+  const hoursSinceSuccess = hoursSince(row.last_success_at, now);
+  const base = { status: row.status, reauthRequired: row.reauth_required === true, consecutiveFailures: Number(row.consecutive_failures ?? 0), lastErrorCode: row.last_error_code ?? null, lastSuccessAt: row.last_success_at ?? null, hoursSinceSuccess };
+  if (base.reauthRequired) return { ...base, state: "PROBLEM", reason: "REAUTH_REQUIRED" };
+  if (CONNECTION_BAD_STATUS.includes(row.status)) return { ...base, state: "PROBLEM", reason: "BAD_STATUS" };
+  if (hoursSinceSuccess === null || hoursSinceSuccess >= CONNECTION_STALE_HOURS) return { ...base, state: "PROBLEM", reason: "NO_RECENT_SUCCESS" };
+  return { ...base, state: "OK", reason: null };
+}
+async function lastDiscoveryAt(client, vertical) {
+  const result = vertical.kinded ? await client.from(vertical.table).select("started_at,status").eq("kind", "DISCOVERY").eq("status", "COMPLETED").order("started_at", { ascending: false }).limit(1) : await client.from("scan_runs").select("started_at,status").eq("vertical_key", vertical.key).eq("job_type", "COMMERCE_DISCOVERY").in("status", ["COMPLETED", "PARTIAL"]).order("started_at", { ascending: false }).limit(1);
+  if (result.error) throw new Error("HEALTH_STORAGE_UNAVAILABLE");
+  return (result.data ?? [])[0]?.started_at ?? null;
+}
+async function collectionHealth(client, now = Date.now()) {
+  const flags = await client.from("commercial_verticals").select("vertical_key,enabled,executor_ready");
+  if (flags.error) throw new Error("HEALTH_STORAGE_UNAVAILABLE");
+  const active = HEALTH_VERTICALS.filter((v) => {
+    const row = (flags.data ?? []).find((f) => f.vertical_key === v.key);
+    return row?.enabled === true && (v.key === "AUTOMOTIVE" || row?.executor_ready === true);
+  });
+  const verticals = [];
+  const discovery = [];
+  for (const vertical of active) {
+    const base = client.from(vertical.table).select("started_at,status,collected");
+    const scoped = vertical.kinded ? base.eq("kind", "HISTORY") : base;
+    const result = await scoped.order("started_at", { ascending: false }).limit(RUN_WINDOW);
+    if (result.error) throw new Error("HEALTH_STORAGE_UNAVAILABLE");
+    verticals.push(assessVertical(vertical, result.data ?? [], now));
+    discovery.push(assessDiscovery(vertical, await lastDiscoveryAt(client, vertical), now));
+  }
+  const connectionResult = await client.rpc("operational_meli_connection_status");
+  if (connectionResult.error) throw new Error("HEALTH_STORAGE_UNAVAILABLE");
+  const raw = connectionResult.data;
+  const connection = assessConnection((Array.isArray(raw) ? raw[0] : raw) ?? null, now);
+  const healthy = verticals.every((v) => v.state === "OK") && discovery.every((d) => d.state === "OK") && connection.state === "OK";
+  return { checkedAt: new Date(now).toISOString(), stallHours: STALL_HOURS, discoveryStaleHours: DISCOVERY_STALE_HOURS, healthy, verticals, discovery, connection };
+}
+function safeErrorCode(error) {
+  const code = error?.code;
+  if (typeof code === "string" && ERROR_CODE.test(code)) return code;
+  const message = error instanceof Error ? error.message : "";
+  return ERROR_CODE.test(message) ? message : "UNCLASSIFIED";
+}
+var HEALTH_VERTICALS, VERTICAL_ARTICLE_LABEL, STALL_HOURS, FAILURE_STREAK, DISCOVERY_STALE_HOURS, CONNECTION_STALE_HOURS, CONNECTION_BAD_STATUS, RUN_WINDOW, articleOf, hoursSince, ERROR_CODE;
+var init_health = __esm({
+  "src/server/commercial/health.ts"() {
+    "use strict";
+    HEALTH_VERTICALS = [
+      { key: "AUTOMOTIVE", label: "Automotivo", table: "commercial_collection_runs", kinded: false },
+      { key: "HOME", label: "Casa", table: "home_runs", kinded: true },
+      { key: "APPLIANCES", label: "Eletrodomésticos", table: "appliances_runs", kinded: true }
+    ];
+    VERTICAL_ARTICLE_LABEL = { AUTOMOTIVE: "do Automotivo", HOME: "da Casa", APPLIANCES: "de Eletrodomésticos" };
+    STALL_HOURS = 6;
+    FAILURE_STREAK = 3;
+    DISCOVERY_STALE_HOURS = 30;
+    CONNECTION_STALE_HOURS = 8;
+    CONNECTION_BAD_STATUS = ["REAUTH_REQUIRED", "REFRESH_OUTCOME_UNKNOWN", "DISABLED"];
+    RUN_WINDOW = 60;
+    articleOf = (key, label) => VERTICAL_ARTICLE_LABEL[key] ?? label;
+    hoursSince = (at, now) => at === null ? null : Math.max(0, Math.floor((now - Date.parse(at)) / 36e5));
+    ERROR_CODE = /^[A-Z][A-Z0-9_]{2,63}$/;
+  }
+});
+
 // src/server/commercial/cohort-review.ts
 var cohort_review_exports = {};
 __export(cohort_review_exports, {
@@ -25393,17 +25496,29 @@ function checked(r) {
   if (r.error) throw new Error("ADMISSION_STORAGE_FAILED");
   return r.data;
 }
+function outOfScope(categoryId) {
+  const family = familyForCategory(categoryId);
+  return family === null || family === "EXCLUDED";
+}
 async function exploreCandidates(client, deadline, compact = false) {
-  const due = () => client.from("commercial_candidate_queue").select("*").in("state", ["PENDING", "RETRY"]).lte("next_check_at", (/* @__PURE__ */ new Date()).toISOString());
-  const order = (query) => query.order("next_check_at").order("best_position").order("first_seen_at").order("source_key");
-  const [catalog, others] = await Promise.all([order(due().eq("type", "PRODUCT")).limit(compact ? 6 : 20), order(due().neq("type", "PRODUCT")).limit(compact ? 2 : 4)]);
-  const rows = [...checked(catalog) ?? [], ...checked(others) ?? []];
-  let evaluated = 0, failed = 0;
-  const queue = [...rows ?? []];
+  const due = client.from("commercial_candidate_queue").select("*").in("state", ["PENDING", "RETRY"]).lte("next_check_at", (/* @__PURE__ */ new Date()).toISOString()).eq("type", "PRODUCT").order("best_position").order("first_seen_at", { ascending: false }).order("source_key").limit(compact ? BATCH_COMPACT : BATCH_FULL);
+  const rows = checked(await due) ?? [];
+  let evaluated = 0, failed = 0, skipped = 0;
+  const queue = [...rows];
   async function worker() {
     while (queue.length && Date.now() < deadline) {
       const row = queue.shift();
       const attempts = row.attempts + 1;
+      if (outOfScope(row.category_id)) {
+        checked(await client.from("commercial_candidate_queue").update({
+          state: "REJECTED",
+          reason: "EXCLUDED_CATEGORY",
+          attempts,
+          evaluated_at: (/* @__PURE__ */ new Date()).toISOString()
+        }).eq("source_key", row.source_key));
+        skipped++;
+        continue;
+      }
       try {
         const p = await configuredProductPreview(client, row.product_id, row.type);
         const decision = admissionDecision(p, attempts, row.category_id);
@@ -25429,13 +25544,20 @@ async function exploreCandidates(client, deadline, compact = false) {
           next_check_at: new Date(Date.now() + 864e5 * Math.min(attempts, 3)).toISOString()
         }).eq("source_key", row.source_key));
         evaluated++;
-      } catch {
+      } catch (error) {
         failed++;
+        const status = error.status;
+        console.error(JSON.stringify({
+          event: "ADMISSION_ITEM_FAILED",
+          code: safeErrorCode(error),
+          status: typeof status === "number" ? status : null
+        }));
+        const exhausted = attempts >= MAX_UPSTREAM_ATTEMPTS;
         checked(await client.from("commercial_candidate_queue").update({
-          state: "RETRY",
-          reason: "UPSTREAM_OR_STORAGE_FAILURE",
+          state: exhausted ? "REJECTED" : "RETRY",
+          reason: exhausted ? "PERSISTENT_UPSTREAM_FAILURE" : "UPSTREAM_OR_STORAGE_FAILURE",
           attempts,
-          next_check_at: new Date(Date.now() + 864e5).toISOString()
+          ...exhausted ? { evaluated_at: (/* @__PURE__ */ new Date()).toISOString() } : { next_check_at: new Date(Date.now() + RETRY_AFTER_FAILURE).toISOString() }
         }).eq("source_key", row.source_key));
       }
     }
@@ -25443,15 +25565,22 @@ async function exploreCandidates(client, deadline, compact = false) {
   await Promise.all([worker(), worker()]);
   await reviewAutomotiveCohort(client);
   const promoted = await renewAutomotiveSelection(client);
-  return { evaluated, failed, promoted, deferred: queue.length };
+  return { evaluated, failed, skipped, promoted, deferred: queue.length };
 }
+var RETRY_AFTER_FAILURE, MAX_UPSTREAM_ATTEMPTS, BATCH_COMPACT, BATCH_FULL;
 var init_admission = __esm({
   "src/server/commercial/admission.ts"() {
     "use strict";
     init_product_preview();
     init_editorial();
+    init_automotive_families();
+    init_health();
     init_cohort_review();
     init_selection_renewal();
+    RETRY_AFTER_FAILURE = 6 * 36e5;
+    MAX_UPSTREAM_ATTEMPTS = 4;
+    BATCH_COMPACT = 30;
+    BATCH_FULL = 20;
   }
 });
 
@@ -27107,109 +27236,6 @@ var init_service2 = __esm({
       code;
     };
     money = (v) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
-  }
-});
-
-// src/server/commercial/health.ts
-var health_exports = {};
-__export(health_exports, {
-  CONNECTION_BAD_STATUS: () => CONNECTION_BAD_STATUS,
-  CONNECTION_STALE_HOURS: () => CONNECTION_STALE_HOURS,
-  DISCOVERY_STALE_HOURS: () => DISCOVERY_STALE_HOURS,
-  FAILURE_STREAK: () => FAILURE_STREAK,
-  HEALTH_VERTICALS: () => HEALTH_VERTICALS,
-  STALL_HOURS: () => STALL_HOURS,
-  VERTICAL_ARTICLE_LABEL: () => VERTICAL_ARTICLE_LABEL,
-  assessConnection: () => assessConnection,
-  assessDiscovery: () => assessDiscovery,
-  assessVertical: () => assessVertical,
-  collectionHealth: () => collectionHealth,
-  safeErrorCode: () => safeErrorCode
-});
-function assessVertical(vertical, rows, now) {
-  const runs = [...rows].sort((a, b) => Date.parse(b.started_at) - Date.parse(a.started_at));
-  let consecutiveFailures = 0;
-  for (const run of runs) {
-    if (run.status === "FAILED") consecutiveFailures++;
-    else break;
-  }
-  const productive = runs.find((r) => Number(r.collected) > 0) ?? null;
-  const lastProductiveAt = productive?.started_at ?? null;
-  const hoursSinceProductive = hoursSince(lastProductiveAt, now);
-  const base = { vertical: vertical.key, label: vertical.label, articleLabel: articleOf(vertical.key, vertical.label), lastRunAt: runs[0]?.started_at ?? null, lastProductiveAt, hoursSinceProductive, consecutiveFailures };
-  if (!runs.length) return { ...base, state: "NO_RUNS" };
-  if (consecutiveFailures >= FAILURE_STREAK) return { ...base, state: "FAILING" };
-  if (hoursSinceProductive === null || hoursSinceProductive >= STALL_HOURS) return { ...base, state: "STALLED" };
-  return { ...base, state: "OK" };
-}
-function assessDiscovery(vertical, lastDiscoveryAt2, now) {
-  const hoursSinceDiscovery = hoursSince(lastDiscoveryAt2, now);
-  const state = hoursSinceDiscovery === null || hoursSinceDiscovery >= DISCOVERY_STALE_HOURS ? "STALE" : "OK";
-  return { vertical: vertical.key, label: vertical.label, articleLabel: articleOf(vertical.key, vertical.label), state, lastDiscoveryAt: lastDiscoveryAt2, hoursSinceDiscovery };
-}
-function assessConnection(row, now) {
-  if (!row) return { state: "PROBLEM", reason: "NO_CONNECTION", status: null, reauthRequired: true, consecutiveFailures: 0, lastErrorCode: null, lastSuccessAt: null, hoursSinceSuccess: null };
-  const hoursSinceSuccess = hoursSince(row.last_success_at, now);
-  const base = { status: row.status, reauthRequired: row.reauth_required === true, consecutiveFailures: Number(row.consecutive_failures ?? 0), lastErrorCode: row.last_error_code ?? null, lastSuccessAt: row.last_success_at ?? null, hoursSinceSuccess };
-  if (base.reauthRequired) return { ...base, state: "PROBLEM", reason: "REAUTH_REQUIRED" };
-  if (CONNECTION_BAD_STATUS.includes(row.status)) return { ...base, state: "PROBLEM", reason: "BAD_STATUS" };
-  if (hoursSinceSuccess === null || hoursSinceSuccess >= CONNECTION_STALE_HOURS) return { ...base, state: "PROBLEM", reason: "NO_RECENT_SUCCESS" };
-  return { ...base, state: "OK", reason: null };
-}
-async function lastDiscoveryAt(client, vertical) {
-  const result = vertical.kinded ? await client.from(vertical.table).select("started_at,status").eq("kind", "DISCOVERY").eq("status", "COMPLETED").order("started_at", { ascending: false }).limit(1) : await client.from("scan_runs").select("started_at,status").eq("vertical_key", vertical.key).eq("job_type", "COMMERCE_DISCOVERY").in("status", ["COMPLETED", "PARTIAL"]).order("started_at", { ascending: false }).limit(1);
-  if (result.error) throw new Error("HEALTH_STORAGE_UNAVAILABLE");
-  return (result.data ?? [])[0]?.started_at ?? null;
-}
-async function collectionHealth(client, now = Date.now()) {
-  const flags = await client.from("commercial_verticals").select("vertical_key,enabled,executor_ready");
-  if (flags.error) throw new Error("HEALTH_STORAGE_UNAVAILABLE");
-  const active = HEALTH_VERTICALS.filter((v) => {
-    const row = (flags.data ?? []).find((f) => f.vertical_key === v.key);
-    return row?.enabled === true && (v.key === "AUTOMOTIVE" || row?.executor_ready === true);
-  });
-  const verticals = [];
-  const discovery = [];
-  for (const vertical of active) {
-    const base = client.from(vertical.table).select("started_at,status,collected");
-    const scoped = vertical.kinded ? base.eq("kind", "HISTORY") : base;
-    const result = await scoped.order("started_at", { ascending: false }).limit(RUN_WINDOW);
-    if (result.error) throw new Error("HEALTH_STORAGE_UNAVAILABLE");
-    verticals.push(assessVertical(vertical, result.data ?? [], now));
-    discovery.push(assessDiscovery(vertical, await lastDiscoveryAt(client, vertical), now));
-  }
-  const connectionResult = await client.rpc("operational_meli_connection_status");
-  if (connectionResult.error) throw new Error("HEALTH_STORAGE_UNAVAILABLE");
-  const raw = connectionResult.data;
-  const connection = assessConnection((Array.isArray(raw) ? raw[0] : raw) ?? null, now);
-  const healthy = verticals.every((v) => v.state === "OK") && discovery.every((d) => d.state === "OK") && connection.state === "OK";
-  return { checkedAt: new Date(now).toISOString(), stallHours: STALL_HOURS, discoveryStaleHours: DISCOVERY_STALE_HOURS, healthy, verticals, discovery, connection };
-}
-function safeErrorCode(error) {
-  const code = error?.code;
-  if (typeof code === "string" && ERROR_CODE.test(code)) return code;
-  const message = error instanceof Error ? error.message : "";
-  return ERROR_CODE.test(message) ? message : "UNCLASSIFIED";
-}
-var HEALTH_VERTICALS, VERTICAL_ARTICLE_LABEL, STALL_HOURS, FAILURE_STREAK, DISCOVERY_STALE_HOURS, CONNECTION_STALE_HOURS, CONNECTION_BAD_STATUS, RUN_WINDOW, articleOf, hoursSince, ERROR_CODE;
-var init_health = __esm({
-  "src/server/commercial/health.ts"() {
-    "use strict";
-    HEALTH_VERTICALS = [
-      { key: "AUTOMOTIVE", label: "Automotivo", table: "commercial_collection_runs", kinded: false },
-      { key: "HOME", label: "Casa", table: "home_runs", kinded: true },
-      { key: "APPLIANCES", label: "Eletrodomésticos", table: "appliances_runs", kinded: true }
-    ];
-    VERTICAL_ARTICLE_LABEL = { AUTOMOTIVE: "do Automotivo", HOME: "da Casa", APPLIANCES: "de Eletrodomésticos" };
-    STALL_HOURS = 6;
-    FAILURE_STREAK = 3;
-    DISCOVERY_STALE_HOURS = 30;
-    CONNECTION_STALE_HOURS = 8;
-    CONNECTION_BAD_STATUS = ["REAUTH_REQUIRED", "REFRESH_OUTCOME_UNKNOWN", "DISABLED"];
-    RUN_WINDOW = 60;
-    articleOf = (key, label) => VERTICAL_ARTICLE_LABEL[key] ?? label;
-    hoursSince = (at, now) => at === null ? null : Math.max(0, Math.floor((now - Date.parse(at)) / 36e5));
-    ERROR_CODE = /^[A-Z][A-Z0-9_]{2,63}$/;
   }
 });
 
