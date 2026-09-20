@@ -30,19 +30,20 @@ export const AUTOMOTIVE_CATEGORY_FAMILY: Readonly<Record<string,AutomotiveFamily
  MLB116336:'pneus_calibragem',MLB2233:'pneus_calibragem',MLB370798:'pneus_calibragem',MLB3933:'pneus_calibragem',
  MLB429029:'pneus_calibragem',MLB440129:'pneus_calibragem',MLB440135:'pneus_calibragem',MLB459150:'pneus_calibragem',
  MLB63533:'pneus_calibragem',
- // Emergência e segurança (14)
- MLB179794:'emergencia_seguranca',MLB270295:'emergencia_seguranca',MLB277617:'emergencia_seguranca',MLB278274:'emergencia_seguranca',
- MLB410863:'emergencia_seguranca',MLB429413:'emergencia_seguranca',MLB430581:'emergencia_seguranca',MLB440307:'emergencia_seguranca',
- MLB455304:'emergencia_seguranca',MLB458031:'emergencia_seguranca',MLB459157:'emergencia_seguranca',MLB459347:'emergencia_seguranca',
- MLB459348:'emergencia_seguranca',MLB63455:'emergencia_seguranca',
+ // Emergência e segurança (16)
+ MLB179794:'emergencia_seguranca',MLB2239:'emergencia_seguranca',MLB270295:'emergencia_seguranca',MLB277617:'emergencia_seguranca',
+ MLB278274:'emergencia_seguranca',MLB410863:'emergencia_seguranca',MLB429046:'emergencia_seguranca',MLB429413:'emergencia_seguranca',
+ MLB430581:'emergencia_seguranca',MLB440307:'emergencia_seguranca',MLB455304:'emergencia_seguranca',MLB458031:'emergencia_seguranca',
+ MLB459157:'emergencia_seguranca',MLB459347:'emergencia_seguranca',MLB459348:'emergencia_seguranca',MLB63455:'emergencia_seguranca',
  // Celular e eletrônicos (9)
  MLB10727:'celular_eletronicos',MLB116489:'celular_eletronicos',MLB186150:'celular_eletronicos',MLB271558:'celular_eletronicos',
  MLB45905:'celular_eletronicos',MLB459471:'celular_eletronicos',MLB49496:'celular_eletronicos',MLB8531:'celular_eletronicos',
  MLB8532:'celular_eletronicos',
- // Som e multimídia (12)
+ // Som e multimídia (14)
  MLB135679:'som_multimidia',MLB169600:'som_multimidia',MLB3381:'som_multimidia',MLB3386:'som_multimidia',
- MLB3905:'som_multimidia',MLB430132:'som_multimidia',MLB438486:'som_multimidia',MLB443814:'som_multimidia',
- MLB455438:'som_multimidia',MLB455582:'som_multimidia',MLB5670:'som_multimidia',MLB60182:'som_multimidia',
+ MLB3904:'som_multimidia',MLB3905:'som_multimidia',MLB430132:'som_multimidia',MLB438467:'som_multimidia',
+ MLB438486:'som_multimidia',MLB443814:'som_multimidia',MLB455438:'som_multimidia',MLB455582:'som_multimidia',
+ MLB5670:'som_multimidia',MLB60182:'som_multimidia',
  // Acessórios internos (12)
  MLB2219:'acessorios_internos',MLB271108:'acessorios_internos',MLB271611:'acessorios_internos',MLB271614:'acessorios_internos',
  MLB277952:'acessorios_internos',MLB40411:'acessorios_internos',MLB430913:'acessorios_internos',MLB430923:'acessorios_internos',
@@ -58,21 +59,20 @@ export const AUTOMOTIVE_CATEGORY_FAMILY: Readonly<Record<string,AutomotiveFamily
  MLB115943:'ferramentas',MLB115944:'ferramentas',MLB115945:'ferramentas',MLB116343:'ferramentas',
  MLB271712:'ferramentas',MLB437783:'ferramentas',MLB437784:'ferramentas',MLB437795:'ferramentas',
  MLB437802:'ferramentas',MLB455301:'ferramentas',MLB455313:'ferramentas',
- // Moto (11)
+ // Moto (15)
  MLB203101:'moto',MLB22204:'moto',MLB22879:'moto',MLB277590:'moto',
  MLB3929:'moto',MLB3930:'moto',MLB430631:'moto',MLB431120:'moto',
- MLB438313:'moto',MLB438314:'moto',MLB456124:'moto',
- // Fora da seleção de público amplo (70)
+ MLB437252:'moto',MLB437253:'moto',MLB438313:'moto',MLB438314:'moto',
+ MLB440303:'moto',MLB440305:'moto',MLB456124:'moto',
+ // Fora da seleção de público amplo (62)
  MLB11099:'EXCLUDED',MLB191708:'EXCLUDED',MLB191834:'EXCLUDED',MLB193967:'EXCLUDED',
  MLB194025:'EXCLUDED',MLB194026:'EXCLUDED',MLB194027:'EXCLUDED',MLB194028:'EXCLUDED',
- MLB198931:'EXCLUDED',MLB2220:'EXCLUDED',MLB2228:'EXCLUDED',MLB2239:'EXCLUDED',
- MLB22727:'EXCLUDED',MLB22735:'EXCLUDED',MLB243791:'EXCLUDED',MLB3385:'EXCLUDED',
- MLB3904:'EXCLUDED',MLB3932:'EXCLUDED',MLB429046:'EXCLUDED',MLB429227:'EXCLUDED',
- MLB430675:'EXCLUDED',MLB431319:'EXCLUDED',MLB432538:'EXCLUDED',MLB437252:'EXCLUDED',
- MLB437253:'EXCLUDED',MLB437274:'EXCLUDED',MLB438467:'EXCLUDED',MLB438870:'EXCLUDED',
- MLB439463:'EXCLUDED',MLB439464:'EXCLUDED',MLB439465:'EXCLUDED',MLB439944:'EXCLUDED',
- MLB440153:'EXCLUDED',MLB440299:'EXCLUDED',MLB440300:'EXCLUDED',MLB440303:'EXCLUDED',
- MLB440305:'EXCLUDED',MLB440490:'EXCLUDED',MLB45256:'EXCLUDED',MLB456122:'EXCLUDED',
+ MLB198931:'EXCLUDED',MLB2220:'EXCLUDED',MLB2228:'EXCLUDED',MLB22727:'EXCLUDED',
+ MLB22735:'EXCLUDED',MLB243791:'EXCLUDED',MLB3385:'EXCLUDED',MLB3932:'EXCLUDED',
+ MLB429227:'EXCLUDED',MLB430675:'EXCLUDED',MLB431319:'EXCLUDED',MLB432538:'EXCLUDED',
+ MLB437274:'EXCLUDED',MLB438870:'EXCLUDED',MLB439463:'EXCLUDED',MLB439464:'EXCLUDED',
+ MLB439465:'EXCLUDED',MLB439944:'EXCLUDED',MLB440153:'EXCLUDED',MLB440299:'EXCLUDED',
+ MLB440300:'EXCLUDED',MLB440490:'EXCLUDED',MLB45256:'EXCLUDED',MLB456122:'EXCLUDED',
  MLB456123:'EXCLUDED',MLB456128:'EXCLUDED',MLB456142:'EXCLUDED',MLB456145:'EXCLUDED',
  MLB457271:'EXCLUDED',MLB457915:'EXCLUDED',MLB457979:'EXCLUDED',MLB458211:'EXCLUDED',
  MLB458212:'EXCLUDED',MLB458222:'EXCLUDED',MLB458231:'EXCLUDED',MLB458234:'EXCLUDED',

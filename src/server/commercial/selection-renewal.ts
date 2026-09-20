@@ -1,6 +1,6 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
 import {runSelectionSimulation} from './selection-simulation.js';
-import {planRebalance,appliedToday,type RebalancePlan} from './automotive-rebalance.js';
+import {planRebalance,appliedToday,recentlyRemoved,READD_BLOCK_DAYS,type RebalancePlan} from './automotive-rebalance.js';
 
 export const REBALANCE_APPLY_SETTING='AUTOMOTIVE_REBALANCE_APPLY';
 
@@ -31,11 +31,13 @@ export async function renewAutomotiveSelection(client:SupabaseClient,now=Date.no
 }
 
 export async function rebalanceAutomotive(client:SupabaseClient,result:Parameters<typeof planRebalance>[0],now=Date.now()) {
- const since=new Date(now-2*86400000).toISOString();
- const history=await client.from('commercial_cohort_changes').select('reason,changed_at')
+ // Thirty days of history: today's ceilings and the products that must not come straight back.
+ const since=new Date(now-READD_BLOCK_DAYS*86400000).toISOString();
+ const history=await client.from('commercial_cohort_changes').select('reason,changed_at,removed_source')
   .eq('vertical_key','AUTOMOTIVE').gte('changed_at',since);
  if(history.error) throw new Error('REBALANCE_HISTORY_UNAVAILABLE');
- const plan=planRebalance(result,now,appliedToday((history.data??[]) as {reason:string;changed_at:string}[],now));
+ const changes=(history.data??[]) as {reason:string;changed_at:string;removed_source:string|null}[];
+ const plan=planRebalance(result,now,appliedToday(changes,now),{recentlyRemoved:recentlyRemoved(changes,now)});
  const enabled=await applyEnabled(client);
  if(!enabled) return {rebalance:await recordPreview(client,plan),applied:false,mode:'DRY_RUN' as const};
  const applied=await client.rpc('apply_automotive_rebalance',{p_swaps:plan.swaps});

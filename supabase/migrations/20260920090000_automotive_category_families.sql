@@ -51,14 +51,15 @@ begin
 end $$;
 
 -- Each pair is validated on its own and applied atomically: a refused pair never removes anyone.
+-- FILL pairs carry no remove and only run while the portfolio is below capacity.
 create function public.apply_automotive_rebalance(p_swaps jsonb) returns jsonb
 language plpgsql security definer set search_path='' as $$
 declare swap jsonb; applied integer:=0; refused integer:=0;
  by_reason jsonb:='{}'::jsonb; refusals jsonb:='{}'::jsonb;
- today_start timestamptz; used_diversity integer; used_advantage integer;
+ today_start timestamptz; used_diversity integer; used_advantage integer; monitored integer;
  reason text; add_preview jsonb; add_identity text; remove_identity text; refusal text;
 begin
- if jsonb_typeof(p_swaps)<>'array' or jsonb_array_length(p_swaps)>100 then raise exception 'REBALANCE_INVALID_PLAN'; end if;
+ if jsonb_typeof(p_swaps)<>'array' or jsonb_array_length(p_swaps)>200 then raise exception 'REBALANCE_INVALID_PLAN'; end if;
  perform pg_advisory_xact_lock(pg_catalog.hashtext('commercial-watchlist-seed'));
  lock table public.commercial_vertical_feedback,public.commercial_sent_products in share row exclusive mode;
  today_start:=date_trunc('day',now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo';
@@ -69,20 +70,36 @@ begin
  for swap in select * from jsonb_array_elements(p_swaps) loop
   reason:=swap->>'reason';
   refusal:=null;
-  if reason not in ('DIVERSITY','ADVANTAGE') then refusal:='INVALID_REASON';
+  remove_identity:=null;
+  select count(*) into monitored from public.commercial_vertical_memberships m
+   where m.vertical_key='AUTOMOTIVE' and m.monitor;
+
+  if reason not in ('DIVERSITY','ADVANTAGE','FILL') then refusal:='INVALID_REASON';
   elsif reason='DIVERSITY' and used_diversity>=20 then refusal:='DIVERSITY_DAILY_LIMIT';
   elsif reason='ADVANTAGE' and used_advantage>=5 then refusal:='ADVANTAGE_DAILY_LIMIT';
+  elsif reason='FILL' and (swap->>'remove') is not null then refusal:='FILL_MUST_NOT_REMOVE';
+  elsif reason='FILL' and monitored>=100 then refusal:='PORTFOLIO_FULL';
+  elsif reason<>'FILL' and (swap->>'remove') is null then refusal:='REMOVE_REQUIRED';
   end if;
 
-  if refusal is null then
+  -- Interest, sharing and anything already sent protect a member, exactly like the old promotion.
+  if refusal is null and reason<>'FILL' then
    select w.identity_key into remove_identity from public.commercial_watchlist w
    where w.source_key=swap->>'remove' and w.monitor
     and exists(select 1 from public.commercial_vertical_memberships m
-     where m.vertical_key='AUTOMOTIVE' and m.identity_key=w.identity_key and m.monitor)
-    and not exists(select 1 from public.commercial_vertical_feedback f
-     where f.vertical_key='AUTOMOTIVE' and f.identity_key=w.identity_key and f.action='INTERESTED');
-   if remove_identity is null then refusal:='REMOVE_NOT_ELIGIBLE'; end if;
+     where m.vertical_key='AUTOMOTIVE' and m.identity_key=w.identity_key and m.monitor);
+   if remove_identity is null then refusal:='REMOVE_NOT_ELIGIBLE';
+   elsif exists(select 1 from public.commercial_vertical_feedback f where f.vertical_key='AUTOMOTIVE'
+     and f.identity_key=remove_identity and f.action in ('INTERESTED','SHARED'))
+    or exists(select 1 from public.commercial_sent_products s where s.vertical_key='AUTOMOTIVE'
+     and s.identity_key=remove_identity and s.sent_at is not null)
+   then refusal:='REMOVE_PROTECTED';
+   end if;
   end if;
+
+  if refusal is null and exists(select 1 from public.commercial_cohort_changes c
+   where c.vertical_key='AUTOMOTIVE' and c.removed_source=swap->>'add'
+    and c.changed_at>=now()-interval '30 days') then refusal:='ADD_RECENTLY_REMOVED'; end if;
 
   if refusal is null then
    select w.identity_key,w.preview into add_identity,add_preview from public.commercial_watchlist w
@@ -103,7 +120,9 @@ begin
    continue;
   end if;
 
-  update public.commercial_watchlist set monitor=false where source_key=swap->>'remove';
+  if remove_identity is not null then
+   update public.commercial_watchlist set monitor=false where source_key=swap->>'remove';
+  end if;
   insert into public.commercial_observations(identity_key,source_key,observed_at,observed_day,price,currency,seller_id,comparable,trusted,position)
    values(add_identity,swap->>'add',(add_preview->>'priceCheckedAt')::timestamptz,
     ((add_preview->>'priceCheckedAt')::timestamptz at time zone 'UTC')::date,
@@ -112,12 +131,16 @@ begin
   update public.commercial_watchlist set monitor=true,next_evidence_check=now(),
    last_valid_price_at=(add_preview->>'priceCheckedAt')::timestamptz where source_key=swap->>'add';
   update public.commercial_candidate_queue set state='MONITORED',reason=null where source_key=swap->>'add';
-  insert into public.commercial_cohort_changes(vertical_key,removed_source,added_source,reason,evidence)
-   values('AUTOMOTIVE',swap->>'remove',swap->>'add',reason,
-    jsonb_build_object('detail',swap->>'detail','advantage',swap->'advantage'));
+  -- commercial_cohort_changes.removed_source is NOT NULL, so a FILL has nothing to record there.
+  if remove_identity is not null then
+   insert into public.commercial_cohort_changes(vertical_key,removed_source,added_source,reason,evidence)
+    values('AUTOMOTIVE',swap->>'remove',swap->>'add',reason,
+     jsonb_build_object('detail',swap->>'detail','advantage',swap->'advantage'));
+  end if;
   applied:=applied+1;
   by_reason:=jsonb_set(by_reason,array[reason],to_jsonb(coalesce((by_reason->>reason)::integer,0)+1));
-  if reason='DIVERSITY' then used_diversity:=used_diversity+1; else used_advantage:=used_advantage+1; end if;
+  if reason='DIVERSITY' then used_diversity:=used_diversity+1;
+  elsif reason='ADVANTAGE' then used_advantage:=used_advantage+1; end if;
  end loop;
  return jsonb_build_object('applied',applied,'refused',refused,'byReason',by_reason,'refusals',refusals);
 end $$;

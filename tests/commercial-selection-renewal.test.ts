@@ -8,7 +8,8 @@ afterEach(()=>vi.clearAllMocks());
 const row={identity_key:'catalog:MLB1',source_key:'PRODUCT:MLB1',price_analysis:{state:'INSUFFICIENT_HISTORY'},score:70,
  family:'pneus_calibragem',category_id:'MLB63533',brand:'vonixx',duplicate_key:'vonixx:v10',
  demand:{days:7},eligible:true,price_checked_at:'2026-09-09T12:00:00Z'};
-const emptyRaw={evaluated:[],reserve:[],currentIds:new Set<string>(),protectedIds:new Set<string>(),proposedReplacements:[]};
+const emptyRaw={evaluated:[],selected:[],reserve:[],currentIds:new Set<string>(),protectedIds:new Set<string>(),
+ removalBlockedIds:new Set<string>(),proposedReplacements:[],capacity:100};
 
 /** Minimal stand-in for the tables the renewal touches, plus the rebalance setting. */
 function client(apply:boolean,rpc=vi.fn(async(_name:string,_args?:unknown)=>({data:1,error:null}))) {

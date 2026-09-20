@@ -3,7 +3,7 @@ import {describe,expect,it} from 'vitest';
 import {AUTOMOTIVE_CATEGORY_FAMILY,AUTOMOTIVE_ELIGIBLE_CATEGORY_COUNT,AUTOMOTIVE_FAMILY_LABELS,
  brandOf,duplicateKeyOf,familyForCategory,resolveCategory} from '../src/server/commercial/automotive-families.js';
 import {simulateSelection,type SelectionCandidate} from '../src/server/commercial/selection-algorithm.js';
-import {planRebalance,appliedToday,DIVERSITY_DAILY_LIMIT,ADVANTAGE_DAILY_LIMIT} from '../src/server/commercial/automotive-rebalance.js';
+import {planRebalance,appliedToday,recentlyRemoved,DIVERSITY_DAILY_LIMIT,ADVANTAGE_DAILY_LIMIT} from '../src/server/commercial/automotive-rebalance.js';
 import {assessAutomotive} from '../src/server/commercial/editorial.js';
 import {classifyAutomotiveCategory,isAutomaticAutomotiveDiscoveryEligible} from '../src/commerce/classification/automotive/index.js';
 import {snapshotToTaxonomyTree,validateAutomotiveTaxonomySnapshot} from './helpers/automotive-taxonomy-snapshot.js';
@@ -103,10 +103,15 @@ function scored(id:string,over:Record<string,unknown>={}) {
   brand:null,duplicate_key:null,eligible:true,monitor_since:new Date(now-30*DAY).toISOString(),
   demand:{days:10},...over} as unknown as PlanInput['evaluated'][number];
 }
+// capacity defaults to the current size so the vacancy filler stays out of the way unless asked.
 function planInput(members:PlanInput['evaluated'],reserve:PlanInput['evaluated'],over:Partial<PlanInput>={}):PlanInput {
- return {evaluated:[...members,...reserve],reserve,currentIds:new Set(members.map(m=>m.identity_key)),
-  protectedIds:new Set<string>(),proposedReplacements:[],...over} as PlanInput;
+ return {evaluated:[...members,...reserve],selected:[],reserve,currentIds:new Set(members.map(m=>m.identity_key)),
+  protectedIds:new Set<string>(),proposedReplacements:[],capacity:members.length,...over} as PlanInput;
 }
+const FAMILIES=['limpeza_estetica','emergencia_seguranca','moto','som_multimidia','acessorios_internos','ferramentas',
+ 'acessorios_externos','celular_eletronicos','pneus_calibragem','iluminacao','aspiracao'];
+/** One distinct type each, families spread wide, so nothing breaks a diversity limit. */
+const spread=(prefix:string,i:number)=>scored(prefix+i,{category_id:'CAT-'+prefix+i,family:FAMILIES[i%FAMILIES.length]!});
 
 describe('rebalance plan',()=>{
  it('removes a concentration breach without waiting for tenure or a better score',()=>{
@@ -170,5 +175,69 @@ describe('admission by category',()=>{
  it('sends a used or damaged item to review',()=>{
   for(const title of ['Capa de banco usado','Capa seminovo','Kit recondicionado','Item para peças','Peça com defeito','Lote retirada de peças'])
    expect(assessAutomotive({title,description:null},'MLB46692').state).toBe('REVIEW');
+ });
+});
+
+describe('protection, re-entry and vacancies',()=>{
+ it('never removes a shared or already sent member',()=>{
+  // Four of the same type: the fourth would go, but sharing and sending block the removal.
+  const members=Array.from({length:4},(_,i)=>scored('m'+i));
+  const plan=planRebalance(planInput(members,[scored('new',{category_id:'MLB263727'})],
+   {removalBlockedIds:new Set(['m0','m1','m2','m3'])} as never),now);
+  expect(plan.swaps).toHaveLength(0);
+  expect(plan.summary.blockedWithoutReplacement).toBe(0);
+ });
+ it('removes an unprotected member while the protected ones stay',()=>{
+  const members=Array.from({length:4},(_,i)=>scored('m'+i));
+  const plan=planRebalance(planInput(members,[scored('new',{category_id:'MLB263727'})],
+   {removalBlockedIds:new Set(['m0','m1','m2'])} as never),now);
+  expect(plan.swaps.map(s=>s.identity_remove)).toEqual(['m3']);
+ });
+ it('does not bring back a product removed in the last thirty days',()=>{
+  const members=Array.from({length:4},(_,i)=>scored('m'+i));
+  const back=scored('back',{category_id:'MLB263727'});
+  const plan=planRebalance(planInput(members,[back]),now,{},{recentlyRemoved:new Set(['PRODUCT:back'])});
+  expect(plan.swaps).toHaveLength(0);
+  expect(plan.summary.blockedWithoutReplacement).toBe(1);
+ });
+ it('reads the block list from the cohort history window',()=>{
+  const changes=[{removed_source:'PRODUCT:a',changed_at:new Date(now-10*DAY).toISOString()},
+   {removed_source:'PRODUCT:b',changed_at:new Date(now-40*DAY).toISOString()},
+   {removed_source:null,changed_at:new Date(now-1*DAY).toISOString()}];
+  expect([...recentlyRemoved(changes,now)]).toEqual(['PRODUCT:a']);
+ });
+ it('fills the three empty seats when only ninety-seven are monitored',()=>{
+  const members=Array.from({length:97},(_,i)=>spread('m',i));
+  const reserve=Array.from({length:5},(_,i)=>spread('r',i));
+  const plan=planRebalance(planInput(members,reserve,{capacity:100}),now);
+  const fill=plan.swaps.filter(s=>s.reason==='FILL');
+  expect(plan.summary.vacancies).toBe(3);
+  expect(fill).toHaveLength(3);
+  expect(fill.every(s=>s.remove===null&&s.identity_remove===null&&s.detail==='VACANCY')).toBe(true);
+ });
+ it('fills nothing when the portfolio is already full',()=>{
+  const members=Array.from({length:100},(_,i)=>spread('m',i));
+  const plan=planRebalance(planInput(members,[spread('r',0)],{capacity:100}),now);
+  expect(plan.summary.vacancies).toBe(0);
+  expect(plan.swaps.filter(s=>s.reason==='FILL')).toHaveLength(0);
+ });
+ it('never fills with a product that would break a diversity limit',()=>{
+  const members=Array.from({length:97},(_,i)=>spread('m',i));
+  // Three of the reserve share one type; only three may enter, and the vacancies allow exactly three.
+  const reserve=Array.from({length:6},(_,i)=>scored('r'+i,{category_id:'SAME',family:'moto'}));
+  const plan=planRebalance(planInput(members,reserve,{capacity:100}),now);
+  expect(plan.swaps.filter(s=>s.reason==='FILL')).toHaveLength(3);
+ });
+});
+
+describe('categories decided in review',()=>{
+ it('places the security locks with moto and the rest where they were decided',()=>{
+  for(const id of ['MLB440305','MLB440303','MLB437252','MLB437253']) expect(familyForCategory(id)).toBe('moto');
+  expect(familyForCategory('MLB429046')).toBe('emergencia_seguranca');
+  for(const id of ['MLB438467','MLB3904']) expect(familyForCategory(id)).toBe('som_multimidia');
+  // Antennas are out by an explicit rule, not because no rule reached them.
+  expect(familyForCategory('MLB45256')).toBe('EXCLUDED');
+  // The majority of Segurança Veicular is now in scope, so the parent node follows it.
+  expect(familyForCategory('MLB2239')).toBe('emergencia_seguranca');
  });
 });

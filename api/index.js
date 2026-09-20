@@ -24264,12 +24264,14 @@ var init_automotive_families = __esm({
       MLB440135: "pneus_calibragem",
       MLB459150: "pneus_calibragem",
       MLB63533: "pneus_calibragem",
-      // Emergência e segurança (14)
+      // Emergência e segurança (16)
       MLB179794: "emergencia_seguranca",
+      MLB2239: "emergencia_seguranca",
       MLB270295: "emergencia_seguranca",
       MLB277617: "emergencia_seguranca",
       MLB278274: "emergencia_seguranca",
       MLB410863: "emergencia_seguranca",
+      MLB429046: "emergencia_seguranca",
       MLB429413: "emergencia_seguranca",
       MLB430581: "emergencia_seguranca",
       MLB440307: "emergencia_seguranca",
@@ -24289,13 +24291,15 @@ var init_automotive_families = __esm({
       MLB49496: "celular_eletronicos",
       MLB8531: "celular_eletronicos",
       MLB8532: "celular_eletronicos",
-      // Som e multimídia (12)
+      // Som e multimídia (14)
       MLB135679: "som_multimidia",
       MLB169600: "som_multimidia",
       MLB3381: "som_multimidia",
       MLB3386: "som_multimidia",
+      MLB3904: "som_multimidia",
       MLB3905: "som_multimidia",
       MLB430132: "som_multimidia",
+      MLB438467: "som_multimidia",
       MLB438486: "som_multimidia",
       MLB443814: "som_multimidia",
       MLB455438: "som_multimidia",
@@ -24344,7 +24348,7 @@ var init_automotive_families = __esm({
       MLB437802: "ferramentas",
       MLB455301: "ferramentas",
       MLB455313: "ferramentas",
-      // Moto (11)
+      // Moto (15)
       MLB203101: "moto",
       MLB22204: "moto",
       MLB22879: "moto",
@@ -24353,10 +24357,14 @@ var init_automotive_families = __esm({
       MLB3930: "moto",
       MLB430631: "moto",
       MLB431120: "moto",
+      MLB437252: "moto",
+      MLB437253: "moto",
       MLB438313: "moto",
       MLB438314: "moto",
+      MLB440303: "moto",
+      MLB440305: "moto",
       MLB456124: "moto",
-      // Fora da seleção de público amplo (70)
+      // Fora da seleção de público amplo (62)
       MLB11099: "EXCLUDED",
       MLB191708: "EXCLUDED",
       MLB191834: "EXCLUDED",
@@ -24368,22 +24376,16 @@ var init_automotive_families = __esm({
       MLB198931: "EXCLUDED",
       MLB2220: "EXCLUDED",
       MLB2228: "EXCLUDED",
-      MLB2239: "EXCLUDED",
       MLB22727: "EXCLUDED",
       MLB22735: "EXCLUDED",
       MLB243791: "EXCLUDED",
       MLB3385: "EXCLUDED",
-      MLB3904: "EXCLUDED",
       MLB3932: "EXCLUDED",
-      MLB429046: "EXCLUDED",
       MLB429227: "EXCLUDED",
       MLB430675: "EXCLUDED",
       MLB431319: "EXCLUDED",
       MLB432538: "EXCLUDED",
-      MLB437252: "EXCLUDED",
-      MLB437253: "EXCLUDED",
       MLB437274: "EXCLUDED",
-      MLB438467: "EXCLUDED",
       MLB438870: "EXCLUDED",
       MLB439463: "EXCLUDED",
       MLB439464: "EXCLUDED",
@@ -24392,8 +24394,6 @@ var init_automotive_families = __esm({
       MLB440153: "EXCLUDED",
       MLB440299: "EXCLUDED",
       MLB440300: "EXCLUDED",
-      MLB440303: "EXCLUDED",
-      MLB440305: "EXCLUDED",
       MLB440490: "EXCLUDED",
       MLB45256: "EXCLUDED",
       MLB456122: "EXCLUDED",
@@ -25090,9 +25090,13 @@ function analyzeSelectionInputs(input, now = Date.now(), evaluationLimit = 500, 
     totals[key] = (totals[key] ?? 0) + 1;
     return totals;
   }, {});
+  const removalBlockedIds = /* @__PURE__ */ new Set([
+    ...feedback.filter((f) => f.action === "INTERESTED" || f.action === "SHARED").map((f) => f.identity_key),
+    ...input.sent.filter((s) => s.sent_at).map((s) => s.identity_key)
+  ]);
   return {
     ...result,
-    ...includeRaw ? { raw: result } : {},
+    ...includeRaw ? { raw: { ...result, removalBlockedIds } } : {},
     selected: result.selected.map(summary),
     reserve: result.reserve.slice(0, 100).map(summary),
     reserveCount: result.reserve.length,
@@ -25137,15 +25141,17 @@ function uncount(c, counts2) {
   if (c.brand !== null) counts2.brands.set(c.brand, Math.max(0, (counts2.brands.get(c.brand) ?? 0) - 1));
   if (c.duplicate_key !== null) counts2.duplicates.delete(c.duplicate_key);
 }
-function planRebalance(result, now = Date.now(), appliedToday2 = {}) {
+function planRebalance(result, now = Date.now(), appliedToday2 = {}, guards = {}) {
   const capacityDiversity = Math.max(0, DIVERSITY_DAILY_LIMIT - (appliedToday2.DIVERSITY ?? 0));
   const capacityAdvantage = Math.max(0, ADVANTAGE_DAILY_LIMIT - (appliedToday2.ADVANTAGE ?? 0));
   const byIdentity = new Map(result.evaluated.map((c) => [c.identity_key, c]));
+  const blocked = guards.removalBlockedIds ?? result.removalBlockedIds ?? result.protectedIds;
+  const recentlyRemoved2 = guards.recentlyRemoved ?? /* @__PURE__ */ new Set();
   const current = [...result.currentIds].map((id) => byIdentity.get(id)).filter((c) => c !== void 0);
-  const keptProtected = current.filter((c) => result.protectedIds.has(c.identity_key));
-  const removable = current.filter((c) => !result.protectedIds.has(c.identity_key)).sort((a, b) => b.score - a.score || a.identity_key.localeCompare(b.identity_key));
+  const kept = current.filter((c) => blocked.has(c.identity_key));
+  const removable = current.filter((c) => !blocked.has(c.identity_key)).sort((a, b) => b.score - a.score || a.identity_key.localeCompare(b.identity_key));
   const counts2 = emptyCounts2();
-  for (const c of keptProtected) count2(c, counts2);
+  for (const c of kept) count2(c, counts2);
   const violations = [];
   for (const c of removable) {
     const violation = !c.eligible && diversityViolation(c, counts2) === null ? "INELIGIBLE" : diversityViolation(c, counts2);
@@ -25156,16 +25162,23 @@ function planRebalance(result, now = Date.now(), appliedToday2 = {}) {
     count2(c, counts2);
   }
   violations.sort((a, b) => SEVERITY.indexOf(a.violation) - SEVERITY.indexOf(b.violation) || a.member.score - b.member.score || a.member.identity_key.localeCompare(b.member.identity_key));
+  const pool = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const c of [...result.selected, ...result.reserve]) {
+    if (result.currentIds.has(c.identity_key) || seen.has(c.identity_key)) continue;
+    if (recentlyRemoved2.has(c.source_key) || recentlyRemoved2.has(c.identity_key)) continue;
+    seen.add(c.identity_key);
+    pool.push(c);
+  }
   const used = /* @__PURE__ */ new Set();
-  const additions = result.reserve.filter((c) => !result.currentIds.has(c.identity_key)).sort((a, b) => b.score - a.score || a.identity_key.localeCompare(b.identity_key));
   const swaps = [];
   const tally = {};
-  let blockedWithoutReplacement = 0;
+  let blockedWithoutReplacement = 0, diversity = 0;
   for (const { member, violation } of violations) {
     tally[violation] = (tally[violation] ?? 0) + 1;
-    if (swaps.length >= capacityDiversity) continue;
+    if (diversity >= capacityDiversity) continue;
     uncount(member, counts2);
-    const replacement = additions.find((a) => !used.has(a.identity_key) && diversityViolation(a, counts2) === null);
+    const replacement = pool.find((a) => !used.has(a.identity_key) && diversityViolation(a, counts2) === null);
     if (!replacement) {
       count2(member, counts2);
       blockedWithoutReplacement++;
@@ -25174,6 +25187,7 @@ function planRebalance(result, now = Date.now(), appliedToday2 = {}) {
     count2(replacement, counts2);
     used.add(replacement.identity_key);
     used.add(member.identity_key);
+    diversity++;
     swaps.push({
       remove: member.source_key,
       add: replacement.source_key,
@@ -25188,7 +25202,8 @@ function planRebalance(result, now = Date.now(), appliedToday2 = {}) {
     if (advantage >= capacityAdvantage) break;
     const victim = byIdentity.get(proposed.from), newcomer = byIdentity.get(proposed.to);
     if (!victim || !newcomer || used.has(victim.identity_key) || used.has(newcomer.identity_key)) continue;
-    if (result.protectedIds.has(victim.identity_key)) continue;
+    if (blocked.has(victim.identity_key)) continue;
+    if (recentlyRemoved2.has(newcomer.source_key) || recentlyRemoved2.has(newcomer.identity_key)) continue;
     used.add(victim.identity_key);
     used.add(newcomer.identity_key);
     advantage++;
@@ -25202,11 +25217,30 @@ function planRebalance(result, now = Date.now(), appliedToday2 = {}) {
       advantage: proposed.advantage
     });
   }
+  const vacancies = Math.max(0, result.capacity - result.currentIds.size);
+  let fill = 0;
+  for (const addition of pool) {
+    if (fill >= vacancies) break;
+    if (used.has(addition.identity_key) || diversityViolation(addition, counts2) !== null) continue;
+    count2(addition, counts2);
+    used.add(addition.identity_key);
+    fill++;
+    swaps.push({
+      remove: null,
+      add: addition.source_key,
+      identity_remove: null,
+      identity_add: addition.identity_key,
+      reason: "FILL",
+      detail: "VACANCY"
+    });
+  }
   return { swaps, summary: {
-    diversity: swaps.filter((s) => s.reason === "DIVERSITY").length,
+    diversity,
     advantage,
+    fill,
     violations: tally,
     blockedWithoutReplacement,
+    vacancies,
     capacityDiversity,
     capacityAdvantage
   } };
@@ -25222,16 +25256,26 @@ function appliedToday(changes, now = Date.now()) {
   }
   return totals;
 }
+function recentlyRemoved(changes, now = Date.now()) {
+  const cutoff = now - READD_BLOCK_DAYS * 864e5;
+  const blocked = /* @__PURE__ */ new Set();
+  for (const change of changes) {
+    const time = Date.parse(change.changed_at);
+    if (Number.isFinite(time) && time >= cutoff && change.removed_source) blocked.add(change.removed_source);
+  }
+  return blocked;
+}
 function saoPauloDay(time) {
   return new Date(time - 3 * 36e5).toISOString().slice(0, 10);
 }
-var DIVERSITY_DAILY_LIMIT, ADVANTAGE_DAILY_LIMIT, SEVERITY;
+var DIVERSITY_DAILY_LIMIT, ADVANTAGE_DAILY_LIMIT, READD_BLOCK_DAYS, SEVERITY;
 var init_automotive_rebalance = __esm({
   "src/server/commercial/automotive-rebalance.ts"() {
     "use strict";
     init_selection_algorithm();
     DIVERSITY_DAILY_LIMIT = 20;
     ADVANTAGE_DAILY_LIMIT = 5;
+    READD_BLOCK_DAYS = 30;
     SEVERITY = ["UNKNOWN_CATEGORY", "EXCLUDED_CATEGORY", "INELIGIBLE", "DUPLICATE", "BRAND_LIMIT", "TYPE_LIMIT", "FAMILY_LIMIT"];
   }
 });
@@ -25269,10 +25313,11 @@ async function renewAutomotiveSelection(client, now = Date.now()) {
   return { assessments: stored.data, ...await rebalanceAutomotive(client, raw, now) };
 }
 async function rebalanceAutomotive(client, result, now = Date.now()) {
-  const since = new Date(now - 2 * 864e5).toISOString();
-  const history3 = await client.from("commercial_cohort_changes").select("reason,changed_at").eq("vertical_key", "AUTOMOTIVE").gte("changed_at", since);
+  const since = new Date(now - READD_BLOCK_DAYS * 864e5).toISOString();
+  const history3 = await client.from("commercial_cohort_changes").select("reason,changed_at,removed_source").eq("vertical_key", "AUTOMOTIVE").gte("changed_at", since);
   if (history3.error) throw new Error("REBALANCE_HISTORY_UNAVAILABLE");
-  const plan = planRebalance(result, now, appliedToday(history3.data ?? [], now));
+  const changes = history3.data ?? [];
+  const plan = planRebalance(result, now, appliedToday(changes, now), { recentlyRemoved: recentlyRemoved(changes, now) });
   const enabled3 = await applyEnabled(client);
   if (!enabled3) return { rebalance: await recordPreview(client, plan), applied: false, mode: "DRY_RUN" };
   const applied = await client.rpc("apply_automotive_rebalance", { p_swaps: plan.swaps });

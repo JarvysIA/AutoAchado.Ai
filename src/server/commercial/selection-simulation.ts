@@ -48,7 +48,10 @@ export function analyzeSelectionInputs(input:SelectionInputs,now=Date.now(),eval
   price_analysis:c.preview?analyzePriceTruth(c.preview,historyByIdentity.get(c.identity_key)??[],now):null});
  const current=result.evaluated.filter(c=>c.monitor);
  const familyCounts=(entries:typeof result.evaluated)=>entries.reduce<Record<string,number>>((totals,c)=>{const key=c.family??'desconhecida';totals[key]=(totals[key]??0)+1;return totals;},{});
- return {...result,...(includeRaw?{raw:result}:{}),selected:result.selected.map(summary),reserve:result.reserve.slice(0,100).map(summary),reserveCount:result.reserve.length,
+ // Removal protection is wider than portfolio protection: sharing and sending also block a removal.
+ const removalBlockedIds=new Set([...feedback.filter(f=>f.action==='INTERESTED'||f.action==='SHARED').map(f=>f.identity_key),
+  ...input.sent.filter(s=>s.sent_at).map(s=>s.identity_key)]);
+ return {...result,...(includeRaw?{raw:{...result,removalBlockedIds}}:{}),selected:result.selected.map(summary),reserve:result.reserve.slice(0,100).map(summary),reserveCount:result.reserve.length,
   evaluated:result.evaluated.slice(0,evaluationLimit).map(summary),evaluatedTotal:result.evaluated.length,evaluatedPreviewLimit:evaluationLimit,currentEvaluated:current.map(summary),
   comparison:{currentFamilies:familyCounts(current),selectedFamilies:familyCounts(result.selected),eligible:result.evaluated.filter(c=>c.eligible).length,
    insufficientDemand:result.evaluated.filter(c=>c.demand.days<3).length},
